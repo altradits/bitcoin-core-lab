@@ -29,6 +29,7 @@ Every lesson, test run, PR reproduction, and architecture design is recorded her
 | Hour | Challenge Topic | Artifact / Code | Outcome |
 | :---: | :--- | :--- | :---: |
 | **01** | **Bitcoin Core Daemon & Coinbase Maturity** | [`01-node-foundations`](./01-node-foundations/) | Mined 101 regtest blocks; passed coinbase maturity rule; verified UTXO creation. |
+| **02** | **Raw Transactions, Implicit Fee Guardrails & Mempool Weight** | [`02-raw-tx-and-mempool`](./02-raw-tx-and-mempool/) | Spent 25 BTC UTXO via raw hex; triggered `-maxtxfee` guardrail; verified SegWit `txid` vs `wtxid`, `561 WU` / `141 vB` math, and BIP141 witness commitment. |
 
 ---
 
