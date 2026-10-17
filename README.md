@@ -1,14 +1,16 @@
-# ⚡ Bitcoin Core & Lightning Lab Notes
+# ⚡ Bitcoin Core & Lightning Protocol Lab
 
-> *"Proof of Work speaks louder than credentials."*  
-> An open-source log of first-principles research, upstream PR reviews (`bitcoin/bitcoin`), and circular economy architecture experiments for **Kisumu, Kenya**.
+> *"A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution."* — **Satoshi Nakamoto**  
+> An open-source repository of first-principles Bitcoin Core C++ consensus verification, functional tests, upstream PR reviews (`bitcoin/bitcoin`), and sovereign custody architecture.
+
+📘 **[Start Here: Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
 
 ---
 
 ## 🎯 Purpose & Goal
-This repository documents my hands-on hourly challenges and code experiments as I work towards full-time open-source Bitcoin protocol contribution and grant support (**Btrust Builders Fellowship**, **Brink**, **OpenSats**).
+This repository documents my hands-on protocol verification labs, functional test implementations, and upstream code reviews as I work towards full-time open-source Bitcoin & Lightning protocol contribution (**Btrust Builders Fellowship**, **Brink**, **OpenSats**).
 
-Every lesson, test run, PR reproduction, and architecture design is recorded here with code, reproduction steps, and technical rationale.
+Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)** and includes executable scripts, C++ source references into `bitcoin/bitcoin`, and empirical `regtest` verification traces.
 
 ---
 
@@ -16,34 +18,34 @@ Every lesson, test run, PR reproduction, and architecture design is recorded her
 
 | Module | Focus Area | Core Technologies | Status |
 | :--- | :--- | :--- | :---: |
-| **01. Node Engine** | Bitcoin Core compilation, Regtest daemon, JSON-RPC & LevelDB UTXO tracking | C++, `bitcoind`, `bitcoin-cli` | `Completed ✅` |
-| **02. Functional Tests** | Running and writing Python simulations for consensus, mempool & wallet edge cases | Python 3, `test_framework` | `Completed ✅` |
-| **03. Upstream PR Reviews** | Reproducing PRs from `bitcoin/bitcoin`, running `test_runner.py`, and publishing reviews | Git, C++, Bitcoin Core PR Review Club | `Completed ✅` |
-| **04. Lightning Layer 2** | Multi-node topologies, routing fees, channel liquidity & HTLC state machine | Bitcoin Script, P2WSH, BIP68 CSV | `Completed ✅` |
-| **05. Kisumu Circular Economy** | Low-latency Point-of-Sale (POS) & M-Pesa automated on/off-ramp rails | Go, Daraja API, BIP21, JSON-RPC | `Completed ✅` |
+| **01. Consensus & Node Engine** | Bitcoin Core compilation, `COINBASE_MATURITY`, subsidy halvings & UTXO conservation | C++, `bitcoind`, `bitcoin-cli` | `Completed ✅` |
+| **02. Mempool & Fee Markets** | Raw transaction serialization, SegWit weight (`WITNESS_SCALE_FACTOR`), BIP125 RBF & CPFP | C++, `src/policy/rbf.cpp`, SegWit | `Completed ✅` |
+| **03. Functional Test Suite** | Multi-node P2P simulations using `BitcoinTestFramework` and descriptor-less `MiniWallet` | Python 3, `test/functional` | `Completed ✅` |
+| **04. Upstream PR Reviews** | BIP431 TRUC (`v3`) transactions, `1P1C` zero-fee parent relay & `submitpackage` | C++, `src/policy/truc_policy.cpp` | `Completed ✅` |
+| **05. Programmable Money & Custody** | P2WSH Lightning HTLCs (`OP_SHA256`, `OP_CHECKSEQUENCEVERIFY`), BIP380 Descriptors & BIP174 PSBT | Bitcoin Script, Go, BIP174, BIP380 | `Completed ✅` |
 
 ---
 
-## 📝 Hourly Challenge Log
+## 📝 Hands-On Protocol Lab Log
 
-| Hour | Challenge Topic | Artifact / Code | Outcome |
-| :---: | :--- | :--- | :---: |
-| **01** | **Bitcoin Core Daemon & Coinbase Maturity** | [`01-node-foundations`](./01-node-foundations/) | Mined 101 regtest blocks; passed coinbase maturity rule; verified UTXO creation. |
-| **02** | **Raw Transactions, Implicit Fee Guardrails & Mempool Weight** | [`02-raw-tx-and-mempool`](./02-raw-tx-and-mempool/) | Spent 25 BTC UTXO via raw hex; triggered `-maxtxfee` guardrail; verified SegWit `txid` vs `wtxid`, `561 WU` / `141 vB` math, and BIP141 witness commitment. |
-| **03** | **BIP125 Replace-By-Fee (RBF) & Child-Pays-For-Parent (CPFP)** | [`03-rbf-and-cpfp`](./03-rbf-and-cpfp/) | Triggered `PaysForRBF` Rule #4 relay DoS rejection; evicted low-fee tx via BIP125 RBF; verified CPFP ancestor package feerate (`99.60 sat/vB`) and topological block assembly. |
-| **04** | **Python Functional Test Suite (`BitcoinTestFramework` & `MiniWallet`)** | [`04-functional-test-framework`](./04-functional-test-framework/) | Ran upstream `feature_rbf.py` & `mempool_packages.py`; authored custom 2-node P2P functional test (`kisumu_pos_rbf_test.py`) verifying RBF eviction and CPFP package propagation. |
-| **05** | **Upstream PR Review: BIP431 TRUC (`v3`) & 1P1C Package Relay** | [`05-truc-package-relay-review`](./05-truc-package-relay-review/) | Reviewed `src/policy/truc_policy.cpp`; ran `mempool_truc.py`; verified `TRUC-violation` version inheritance and atomic 0-fee `v3` parent + fee-paying `v3` child acceptance via `submitpackage`. |
+| Stage | Protocol Topic | Lab Directory & Code | Verified Consensus / Policy Outcome |
+| :---: | :--- | :--- | :--- |
+| **01** | **Bitcoin Core Daemon, Halving Epochs & Coinbase Maturity** | [`01-node-foundations`](./01-node-foundations/) | Verified `COINBASE_MATURITY = 100` (`src/consensus/consensus.h`) and `nSubsidyHalvingInterval = 150` across heights 203 -> 302 -> 303. |
+| **02** | **Raw Transactions, Implicit Fee Guardrails & SegWit Weight** | [`02-raw-tx-and-mempool`](./02-raw-tx-and-mempool/) | Verified implicit fee rule (`nValueIn - value_out`), `-maxtxfee` rejection, `txid` vs `wtxid` malleability fix, `561 WU` / `141 vB` math, and BIP141 witness commitment. |
+| **03** | **BIP125 Replace-By-Fee (RBF) & Child-Pays-For-Parent (CPFP)** | [`03-rbf-and-cpfp`](./03-rbf-and-cpfp/) | Triggered `PaysForRBF` Rule #4 relay DoS rejection (`src/policy/rbf.cpp`); evicted low-fee tx via BIP125 RBF; verified CPFP ancestor package feerate (`99.60 sat/vB`) and topological block assembly. |
+| **04** | **Python Functional Test Suite (`BitcoinTestFramework` & `MiniWallet`)** | [`04-functional-test-framework`](./04-functional-test-framework/) | Ran upstream `feature_rbf.py` & `mempool_packages.py`; authored custom 2-node P2P functional test (`kisumu_pos_rbf_test.py`) verifying P2P RBF eviction and CPFP package propagation. |
+| **05** | **Upstream PR Review: BIP431 TRUC (`v3`) & 1P1C Package Relay** | [`05-truc-package-relay-review`](./05-truc-package-relay-review/) | Reviewed `PackageTRUCChecks` (`src/policy/truc_policy.cpp`); ran `mempool_truc.py`; verified `TRUC-violation` version inheritance and atomic 0-fee `v3` parent + fee-paying `v3` child acceptance via `submitpackage`. |
 | **06** | **Lightning HTLC State Machine (`OP_SHA256` & `OP_CHECKSEQUENCEVERIFY`)** | [`06-lightning-htlc-state-machine`](./06-lightning-htlc-state-machine/) | Constructed and funded P2WSH HTLC (`bcrt1q00umt9...`); verified `OP_EQUALVERIFY` preimage failure, immediate preimage settlement, `non-BIP68-final` premature timeout rejection, and 10-block CSV refund. |
-| **07** | **Kisumu Circular Economy POS & M-Pesa Daraja Settlement Bridge** | [`07-kisumu-pos-bridge`](./07-kisumu-pos-bridge/) | Built & tested Go JSON-RPC settlement bridge enforcing dust guardrails (`>= 546 sats`), BIP21 URI generation, and SHA-256 Daraja webhook replay protection against live `bitcoind -regtest`. |
+| **07** | **Sovereign Custody: BIP380 Descriptors & BIP174 Airgapped PSBT** | [`07-psbt-descriptors-and-miniscript`](./07-psbt-descriptors-and-miniscript/) | Built & tested Go coordinator separating watch-only BIP84 descriptors (`disable_private_keys: true`) from airgapped BIP174 PSBT signing (`0x70736274ff`), finalized and confirmed on `bitcoind -regtest`. |
 
 ---
 
 ## 🛠️ Environment & Toolchain
 - **OS:** macOS ARM64
-- **Base Chain:** Bitcoin Core v29.0 (`bitcoind`)
+- **Base Chain:** Bitcoin Core v29.0 (`bitcoind`, compiled from source with CMake)
 - **Layer 2:** Lightning Network Daemon v0.21.3-beta (`lnd`)
-- **Testing:** Python Functional Test Suite & Polar
-- **Language Stack:** Go (Backend/Services), C++ (Protocol Core), Python (Testing)
+- **Testing:** Bitcoin Core Python Functional Test Suite (`test_runner.py`)
+- **Language Stack:** C++ (Consensus/Mempool Core), Python 3 (Functional Testing), Go (Descriptor/PSBT Coordinator)
 
 ---
 
