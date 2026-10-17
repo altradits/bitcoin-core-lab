@@ -30,6 +30,7 @@ Every lesson, test run, PR reproduction, and architecture design is recorded her
 | :---: | :--- | :--- | :---: |
 | **01** | **Bitcoin Core Daemon & Coinbase Maturity** | [`01-node-foundations`](./01-node-foundations/) | Mined 101 regtest blocks; passed coinbase maturity rule; verified UTXO creation. |
 | **02** | **Raw Transactions, Implicit Fee Guardrails & Mempool Weight** | [`02-raw-tx-and-mempool`](./02-raw-tx-and-mempool/) | Spent 25 BTC UTXO via raw hex; triggered `-maxtxfee` guardrail; verified SegWit `txid` vs `wtxid`, `561 WU` / `141 vB` math, and BIP141 witness commitment. |
+| **03** | **BIP125 Replace-By-Fee (RBF) & Child-Pays-For-Parent (CPFP)** | [`03-rbf-and-cpfp`](./03-rbf-and-cpfp/) | Triggered `PaysForRBF` Rule #4 relay DoS rejection; evicted low-fee tx via BIP125 RBF; verified CPFP ancestor package feerate (`99.60 sat/vB`) and topological block assembly. |
 
 ---
 
