@@ -240,12 +240,17 @@ practice_stage() {
       go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" test -v ./...
       go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" run .
       ;;
+    12)
+      echo "=== Stage 12: Bitcoin Core -> Lightning Readiness Gate & L1/L2 Bridge ==="
+      go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" test -v ./...
+      go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" run .
+      ;;
     09|9)
       echo "=== Stage 09: Bitcoin Core Bug Dojo & PR Fix Arena ==="
       run_dojo check all
       ;;
     *)
-      echo "Unknown stage: $STAGE (choose 00..11)"
+      echo "Unknown stage: $STAGE (choose 00..12)"
       exit 1
       ;;
   esac

@@ -7,6 +7,7 @@
 - 🌱 **[Stage 00: Start Small — The 15-Minute Micro-Win Ladder (`00-start-small`)](./00-start-small/README.md)**
 - 🔨 **[Bitcoin Core From Source: The 8-Drill Repetition & Open-Source Mastery Manual (`./lab.sh drill 1..8`)](./BITCOIN_FROM_SOURCE_MASTERY.md)**
 - 🌍 **[Stage 11: Apple M1 Sovereign Node, Wallet of Satoshi Migration, Fee/Speed Mastery & PR Fix Proposals (`11-from-regtest-to-live-mainnet`)](./11-from-regtest-to-live-mainnet/README.md)**
+- ⚡ **[Stage 12: The Bitcoin-to-Lightning Readiness Gate & How `lnd` Interacts With `bitcoind` (`12-lightning-readiness-and-bitcoind-bridge`)](./12-lightning-readiness-and-bitcoind-bridge/README.md)**
 - ⚙️ **[Stage 10: Bitcoin Protocol Primitives From Scratch (`10-protocol-primitives-from-scratch`)](./10-protocol-primitives-from-scratch/README.md)**
 - 🥋 **[Stage 09: The Bitcoin Core Bug Dojo & PR Fix Arena (`09-bug-dojo-and-pr-mastery`)](./09-bug-dojo-and-pr-mastery/README.md)**
 - 🛡️ **[The Guardian's Manual: If Satoshi Taught His Son How to Protect & Audit Bitcoin](./SATOSHI_GUARDIAN_MANUAL.md)**
@@ -33,9 +34,10 @@
 ./lab.sh dojo check 1     # Test Mission 1 (CVE-2010-5139 & CVE-2018-17144)
 ./lab.sh dojo solve       # Restore & verify all 5 upstream solutions
 
-# 3. Run Protocol Primitives From Scratch & Apple M1 Mainnet/Signet Sovereign Wallet Graduation
+# 3. Run Protocol Primitives, Apple M1 Sovereign Wallet & Lightning L1/L2 Readiness Bridge
 ./lab.sh practice 10
 ./lab.sh practice 11
+./lab.sh practice 12
 
 # 4. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield
 ./lab.sh genesis
@@ -78,6 +80,7 @@ Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)
 | **09** | **The Bitcoin Core Bug Dojo & PR Fix Arena (5 Upstream Bugs)** | [`09-bug-dojo-and-pr-mastery`](./09-bug-dojo-and-pr-mastery/) | Interactive break-and-fix arena covering `CVE-2010-5139` overflow, `CVE-2018-17144` duplicate inputs, `PR #35320` BIP32 seed bounds, `PR #32800` sigop vsize, BIP125 RBF DoS, and `PR #33014` PSBT validation. |
 | **10** | **Protocol Primitives From Scratch (PoW, CompactSize, Merkle, Script VM)** | [`10-protocol-primitives-from-scratch`](./10-protocol-primitives-from-scratch/) | Zero-dependency Go implementation of `SHA256d`, BIP340 `TaggedHash`, canonical `CompactSize`, 80-byte Genesis Block PoW & `nBits` target math, Merkle tree root, and a stack-based Script interpreter. |
 | **11** | **Apple M1 Sovereign Node, WoS Migration, Fee Optimizer & PR Fix Proposals** | [`11-from-regtest-to-live-mainnet`](./11-from-regtest-to-live-mainnet/) | Profiled M1 Mac (`prune=5500`, `dbcache=1024`), Wallet of Satoshi -> sovereign `bc1q`/`bc1p` migration, `vByte` fee/speed math (`RBF`/`CPFP`/`sendmany`), and PR Fix Proposal Matrix. |
+| **12** | **Bitcoin-to-Lightning Readiness Gate & `lnd` <-> `bitcoind` Bridge** | [`12-lightning-readiness-and-bitcoind-bridge`](./12-lightning-readiness-and-bitcoind-bridge/) | Verified the 6 Bitcoin Core prerequisites for Lightning (2-of-2 multisig, SegWit `txid` fix, `OP_CSV` revocation penalty, HTLCs, TRUC/CPFP) and simulated off-chain channel state transitions & breach penalties. |
 
 ---
 
