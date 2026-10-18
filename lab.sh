@@ -546,12 +546,39 @@ INNER_EOF
   esac
 }
 
+run_polar() {
+  echo "======================================================================"
+  echo "🐻‍❄️ POLAR & DOCKER MULTI-NODE LIGHTNING LAB (~/.polar/networks/)"
+  echo "======================================================================"
+  go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" run .
+  echo ""
+  echo "⚡ READY-TO-RUN TERMINAL COMMANDS WHEN POLAR NETWORK #1 IS STARTED:"
+  echo "  1. Check running Polar Docker containers:"
+  echo "     docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'"
+  echo ""
+  echo "  2. Query Polar's backend1 bitcoind (mapped to host port 18446):"
+  echo "     bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass getblockchaininfo"
+  echo ""
+  echo "  3. Query Alice (LND) using your native /Users/mac/bin/lncli:"
+  echo "     /Users/mac/bin/lncli --network=regtest --rpcserver=localhost:10001 \\"
+  echo "       --tlscertpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
+  echo "       --macaroonpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
+  echo ""
+  echo "  4. Or run lncli directly inside the Alice & Dave Docker containers:"
+  echo "     docker exec polar-n1-alice lncli --network=regtest getinfo"
+  echo "     docker exec polar-n1-dave  lncli --network=regtest getinfo"
+  echo "======================================================================"
+}
+
 case "${1:-help}" in
   step|baby-step)
     run_baby_step "${2:-1}"
     ;;
   drill|setup-drill)
     run_drill "${2:-1}"
+    ;;
+  polar)
+    run_polar
     ;;
   status)
     show_status
@@ -585,7 +612,7 @@ case "${1:-help}" in
     ;;
   verify-all)
     show_status
-    for s in 00 01 02 03 05 06 07 08 09 10; do
+    for s in 00 01 02 03 05 06 07 08 09 10 11 12; do
       echo ""
       practice_stage "$s"
     done
@@ -600,6 +627,10 @@ case "${1:-help}" in
     echo "🔨 Bitcoin From Source Repetition Drills (Download -> Compile -> Test -> PR Feedback):"
     echo "  ./lab.sh drill [1..8]            Master every command from git clone & CMake build to Tested ACK"
     echo ""
+    echo "🐻‍❄️ Lightning Readiness, Polar & Docker Simulation:"
+    echo "  ./lab.sh polar                   Inspect ~/.polar networks & print lncli / Docker terminal drills"
+    echo "  ./lab.sh practice 12             Run the 6-Point Bitcoin->Lightning Readiness Gate & L1/L2 simulator"
+    echo ""
     echo "Bug Dojo (Break, Fix & Verify Real Bitcoin Core Bugs):"
     echo "  ./lab.sh dojo break              Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go"
     echo "  ./lab.sh dojo check [1..5]       Run the Dojo exploit test suite to verify your fixes"
@@ -610,7 +641,7 @@ case "${1:-help}" in
     echo "  ./lab.sh status                  Show regtest node, offline libraries & unpushed commit count"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
-    echo "  ./lab.sh practice <00..10>       Run and study a specific stage interactively"
+    echo "  ./lab.sh practice <00..12>       Run and study a specific stage interactively"
     echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
     echo ""
     echo "Maintainer-Grade Offline PR Auditing & Sync:"

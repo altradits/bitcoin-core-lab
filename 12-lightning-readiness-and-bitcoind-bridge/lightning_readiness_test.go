@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"os"
 	"strings"
 	"testing"
 )
@@ -21,7 +22,6 @@ func TestChannelBalanceConservationAndRevocationPenalty(t *testing.T) {
 		BobSats:      0,
 	}
 
-	// Paying more than channel capacity must fail
 	if _, err := UpdateChannelBalance(s0, 2_000_000, [32]byte{}); err == nil {
 		t.Fatalf("expected payment exceeding outbound liquidity to fail")
 	}
@@ -38,21 +38,30 @@ func TestChannelBalanceConservationAndRevocationPenalty(t *testing.T) {
 		t.Fatalf("expected 600k/400k split, got %d/%d", s1.AliceSats, s1.BobSats)
 	}
 
-	// If Alice broadcasts revoked state s0 on-chain at block 100, and Bob reacts at block 105 (within 144 CSV delay):
 	aliceOut, bobOut, outcome := EvaluateBroadcastedCommitment(s0, 105, 100, 144)
 	if aliceOut != 0 || bobOut != 1_000_000 || !strings.Contains(outcome, "JUSTICE_PENALTY_APPLIED") {
 		t.Fatalf("expected Bob to sweep 100%% of channel via revocation penalty, got alice=%d bob=%d (%s)", aliceOut, bobOut, outcome)
 	}
 
-	// If Alice broadcasts honest latest state s1 at block 100, before 144 blocks Alice's output is locked by OP_CSV:
 	aliceEarly, bobEarly, earlyOutcome := EvaluateBroadcastedCommitment(s1, 110, 100, 144)
 	if aliceEarly != 0 || bobEarly != 400_000 || !strings.Contains(earlyOutcome, "TIMELOCK_ACTIVE") {
 		t.Fatalf("expected Alice's to_local output to be locked by OP_CSV before 144 blocks")
 	}
 
-	// After 144 blocks (block 250), Alice's OP_CSV timelock expires and both get their exact balances:
 	aliceMatured, bobMatured, _ := EvaluateBroadcastedCommitment(s1, 250, 100, 144)
 	if aliceMatured != 600_000 || bobMatured != 400_000 {
 		t.Fatalf("expected 600k/400k after OP_CSV maturity, got %d/%d", aliceMatured, bobMatured)
+	}
+}
+
+func TestInspectLocalPolarNetworksIfPresent(t *testing.T) {
+	if _, err := os.Stat("/Users/mac/.polar/networks/networks.json"); err == nil {
+		nets, err := InspectLocalPolarNetworks("/Users/mac/.polar")
+		if err != nil {
+			t.Fatalf("failed to parse ~/.polar/networks/networks.json: %v", err)
+		}
+		if len(nets) < 1 {
+			t.Fatalf("expected at least 1 configured Polar network")
+		}
 	}
 }

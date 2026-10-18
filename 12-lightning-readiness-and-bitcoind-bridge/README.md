@@ -1,12 +1,12 @@
-# Stage 12: The Bitcoin-to-Lightning Readiness Gate & How `lnd` Interacts With `bitcoind`
+# Stage 12: The Bitcoin-to-Lightning Readiness Gate, `lnd` <-> `bitcoind` Bridge & Polar/Docker Simulation Lab
 
-> *"Lightning is not a separate cryptocurrency and it is not magic. Every Lightning channel, off-chain balance update, HTLC payment, and penalty transaction is 100% a standard Bitcoin Core transaction. Once you master the 6 Layer-1 Bitcoin Core building blocks below, you already understand 90% of Lightning."*
+> *"Lightning is not a separate cryptocurrency and it is not magic. Every Lightning channel, off-chain balance update, HTLC payment, and penalty transaction is 100% a standard Bitcoin Core transaction. Once you master the 6 Layer-1 Bitcoin Core building blocks below, you use your installed Polar + Docker networks (`Addis Ababa Bootcamp` & `Bitrust Bootcamp 2026`) and `/Users/mac/bin/lncli` to simulate multi-node Lightning like a protocol engineer."*
 
 ---
 
 ## Part 1: Your 6-Point Readiness Checklist Before Venturing Into Lightning
 
-Do **not** touch `lnd` (`v0.21.3-beta`, installed at `/Users/mac/bin/lnd`) until you can check off all **6 Bitcoin Core Layer-1 Prerequisites** below. Every single one of them is already built and verified in this repository:
+Do **not** launch `lnd` or Polar until you can check off all **6 Bitcoin Core Layer-1 Prerequisites** below. Every single one of them is already built and verified in Stages 01–10 of this repository:
 
 | # | Required Bitcoin Core Skill | Where You Master It | How Lightning Uses It | What Breaks in Lightning Without It |
 | :-: | :--- | :--- | :--- | :--- |
@@ -39,41 +39,114 @@ Run `./lab.sh practice 12` to see [`lightning_readiness.go`](file:///Users/mac/b
 +-----------------------------------------------------------------------------+
 ```
 
-1. **Step 1 — Open Channel (1 On-Chain Transaction on `bitcoind`):**
-   Alice locks `1,000,000 sats` into a 2-of-2 multisig output controlled by `Alice_PubKey + Bob_PubKey`. `bitcoind` mines this Funding Transaction into a block.
-2. **Step 2 — Instant Off-Chain Payments (0 On-Chain Transactions!):**
-   - In **State #0**, Alice has `1,000,000 sats` and Bob has `0 sats`.
-   - To pay Bob `250,000 sats` in 10 milliseconds, Alice and Bob sign **Commitment Transaction #1** (`Alice: 750,000`, `Bob: 250,000`) and Alice hands Bob the **Revocation Preimage** for State #0.
-   - Neither Alice nor Bob sends this transaction to `bitcoind`! They keep it in their local `lnd` database (`channel.db`), knowing they *could* broadcast it to `bitcoind` at any moment.
-3. **Step 3 — What If Someone Tries to Cheat? (`OP_CHECKSEQUENCEVERIFY` + Justice Tx):**
-   - Suppose Alice tries to cheat by broadcasting old **State #0** (where she had `1,000,000 sats`) to `bitcoind`.
-   - Because Alice's output in State #0 is locked by **Stage 06's `OP_CHECKSEQUENCEVERIFY`** for `to_self_delay` blocks (e.g., 144 blocks), Alice cannot spend her `1,000,000 sats` right away!
-   - Meanwhile, Bob's `bitcoind` node notifies Bob's `lnd` daemon that State #0 just entered a block. Bob uses Alice's **State #0 Revocation Preimage** to immediately broadcast a **Justice (Penalty) Transaction** to `bitcoind`, sweeping **100% of the `1,000,000 sats`** to Bob!
-4. **Step 4 — Channel Close (1 On-Chain Transaction on `bitcoind`):**
-   - **Cooperative Close (Best & Cheapest):** Alice and Bob agree to close the channel and sign a clean 1-input, 2-output transaction with **no timelocks**, paying low fees (`bc1q...` / `bc1p...`) directly to their wallets on `bitcoind`.
-   - **Force Close (Unilateral):** If Bob goes offline forever, Alice broadcasts the latest **State #2** Commitment Transaction to `bitcoind`, waits `144 blocks` (`OP_CSV`), and sweeps her `600,000 sats`.
-
 ---
 
 ## Part 3: How `lnd` Talks to `bitcoind` (The 5 Exact Bridge Calls)
 
-A Lightning node (`lnd`) **cannot function without a Bitcoin node (`bitcoind`)**. Why? Because `lnd` does not validate blocks or hold the UTXO set—it relies on `bitcoind` as its **Eyes and Hands on Layer 1**:
-
-| # | `bitcoind` RPC / Notification | Why `lnd` Calls It on `bitcoind` |
-| :-: | :--- | :--- |
-| **1** | **`getblockchaininfo` / `getblockhash` / `getblock`** | **Watching for Funding & Breaches:** `lnd` scans every new block mined on `bitcoind` to confirm when a Funding Tx reaches 3–6 confirmations, or to detect if a peer broadcasted a revoked old Commitment Tx! |
-| **2** | **`estimatesmartfee`** | **Dynamic Channel Fee Sizing:** `lnd` asks `bitcoind` for current `sat/vB` feerates to set the fee on Commitment Transactions, Cooperative Closes, and Sweep transactions. |
-| **3** | **`sendrawtransaction`** | **Broadcasting to Layer 1:** When opening a channel, force-closing, sweeping an HTLC timeout, or punishing a cheater, `lnd` constructs the raw hex transaction and calls `sendrawtransaction` on `bitcoind`. |
-| **4** | **`submitpackage` (`BIP431 TRUC v3` & `1P1C`)** | **Next-Gen Package Fee Bumping (Stage 05):** Modern Lightning commitment transactions use `submitpackage` on `bitcoind` so a 0-fee Commitment Tx (`parent`) and a high-fee Anchor CPFP (`child`) enter the mempool atomically! |
-| **5** | **`ZMQ` (`-zmqpubrawblock`, `-zmqpubrawtx`) / RPC Polling** | **Real-Time Wakeup:** `bitcoind` pushes newly arrived blocks and transactions to `lnd` in milliseconds so `lnd` can react immediately to HTLC preimages on-chain. |
+A Lightning node (`lnd`) **cannot function without a Bitcoin node (`bitcoind`)**. Look at lines 44–48 of your own Polar Docker file [`/Users/mac/.polar/networks/1/docker-compose.yml`](file:///Users/mac/.polar/networks/1/docker-compose.yml#L44-L48):
+```yaml
+--bitcoin.active --bitcoin.regtest --bitcoin.node=bitcoind
+--bitcoind.rpchost=polar-n1-backend1 --bitcoind.rpcuser=polaruser --bitcoind.rpcpass=polarpass
+--bitcoind.zmqpubrawblock=tcp://polar-n1-backend1:28334
+--bitcoind.zmqpubrawtx=tcp://polar-n1-backend1:28335
+```
+Under the hood, `lnd` uses `bitcoind` for 5 things:
+1. **`getblockchaininfo` / `getblock`:** Scans every block mined on `bitcoind` to confirm channel opens (Funding UTXOs) and detect if a cheating peer broadcasts a revoked Commitment Transaction.
+2. **`estimatesmartfee`:** Queries `bitcoind` for current `sat/vB` feerates.
+3. **`sendrawtransaction`:** Broadcasts channel opens, cooperative closes, force-closes, and justice transactions to the Bitcoin P2P network.
+4. **`submitpackage` (Stage 05):** Submits 0-fee Commitment Transactions + Anchor CPFP children atomically into `bitcoind`'s mempool.
+5. **ZMQ (`28334` / `28335`):** Pushes raw blocks and transactions from `bitcoind` to `lnd` in real time.
 
 ---
 
-## Part 4: Your Guided Offline BOLT Study Order (`./lab.sh bolt <num>`)
+## Part 4: How to Use Your Installed Polar & Docker Setup (`~/.polar`) Like a Protocol Engineer
 
-All Lightning specifications (`BOLTs`) are already stored offline on your Mac in `/Users/mac/bitcoin-references/bolts/`. Read them in this exact order using `./lab.sh`:
+We inspected your Mac and found **Polar (`/Applications/Polar.app`)**, **Docker (`/Applications/Docker.app`)**, and **two pre-configured multi-node Lightning networks** in `/Users/mac/.polar/networks/`:
 
-1. **`./lab.sh bolt 3` (BOLT #3: Bitcoin Transaction and Script Formats)** — *Start here!* You will immediately recognize `OP_CHECKSEQUENCEVERIFY`, `OP_SHA256`, `OP_CHECKLOCKTIMEVERIFY`, and SegWit witness scripts from **Stage 02** and **Stage 06**!
-2. **`./lab.sh bolt 2` (BOLT #2: Peer Protocol for Channel Management)** — How `open_channel`, `funding_created`, `funding_signed`, `commitment_signed`, and `revoke_and_ack` messages work.
-3. **`./lab.sh bolt 11` (BOLT #11: Invoice Protocol for Lightning Payments)** — How `lnbc...` invoices encode the `payment_hash` (`H`), amount in millisatoshis (`msat`), expiry, and node signature.
-4. **`./lab.sh bolt 4` (BOLT #4: Onion Routing Protocol)** — How Sphinx onion packets hide who is paying whom across multiple Lightning hops.
+1. **Polar Network #1 (`Addis Ababa Bootcamp`, [`/Users/mac/.polar/networks/1/docker-compose.yml`](file:///Users/mac/.polar/networks/1/docker-compose.yml)):**
+   - **Bitcoin Core L1 Node:** `polar-n1-backend1` (`bitcoind v30.0`, Host RPC port `18446`, ZMQ `28334`/`28335`)
+   - **LND Node 1 (`alice`):** `polar-n1-alice` (`LND v0.20.0-beta`, REST `8081`, gRPC `10001`, P2P `9735`)
+   - **Core Lightning Node (`bob`):** `polar-n1-bob` (`CLN v25.12`, REST `8182`, gRPC `11002`, P2P `9836`)
+   - **Eclair Node (`carol`):** `polar-n1-carol` (`Eclair v0.13.1`, REST `8283`, P2P `9937`)
+   - **LND Node 2 (`dave`):** `polar-n1-dave` (`LND v0.20.0-beta`, REST `8084`, gRPC `10004`, P2P `9738`)
+2. **Polar Network #2 (`Bitrust Bootcamp 2026`, `/Users/mac/.polar/networks/2/docker-compose.yml`):**
+   - `backend1` (`bitcoind v30.0`), `alice` (`LND`), `bob` (`c-lightning`), `carol` (`eclair`).
+
+### ⚠️ Golden Rule for Your 8 GB RAM Apple M1 MacBook Air
+Running Docker Desktop + 5 containers (`bitcoind` + `2x LND` + `CLN` + `Eclair`) uses **`~3.5 GB` of RAM**.
+- **When working on Stages 00–11 (Bitcoin Core C++ & Regtest):** Keep Docker Desktop and Polar **quit/stopped** so 100% of your 8 GB RAM stays free for your native `/Users/mac/bitcoin/build/bin/bitcoind` and C++ compiler.
+- **When practicing Stage 12 (Multi-Node LND in Polar):** Open `Docker.app` and `Polar.app` (or start Network #1 via `docker compose`), run your Lightning channel drills below, and stop Polar/Docker when finished!
+
+---
+
+## Part 5: Step-by-Step Terminal Drills With Polar & `lncli` (No GUI Clicking!)
+
+Anyone can click buttons in the Polar GUI. To become a Btrust-grade open-source developer, you must know how to drive Polar's Docker containers **directly from your terminal and Go/Python code** using `lncli`, `tls.cert`, and `admin.macaroon`.
+
+Run `./lab.sh polar` anytime to print these exact commands customized for your Mac:
+
+### Drill A: Talk to Polar's `alice` LND Node Using Your Native `/Users/mac/bin/lncli`
+Every LND node requires two files to authenticate an API/CLI caller:
+1. **`tls.cert`** (encrypts the connection)
+2. **`admin.macaroon`** (cryptographic bearer token proving admin permission)
+
+When Polar Network #1 is running, run this in your Mac terminal:
+```bash
+# Option 1: Using your native /Users/mac/bin/lncli on macOS talking to localhost:10001 (alice)
+/Users/mac/bin/lncli \
+  --network=regtest \
+  --rpcserver=localhost:10001 \
+  --tlscertpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/tls.cert \
+  --macaroonpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon \
+  getinfo
+
+# Option 2: Executing lncli directly inside the polar-n1-alice Docker container
+docker exec polar-n1-alice lncli --network=regtest getinfo
+```
+
+### Drill B: Talk Directly to Polar's Layer-1 `bitcoind` (`polar-n1-backend1`)
+Notice in [`docker-compose.yml`](file:///Users/mac/.polar/networks/1/docker-compose.yml#L27) that Polar maps `backend1`'s RPC port `18443` to **`18446`** on your Mac so it never conflicts with your native `bitcoind -regtest` on port `18443`!
+```bash
+/Users/mac/bitcoin/build/bin/bitcoin-cli -regtest \
+  -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass \
+  getblockchaininfo
+```
+
+### Drill C: Full Channel Lifecycle via CLI (`alice` <-> `dave` on Polar Network #1)
+Once Polar Network #1 is started, walk through all 6 steps of a real LND channel from your terminal:
+
+```bash
+# 1. Fund Alice's LND on-chain wallet from Polar's backend1 bitcoind
+ALICE_ADDR=$(docker exec polar-n1-alice lncli --network=regtest newaddress p2wkh | python3 -c "import sys,json; print(json.load(sys.stdin)['address'])")
+/Users/mac/bitcoin/build/bin/bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass generatetoaddress 6 "$ALICE_ADDR"
+
+# 2. Get Dave's LND identity_pubkey and connect Alice -> Dave over P2P port 9735
+DAVE_PUBKEY=$(docker exec polar-n1-dave lncli --network=regtest getinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['identity_pubkey'])")
+docker exec polar-n1-alice lncli --network=regtest connect "${DAVE_PUBKEY}@polar-n1-dave:9735"
+
+# 3. Open a 1,000,000-satoshi Lightning Channel from Alice to Dave
+docker exec polar-n1-alice lncli --network=regtest openchannel --node_key="$DAVE_PUBKEY" --local_amt=1000000
+
+# 4. Mine 6 blocks on backend1 so the 2-of-2 Funding UTXO confirms on Layer 1!
+/Users/mac/bitcoin/build/bin/bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass generatetoaddress 6 "$ALICE_ADDR"
+docker exec polar-n1-alice lncli --network=regtest listchannels
+
+# 5. Create a BOLT #11 Invoice on Dave for 250,000 sats and pay it instantly from Alice!
+PAY_REQ=$(docker exec polar-n1-dave lncli --network=regtest addinvoice --amt=250000 --memo="sovereign_lnd_drill" | python3 -c "import sys,json; print(json.load(sys.stdin)['payment_request'])")
+docker exec polar-n1-alice lncli --network=regtest decodepayreq "$PAY_REQ"
+docker exec polar-n1-alice lncli --network=regtest sendpayment --pay_req="$PAY_REQ" --force
+
+# 6. Verify Alice now has ~750,000 sats local_balance and Dave has 250,000 sats remote_balance (with 0 on-chain txs!)
+docker exec polar-n1-alice lncli --network=regtest channelbalance
+docker exec polar-n1-dave lncli --network=regtest channelbalance
+```
+
+---
+
+## Part 6: Your Guided Offline BOLT Study Order (`./lab.sh bolt <num>`)
+
+All Lightning specifications (`BOLTs`) are stored offline in `/Users/mac/bitcoin-references/bolts/`. Read them alongside your Polar drills:
+1. **`./lab.sh bolt 3` (BOLT #3: Bitcoin Transaction & Script Formats)** — Inspect the exact `to_local` (`OP_CSV`) and HTLC (`OP_SHA256` / `OP_CLTV`) scripts that `alice` and `dave` sign inside `listchannels`.
+2. **`./lab.sh bolt 2` (BOLT #2: Peer Protocol for Channel Management)** — Matches `openchannel`, `sendpayment`, and `closechannel`.
+3. **`./lab.sh bolt 11` (BOLT #11: Invoice Protocol)** — Matches `addinvoice` and `decodepayreq`.
+4. **`./lab.sh bolt 4` (BOLT #4: Onion Routing Protocol)** — Try routing a multi-hop payment in Polar Network #1 from `alice` (LND) -> `bob` (Core Lightning) -> `carol` (Eclair) -> `dave` (LND)!
