@@ -81,10 +81,115 @@ run_dojo() {
   esac
 }
 
+run_baby_step() {
+  ensure_daemon
+  STEP="${1:-1}"
+  case "$STEP" in
+    1)
+      echo "============================================================"
+      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 1 Block"
+      echo "============================================================"
+      GEN_HASH=$($CLI getblockhash 0)
+      BEFORE_H=$($CLI getblockcount)
+      MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
+      $CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
+      AFTER_H=$($CLI getblockcount)
+      echo "1. Block #0 (Genesis Hash) : $GEN_HASH"
+      echo "2. Height Before Mining    : $BEFORE_H"
+      echo "3. Height After Mining 1   : $AFTER_H"
+      echo ""
+      echo "💡 WHAT JUST HAPPENED:"
+      echo "   A blockchain is just a stack of numbered boxes (blocks)."
+      echo "   You just told your live Bitcoin node to mine 1 new block on top of Block #$BEFORE_H!"
+      echo ""
+      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
+      echo "   Run this command yourself in your terminal:"
+      echo "   bitcoin-cli -regtest getblockcount"
+      echo "   Then move to Step 2: ./lab.sh step 2"
+      ;;
+    2)
+      echo "============================================================"
+      echo "🌱 MICRO-STEP 2 (10 Mins): Seeing Your Digital Coins (UTXOs)"
+      echo "============================================================"
+      echo "In Bitcoin, there are NO bank accounts. Your wallet holds individual"
+      echo "digital coins called UTXOs (Unspent Transaction Outputs)."
+      echo ""
+      echo "Here are the top 3 digital coins currently inside your 'kisumu_miner' wallet:"
+      $CLI -rpcwallet=kisumu_miner listunspent | python3 -c "
+import sys, json
+utxos = json.load(sys.stdin)[:3]
+for i, u in enumerate(utxos, 1):
+    print(f'  Coin #{i}: Amount = {u[\"amount\"]} BTC | txid = {u[\"txid\"][:24]}... (vout {u[\"vout\"]})')
+"
+      echo ""
+      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
+      echo "   Check your total balance by adding up all your coins:"
+      echo "   bitcoin-cli -regtest -rpcwallet=kisumu_miner getbalance"
+      echo "   Then move to Step 3: ./lab.sh step 3"
+      ;;
+    3)
+      echo "============================================================"
+      echo "🌱 MICRO-STEP 3 (10 Mins): Sending Bitcoin & Watching the Mempool"
+      echo "============================================================"
+      DEST=$($CLI -rpcwallet=kisumu_merchant getnewaddress "step3_practice" "bech32")
+      TXID=$($CLI -rpcwallet=kisumu_miner sendtoaddress "$DEST" 0.5)
+      MEM_COUNT=$($CLI getmempoolinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['size'])")
+      echo "1. Fresh Merchant Address  : $DEST"
+      echo "2. Sent 0.50 BTC! TXID     : $TXID"
+      echo "3. Waiting in Mempool Now  : $MEM_COUNT unconfirmed transaction(s)"
+      echo ""
+      MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
+      $CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
+      MEM_AFTER=$($CLI getmempoolinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['size'])")
+      echo "4. Mined 1 Block! Mempool  : $MEM_AFTER unconfirmed transaction(s) (Confirmed!)"
+      echo ""
+      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
+      echo "   Inspect the transaction you just created:"
+      echo "   bitcoin-cli -regtest -rpcwallet=kisumu_merchant gettransaction $TXID"
+      echo "   Then move to Step 4: ./lab.sh step 4"
+      ;;
+    4)
+      echo "============================================================"
+      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First 60-Line Bitcoin App"
+      echo "============================================================"
+      go -C "$LAB_DIR/00-start-small" run first_app.go
+      echo ""
+      echo "👉 YOUR 5-MINUTE BUILDER ACTION:"
+      echo "   1. Open 00-start-small/first_app.go in your editor."
+      echo "   2. Change 'myProjectLabel' (line 39) and 'amountBTC' (line 44)."
+      echo "   3. Run './lab.sh step 4' again to see your code changes live!"
+      echo "   Then move to Step 5: ./lab.sh step 5"
+      ;;
+    5)
+      echo "============================================================"
+      echo "🌱 MICRO-STEP 5 (15 Mins): Understand Just ONE 3-Line Bug Fix"
+      echo "============================================================"
+      echo "In 2010, someone created 184 Billion BTC out of thin air (CVE-2010-5139)"
+      echo "because Satoshi forgot to check if a transaction output was negative!"
+      echo ""
+      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 18-33):"
+      sed -n '18,34p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
+      echo ""
+      echo "Running Mission 1 verification right now:"
+      run_dojo check 1
+      echo ""
+      echo "🎉 CONGRATULATIONS! You just completed all 5 Beginner Micro-Steps!"
+      ;;
+    *)
+      echo "Usage: ./lab.sh step [1..5]"
+      exit 1
+      ;;
+  esac
+}
+
 practice_stage() {
   ensure_daemon
   STAGE="${1:-01}"
   case "$STAGE" in
+    00|0)
+      echo "=== Stage 00: Start Small — Your First 60-Line Bitcoin App ==="
+      go -C "$LAB_DIR/00-start-small" run first_app.go
+      ;;
     01|1)
       echo "=== Stage 01: Coinbase Maturity (COINBASE_MATURITY = 100) ==="
       echo "C++ Source: $BITCOIN_ROOT/src/consensus/consensus.h"
@@ -136,7 +241,7 @@ practice_stage() {
       run_dojo check all
       ;;
     *)
-      echo "Unknown stage: $STAGE (choose 01..10)"
+      echo "Unknown stage: $STAGE (choose 00..10)"
       exit 1
       ;;
   esac
@@ -271,6 +376,9 @@ sync_online() {
 }
 
 case "${1:-help}" in
+  step|baby-step)
+    run_baby_step "${2:-1}"
+    ;;
   status)
     show_status
     ;;
@@ -303,13 +411,17 @@ case "${1:-help}" in
     ;;
   verify-all)
     show_status
-    for s in 01 02 03 05 06 07 08 09 10; do
+    for s in 00 01 02 03 05 06 07 08 09 10; do
       echo ""
       practice_stage "$s"
     done
     ;;
   *)
     echo "Usage: ./lab.sh <command> [args]"
+    echo ""
+    echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
+    echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps with your live node"
+    echo "  ./lab.sh practice 00             Run your first 60-line Bitcoin program (00-start-small/first_app.go)"
     echo ""
     echo "Bug Dojo (Break, Fix & Verify Real Bitcoin Core Bugs):"
     echo "  ./lab.sh dojo break              Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go"
@@ -321,7 +433,7 @@ case "${1:-help}" in
     echo "  ./lab.sh status                  Show regtest node, offline libraries & unpushed commit count"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
-    echo "  ./lab.sh practice <01..10>       Run and study a specific stage interactively"
+    echo "  ./lab.sh practice <00..10>       Run and study a specific stage interactively"
     echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
     echo ""
     echo "Maintainer-Grade Offline PR Auditing & Sync:"
