@@ -1,10 +1,11 @@
 # ⚡ Bitcoin Core & Lightning Protocol Lab
 
 > *"A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution."* — **Satoshi Nakamoto**  
-> An open-source repository of first-principles Bitcoin Core C++ consensus verification, functional tests, maintainer-grade upstream PR audits (`bitcoin/bitcoin`), interactive bug-fix dojo, sovereign custody, and a pure-Bitcoin Go application starter kit.
+> An open-source repository of first-principles Bitcoin Core C++ consensus verification, protocol primitives from scratch, functional tests, maintainer-grade upstream PR audits (`bitcoin/bitcoin`), interactive bug-fix dojo, sovereign custody, and a pure-Bitcoin Go application starter kit.
 
 ### 📚 Core Guides & Self-Contained Offline Study System
-- 🥋 **[The Bitcoin Core Bug Dojo & PR Fix Arena (`09-bug-dojo-and-pr-mastery`)](./09-bug-dojo-and-pr-mastery/README.md)**
+- ⚙️ **[Stage 10: Bitcoin Protocol Primitives From Scratch (`10-protocol-primitives-from-scratch`)](./10-protocol-primitives-from-scratch/README.md)**
+- 🥋 **[Stage 09: The Bitcoin Core Bug Dojo & PR Fix Arena (`09-bug-dojo-and-pr-mastery`)](./09-bug-dojo-and-pr-mastery/README.md)**
 - 🛡️ **[The Guardian's Manual: If Satoshi Taught His Son How to Protect & Audit Bitcoin](./SATOSHI_GUARDIAN_MANUAL.md)**
 - 📘 **[Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
 - 🗓️ **[30-Day Offline Bitcoin Core & Lightning Mastery Curriculum](./OFFLINE_30_DAY_CURRICULUM.md)**
@@ -22,16 +23,15 @@
 ./lab.sh dojo check 1     # Test Mission 1 (CVE-2010-5139 & CVE-2018-17144)
 ./lab.sh dojo solve       # Restore & verify all 5 upstream solutions
 
-# 2. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield
+# 2. Run the From-Scratch Protocol Primitives Engine (Genesis PoW, CompactSize, Merkle, Script VM)
+./lab.sh practice 10
+
+# 3. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield
 ./lab.sh genesis
 
-# 3. Read any BIP or Lightning BOLT specification 100% offline
+# 4. Read any BIP or Lightning BOLT specification 100% offline
 ./lab.sh bip 340
 ./lab.sh bolt 3
-
-# 4. Practice any specific protocol stage (01 through 09)
-./lab.sh practice 01
-./lab.sh practice 09
 
 # 5. List & run a 6-Point Guardian Security Audit on any upstream PR 100% offline
 ./lab.sh pr-list
@@ -64,6 +64,7 @@ Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)
 | **07** | **Sovereign Custody: BIP380 Descriptors & BIP174 Airgapped PSBT** | [`07-psbt-descriptors-and-miniscript`](./07-psbt-descriptors-and-miniscript/) | Built & tested Go coordinator separating watch-only BIP84 descriptors (`disable_private_keys: true`) from airgapped BIP174 PSBT signing (`0x70736274ff`), finalized and confirmed on `bitcoind -regtest`. |
 | **08** | **Sovereign Bitcoin Builder Starter Kit (Go HTTP + JSON-RPC Engine)** | [`08-builder-starter-kit`](./08-builder-starter-kit/) | Zero-dependency Go HTTP server & CLI building watch-only BIP21 satoshi invoices, dust/supply consensus validation, and `OP_RETURN` (`6a20...`) SHA-256 block timestamping. |
 | **09** | **The Bitcoin Core Bug Dojo & PR Fix Arena (5 Upstream Bugs)** | [`09-bug-dojo-and-pr-mastery`](./09-bug-dojo-and-pr-mastery/) | Interactive break-and-fix arena covering `CVE-2010-5139` overflow, `CVE-2018-17144` duplicate inputs, `PR #35320` BIP32 seed bounds, `PR #32800` sigop vsize, BIP125 RBF DoS, and `PR #33014` PSBT validation. |
+| **10** | **Protocol Primitives From Scratch (PoW, CompactSize, Merkle, Script VM)** | [`10-protocol-primitives-from-scratch`](./10-protocol-primitives-from-scratch/) | Zero-dependency Go implementation of `SHA256d`, BIP340 `TaggedHash`, canonical `CompactSize`, 80-byte Genesis Block PoW & `nBits` target math, Merkle tree root, and a stack-based Script interpreter. |
 
 ---
 
@@ -72,7 +73,7 @@ Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)
 - **Base Chain:** Bitcoin Core v29.0 (`bitcoind`, compiled from source with CMake)
 - **Layer 2:** Lightning Network Daemon v0.21.3-beta (`lnd`)
 - **Offline Reference Vault:** `/Users/mac/bitcoin-references/` (`bitcoin.pdf`, all 270+ BIPs, all Lightning BOLTs)
-- **Language Stack:** C++ (Consensus/Mempool Core), Python 3 (Functional Testing), Go (Descriptor/PSBT Coordinator, Bug Dojo & Sovereign HTTP Kit)
+- **Language Stack:** C++ (Consensus/Mempool Core), Python 3 (Functional Testing), Go (Protocol Primitives, Bug Dojo, PSBT Coordinator & Sovereign HTTP Kit)
 
 ---
 

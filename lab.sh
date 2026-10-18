@@ -126,12 +126,17 @@ practice_stage() {
       go -C "$LAB_DIR/08-builder-starter-kit" test -v ./...
       go -C "$LAB_DIR/08-builder-starter-kit" run . --demo
       ;;
+    10)
+      echo "=== Stage 10: Bitcoin Protocol Primitives From Scratch ==="
+      go -C "$LAB_DIR/10-protocol-primitives-from-scratch" test -v ./...
+      ;;
+
     09|9)
       echo "=== Stage 09: Bitcoin Core Bug Dojo & PR Fix Arena ==="
       run_dojo check all
       ;;
     *)
-      echo "Unknown stage: $STAGE (choose 01..09)"
+      echo "Unknown stage: $STAGE (choose 01..10)"
       exit 1
       ;;
   esac
@@ -298,7 +303,7 @@ case "${1:-help}" in
     ;;
   verify-all)
     show_status
-    for s in 01 02 03 05 06 07 08 09; do
+    for s in 01 02 03 05 06 07 08 09 10; do
       echo ""
       practice_stage "$s"
     done
@@ -316,7 +321,7 @@ case "${1:-help}" in
     echo "  ./lab.sh status                  Show regtest node, offline libraries & unpushed commit count"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
-    echo "  ./lab.sh practice <01..09>       Run and study a specific stage interactively"
+    echo "  ./lab.sh practice <01..10>       Run and study a specific stage interactively"
     echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
     echo ""
     echo "Maintainer-Grade Offline PR Auditing & Sync:"
