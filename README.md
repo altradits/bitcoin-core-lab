@@ -22,7 +22,11 @@
 ## 🚀 Quickstart: Start Small, Drill From Source, Fix Bugs & Audit PRs (`./lab.sh`)
 
 ```bash
-# 0. Start Small (5-to-15 minute micro-wins with your live node when things feel hard)
+# 🍏 Check your Apple M1 CPU, 8 GB RAM, SSD Swap & Process Health anytime (or put daemons to rest)
+./lab.sh health           # Full M1 diagnostic with plain-English explanations
+./lab.sh rest             # Stop bitcoind & Polar containers when done studying to free RAM
+
+# 0. Start Small (5-to-15 minute micro-wins with automatic Before/After M1 health checks)
 ./lab.sh step 1           # Walk through Micro-Steps 1..5
 ./lab.sh practice 00      # Run & edit your first 60-line Bitcoin app
 
@@ -34,10 +38,11 @@
 ./lab.sh dojo check 1     # Test Mission 1 (CVE-2010-5139 & CVE-2018-17144)
 ./lab.sh dojo solve       # Restore & verify all 5 upstream solutions
 
-# 3. Run Protocol Primitives, Apple M1 Sovereign Wallet & Lightning L1/L2 Readiness Bridge
+# 3. Run Protocol Primitives, Apple M1 Sovereign Wallet & Lightning/Polar Readiness Bridge
 ./lab.sh practice 10
 ./lab.sh practice 11
 ./lab.sh practice 12
+./lab.sh polar            # Inspect ~/.polar networks & print lncli / Docker terminal drills
 
 # 4. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield
 ./lab.sh genesis

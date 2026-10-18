@@ -570,27 +570,131 @@ run_polar() {
   echo "======================================================================"
 }
 
+m1_health_snapshot() {
+  PHASE="${1:-SNAPSHOT}"
+  python3 - "$PHASE" << 'PYEOF'
+import subprocess, sys, re
+
+phase = sys.argv[1]
+vm_out = subprocess.check_output(["vm_stat"]).decode()
+swap_out = subprocess.check_output(["sysctl", "-n", "vm.swapusage"]).decode().strip()
+load_out = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode().strip()
+df_out = subprocess.check_output(["df", "-h", "/"]).decode().splitlines()[1].split()
+
+def pages(label):
+    m = re.search(rf"{label}:\s+(\d+)", vm_out)
+    return int(m.group(1)) if m else 0
+
+page_kb = 16 # Apple M1 uses 16 KB pages
+active_mb = (pages("Pages active") * page_kb) // 1024
+wired_mb = (pages("Pages wired down") * page_kb) // 1024
+comp_mb = (pages("Pages occupied by compressor") * page_kb) // 1024
+free_reclaim_mb = ((pages("Pages free") + pages("Pages inactive") + pages("Pages speculative")) * page_kb) // 1024
+used_mb = active_mb + wired_mb + comp_mb
+
+ps_out = subprocess.check_output(["ps", "-axo", "pid,%cpu,rss,comm"]).decode().splitlines()
+btc_mb = 0.0
+btc_cpu = 0.0
+for line in ps_out[1:]:
+    if any(k in line for k in ["bitcoind", "lnd", "com.docker"]):
+        parts = line.split(None, 3)
+        if len(parts) >= 4:
+            btc_cpu += float(parts[1])
+            btc_mb += int(parts[2]) / 1024.0
+
+load_1m = float(load_out.strip("{ }").split()[0])
+verdict = "🟢 HEALTHY (M1 Cool & Responsive)"
+if load_1m > 6.0 or free_reclaim_mb < 600:
+    verdict = "🟡 BUSY (High RAM/CPU Load — run './lab.sh rest' when done)"
+
+print("----------------------------------------------------------------------")
+print(f"🍏 APPLE M1 HEALTH GUARD [{phase}] -> {verdict}")
+print(f"   • 8-Core M1 Load Avg : {load_out} (Safe < 4.0 idle, < 8.0 compiling)")
+print(f"   • 8 GB Unified RAM   : ~{used_mb} MB active/wired | ~{free_reclaim_mb} MB available/cached")
+print(f"   • Bitcoin/LND/Docker : {btc_mb:.1f} MB RAM | {btc_cpu:.1f}% CPU | SSD Free: {df_out[3]}")
+print("----------------------------------------------------------------------")
+PYEOF
+}
+
+show_full_m1_health() {
+  m1_health_snapshot "FULL DIAGNOSTIC"
+  SWAP_LINE=$(sysctl -n vm.swapusage)
+  echo ""
+  echo "📘 HOW TO READ YOUR M1 MACBOOK AIR HEALTH METRICS:"
+  echo "  1. 8-Core M1 Load Average:"
+  echo "     Your M1 chip has 8 cores (4 Performance + 4 Efficiency)."
+  echo "     - Below 2.0  : Completely relaxed & cool."
+  echo "     - 2.0 to 5.0 : Normal while compiling C++ (cmake --build -j4)."
+  echo "     - Above 8.0  : All 8 cores are 100% saturated."
+  echo ""
+  echo "  2. 8 GB Unified RAM & Bitcoin Core Footprint:"
+  echo "     - Your native 'bitcoind -regtest' uses only ~9 MB to ~35 MB of RAM!"
+  echo "     - When idle, it uses 0.0% CPU."
+  echo "     - Docker Desktop + Polar (5 containers) uses ~3,500 MB (3.5 GB) of RAM."
+  echo "       Always quit Docker/Polar when you are not practicing Stage 12!"
+  echo ""
+  echo "  3. SSD Swap & Free Storage Protection:"
+  echo "     - Current Swap: $SWAP_LINE"
+  echo "     - Keep at least 30+ GB of free SSD space so macOS virtual memory"
+  echo "       and your pruned Bitcoin node (-prune=5500) never wear out the SSD."
+  echo ""
+  echo "  4. Active Bitcoin / Lightning / Docker Processes Right Now:"
+  echo "    PID  %CPU    RSS COMM"
+  ps -axo pid,%cpu,rss,comm | grep -E "bitcoind|lnd|docker|com.docker" | grep -v grep || echo "     (0 background Bitcoin/Docker processes running)"
+  echo ""
+  echo "💡 TIP: Run './lab.sh rest' anytime you finish studying to stop bitcoind & Docker containers!"
+}
+
+rest_mac() {
+  echo "🛑 Putting Bitcoin & Polar background services to rest to free 100% of M1 RAM..."
+  $CLI stop >/dev/null 2>&1 && echo "  ✅ Stopped native bitcoind -regtest daemon." || echo "  ℹ️ Native bitcoind -regtest was already stopped."
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker compose -f /Users/mac/.polar/networks/1/docker-compose.yml stop >/dev/null 2>&1 || true
+    docker compose -f /Users/mac/.polar/networks/2/docker-compose.yml stop >/dev/null 2>&1 || true
+    echo "  ✅ Stopped any active Polar Docker containers."
+  fi
+  sleep 1
+  m1_health_snapshot "AFTER REST / RAM FREED"
+}
+
 case "${1:-help}" in
+  health|mac-health)
+    show_full_m1_health
+    ;;
+  rest|stop)
+    rest_mac
+    ;;
   step|baby-step)
+    m1_health_snapshot "BEFORE STEP ${2:-1}"
     run_baby_step "${2:-1}"
+    m1_health_snapshot "AFTER STEP ${2:-1}"
     ;;
   drill|setup-drill)
+    m1_health_snapshot "BEFORE DRILL ${2:-1}"
     run_drill "${2:-1}"
+    m1_health_snapshot "AFTER DRILL ${2:-1}"
     ;;
   polar)
+    m1_health_snapshot "BEFORE POLAR LAB"
     run_polar
+    m1_health_snapshot "AFTER POLAR LAB"
     ;;
   status)
     show_status
+    m1_health_snapshot "LIVE NODE STATUS"
     ;;
   genesis)
     show_genesis
     ;;
   dojo)
+    m1_health_snapshot "BEFORE DOJO (${2:-check})"
     run_dojo "${2:-check}" "${3:-all}"
+    m1_health_snapshot "AFTER DOJO (${2:-check})"
     ;;
   practice)
+    m1_health_snapshot "BEFORE STAGE ${2:-01}"
     practice_stage "${2:-01}"
+    m1_health_snapshot "AFTER STAGE ${2:-01}"
     ;;
   bip)
     read_bip "${2:-1}"
@@ -611,17 +715,23 @@ case "${1:-help}" in
     sync_online
     ;;
   verify-all)
+    m1_health_snapshot "BEFORE VERIFY-ALL"
     show_status
     for s in 00 01 02 03 05 06 07 08 09 10 11 12; do
       echo ""
       practice_stage "$s"
     done
+    m1_health_snapshot "AFTER VERIFY-ALL"
     ;;
   *)
     echo "Usage: ./lab.sh <command> [args]"
     echo ""
+    echo "🍏 Apple M1 Laptop Health & RAM Protection (Run Anytime):"
+    echo "  ./lab.sh health                  Full M1 CPU, 8 GB RAM, SSD Swap & process health report with explanation"
+    echo "  ./lab.sh rest                    Stop bitcoind & Polar containers when done studying to free RAM"
+    echo ""
     echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
-    echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps with your live node"
+    echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps (with Before/After M1 health check)"
     echo "  ./lab.sh practice 00             Run your first 60-line Bitcoin program (00-start-small/first_app.go)"
     echo ""
     echo "🔨 Bitcoin From Source Repetition Drills (Download -> Compile -> Test -> PR Feedback):"
@@ -638,7 +748,7 @@ case "${1:-help}" in
     echo ""
     echo "Satoshi Foundations & Offline Study:"
     echo "  ./lab.sh genesis                 Inspect Genesis Block & 61-Line Consensus Shield (CVE-2010-5139 / CVE-2018-17144)"
-    echo "  ./lab.sh status                  Show regtest node, offline libraries & unpushed commit count"
+    echo "  ./lab.sh status                  Show regtest node, offline libraries & M1 health snapshot"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
     echo "  ./lab.sh practice <00..12>       Run and study a specific stage interactively"
