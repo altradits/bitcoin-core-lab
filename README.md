@@ -3,22 +3,36 @@
 > *"A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution."* — **Satoshi Nakamoto**  
 > An open-source repository of first-principles Bitcoin Core C++ consensus verification, functional tests, upstream PR reviews (`bitcoin/bitcoin`), sovereign custody, and a pure-Bitcoin Go application starter kit.
 
-📘 **[Start Here: Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
+### 📚 Core Guides & Offline Study System
+- 📘 **[Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
+- 🗓️ **[30-Day Offline Bitcoin Core & Lightning Mastery Curriculum](./OFFLINE_30_DAY_CURRICULUM.md)**
+- 📄 **[Satoshi Nakamoto's Original 2008 Whitepaper (Annotated w/ C++ Source Links)](./offline-library/SATOSHI_WHITEPAPER.md)**
+- 🗂️ **[Offline BIPs (`1–431+`) & Lightning BOLTs (`1–11`) Index](./offline-library/OFFLINE_INDEX.md)**
+- 🔍 **[Upstream `bitcoin/bitcoin` PR Reviews (`pr-reviews/`)](./pr-reviews/)**
 
 ---
 
-## 🚀 Quickstart: Practice & Build in 1 Command (`./lab.sh`)
+## 🚀 Quickstart: Practice, Review PRs & Commit Offline (`./lab.sh`)
 
 ```bash
-# 1. Check live regtest daemon height, mempool & wallet balances
+# 1. Check live regtest daemon height, offline libraries & queued offline commits
 ./lab.sh status
 
-# 2. Practice any specific protocol stage (01 through 08)
+# 2. Read any BIP or Lightning BOLT specification 100% offline
+./lab.sh bip 340
+./lab.sh bolt 3
+
+# 3. Practice any specific protocol stage (01 through 08)
 ./lab.sh practice 01
 ./lab.sh practice 08
 
-# 3. Run the complete verification suite across all stages
-./lab.sh verify-all
+# 4. List & review upstream bitcoin/bitcoin PRs 100% offline from local git history
+./lab.sh pr-list
+./lab.sh pr-review 32800
+
+# 5. Commit your daily study/review offline, then push when internet returns
+./lab.sh commit-offline "docs(pr-review): complete review of bitcoin#32800"
+./lab.sh sync
 ```
 
 ---
@@ -49,7 +63,7 @@ Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)
 - **OS:** macOS ARM64
 - **Base Chain:** Bitcoin Core v29.0 (`bitcoind`, compiled from source with CMake)
 - **Layer 2:** Lightning Network Daemon v0.21.3-beta (`lnd`)
-- **Testing:** Bitcoin Core Python Functional Test Suite (`test_runner.py`)
+- **Offline Reference Vault:** `/Users/mac/bitcoin-references/` (`bitcoin.pdf`, all 270+ BIPs, all Lightning BOLTs)
 - **Language Stack:** C++ (Consensus/Mempool Core), Python 3 (Functional Testing), Go (Descriptor/PSBT Coordinator & Sovereign HTTP Kit)
 
 ---
