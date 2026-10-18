@@ -375,9 +375,174 @@ sync_online() {
   git -C "$LAB_DIR" push origin main
 }
 
+run_drill() {
+  DRILL="${1:-1}"
+  case "$DRILL" in
+    1)
+      echo "============================================================"
+      echo "🔨 DRILL 1: Clone, Git Remotes, Directory Map & Toolchain"
+      echo "============================================================"
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  git clone https://github.com/bitcoin/bitcoin.git /Users/mac/bitcoin"
+      echo "  git -C /Users/mac/bitcoin remote -v"
+      echo "  cmake --version && clang++ --version && python3 --version"
+      echo ""
+      echo "LIVE VERIFICATION ON YOUR MACHINE:"
+      git -C "$BITCOIN_ROOT" remote -v
+      cmake --version | head -n 1
+      clang++ --version | head -n 1
+      python3 --version
+      echo ""
+      echo "CORE C++ DIRECTORIES IN $BITCOIN_ROOT:"
+      ls -d "$BITCOIN_ROOT/src/consensus" "$BITCOIN_ROOT/src/script" "$BITCOIN_ROOT/src/policy" "$BITCOIN_ROOT/src/wallet" "$BITCOIN_ROOT/src/test" "$BITCOIN_ROOT/test/functional"
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 2' to practice CMake configuration & C++ compilation."
+      ;;
+    2)
+      echo "============================================================"
+      echo "🔨 DRILL 2: Configure CMake & Compile Bitcoin Core From Source"
+      echo "============================================================"
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  cd /Users/mac/bitcoin"
+      echo "  cmake -B build -DBUILD_TESTING=ON"
+      echo "  cmake --build build --target bitcoind bitcoin-cli test_bitcoin -j4"
+      echo ""
+      echo "LIVE INCREMENTAL BUILD CHECK:"
+      cmake --build "$BITCOIN_ROOT/build" --target bitcoind bitcoin-cli test_bitcoin -j4
+      echo ""
+      echo "COMPILED BINARIES IN $BITCOIN_ROOT/build/bin:"
+      ls -lh "$BITCOIN_ROOT/build/bin/bitcoind" "$BITCOIN_ROOT/build/bin/bitcoin-cli" "$BITCOIN_ROOT/build/bin/test_bitcoin"
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 3' to master bitcoin.conf & starting/stopping bitcoind."
+      ;;
+    3)
+      echo "============================================================"
+      echo "🔨 DRILL 3: bitcoin.conf, Starting/Stopping bitcoind & Logs"
+      echo "============================================================"
+      ensure_daemon
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  export PATH=\"/Users/mac/bitcoin/build/bin:\$PATH\""
+      echo "  bitcoind -regtest -daemon"
+      echo "  bitcoin-cli -regtest getblockchaininfo"
+      echo "  tail -n 10 \"/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log\""
+      echo "  # To stop cleanly: bitcoin-cli -regtest stop"
+      echo ""
+      echo "LIVE REGTEST DAEMON CHECK:"
+      $CLI getblockchaininfo | grep -E '"chain"|"blocks"|"headers"|"bestblockhash"'
+      echo ""
+      echo "LAST 5 LINES OF LIVE REGTEST debug.log:"
+      tail -n 5 "/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log" || true
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 4' to recreate all lab.sh wallets & blocks from scratch."
+      ;;
+    4)
+      echo "============================================================"
+      echo "🔨 DRILL 4: Creating Wallets, Watch-Only Nodes & Mining Blocks"
+      echo "============================================================"
+      ensure_daemon
+      echo "HOW lab.sh CREATES ALL RESOURCES (MEMORIZE THESE COMMANDS):"
+      echo "  bitcoin-cli -regtest createwallet \"kisumu_miner\""
+      echo "  bitcoin-cli -regtest createwallet \"kisumu_merchant\""
+      echo "  bitcoin-cli -regtest createwallet \"sovereign_cold_signer\""
+      echo "  bitcoin-cli -regtest createwallet \"sovereign_watch_only\" true"
+      echo "  ADDR=\$(bitcoin-cli -regtest -rpcwallet=kisumu_miner getnewaddress \"reward\" \"bech32\")"
+      echo "  bitcoin-cli -regtest generatetoaddress 101 \"\$ADDR\""
+      echo ""
+      echo "LIVE LOADED WALLETS ON YOUR NODE RIGHT NOW:"
+      $CLI listwallets
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 5' to run C++ unit tests & Python functional tests."
+      ;;
+    5)
+      echo "============================================================"
+      echo "🔨 DRILL 5: Running C++ Unit Tests (test_bitcoin) & Python P2P Tests"
+      echo "============================================================"
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  # 1. Run a C++ Boost Unit Test Suite (< 1 second):"
+      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=merkle_tests"
+      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=bip32_tests"
+      echo ""
+      echo "  # 2. Run a Python Functional Test:"
+      echo "  python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=/Users/mac/bitcoin/build/test/config.ini"
+      echo ""
+      echo "LIVE C++ UNIT TEST EXECUTION (merkle_tests & bip32_tests):"
+      "$BITCOIN_ROOT/build/bin/test_bitcoin" --run_test=merkle_tests
+      "$BITCOIN_ROOT/build/bin/test_bitcoin" --run_test=bip32_tests
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 6' to learn how to locate, edit & recompile C++ bugs."
+      ;;
+    6)
+      echo "============================================================"
+      echo "🔨 DRILL 6: Finding Errors with git grep, Editing C++ & Recompiling"
+      echo "============================================================"
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  git -C /Users/mac/bitcoin grep -n \"bad-txns-vin-empty\" src/"
+      echo "  git -C /Users/mac/bitcoin grep -n \"CheckTransaction(\" src/"
+      echo "  cmake --build /Users/mac/bitcoin/build --target test_bitcoin -j4"
+      echo ""
+      echo "LIVE git grep SEARCH IN $BITCOIN_ROOT/src/:"
+      git -C "$BITCOIN_ROOT" grep -n "bad-txns-vin-empty" src/
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 7' to checkout & inspect another developer's PR."
+      ;;
+    7)
+      echo "============================================================"
+      echo "🔨 DRILL 7: Checking Out & Testing Another Developer's PR"
+      echo "============================================================"
+      echo "COMMANDS TO MEMORIZE & REPEAT:"
+      echo "  # When Online (fetch any PR by number):"
+      echo "  git -C /Users/mac/bitcoin fetch origin pull/35320/head:pr-35320"
+      echo ""
+      echo "  # When Offline (inspect merged PRs in local git history):"
+      echo "  MERGE=\$(git -C /Users/mac/bitcoin log master --merges --grep=\"bitcoin/bitcoin#35320:\" -n 1 --format=\"%H\")"
+      echo "  git -C /Users/mac/bitcoin diff \"\${MERGE}^1...\${MERGE}^2\""
+      echo ""
+      echo "LIVE INSPECTION OF PR #35320 IN YOUR LOCAL REPO:"
+      MERGE=$(git -C "$BITCOIN_ROOT" log master --merges --grep="bitcoin/bitcoin#35320:" -n 1 --format="%H")
+      git -C "$BITCOIN_ROOT" log "${MERGE}^1..${MERGE}^2" --oneline
+      git -C "$BITCOIN_ROOT" diff --stat "${MERGE}^1...${MERGE}^2"
+      echo ""
+      echo "👉 Next: Run './lab.sh drill 8' to master open-source PR review feedback."
+      ;;
+    8)
+      echo "============================================================"
+      echo "🔨 DRILL 8: Giving High-Signal Open-Source PR Feedback (ACK / Nit)"
+      echo "============================================================"
+      cat << 'INNER_EOF'
+THE 4 BITCOIN CORE OPEN-SOURCE REVIEW SIGNALS:
+  1. Concept ACK  : You agree with the goal/motivation of the PR.
+  2. Approach ACK : You agree with the architectural design & files touched.
+  3. Tested ACK <commit_hash> : You compiled, ran tests, mutation-tested & read the diff.
+  4. NACK / Nit   : Polite, specific feedback citing exact file:line numbers.
+
+COPY-PASTE GITHUB PR REVIEW TEMPLATE:
+------------------------------------------------------------
+Tested ACK <40-char-commit-hash>
+
+### Review Summary
+- **Risk Ring:** Ring <0/1/2/3>
+- **Code Inspection:** Verified `<function_name>` in `<file_path>:<line>` preserves `<invariant>`.
+- **Testing Performed:**
+  - Built cleanly with CMake (`cmake --build build --target bitcoind test_bitcoin`).
+  - Ran C++ unit test: `./build/bin/test_bitcoin --run_test=<suite_name>` (Passed).
+  - Mutation test: commented out the new check in `<file_path>`, recompiled, and confirmed the test fails as expected.
+------------------------------------------------------------
+INNER_EOF
+      echo "📘 Full manual: BITCOIN_FROM_SOURCE_MASTERY.md"
+      ;;
+    *)
+      echo "Usage: ./lab.sh drill [1..8]"
+      exit 1
+      ;;
+  esac
+}
+
 case "${1:-help}" in
   step|baby-step)
     run_baby_step "${2:-1}"
+    ;;
+  drill|setup-drill)
+    run_drill "${2:-1}"
     ;;
   status)
     show_status
@@ -422,6 +587,9 @@ case "${1:-help}" in
     echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
     echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps with your live node"
     echo "  ./lab.sh practice 00             Run your first 60-line Bitcoin program (00-start-small/first_app.go)"
+    echo ""
+    echo "🔨 Bitcoin From Source Repetition Drills (Download -> Compile -> Test -> PR Feedback):"
+    echo "  ./lab.sh drill [1..8]            Master every command from git clone & CMake build to Tested ACK"
     echo ""
     echo "Bug Dojo (Break, Fix & Verify Real Bitcoin Core Bugs):"
     echo "  ./lab.sh dojo break              Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go"
