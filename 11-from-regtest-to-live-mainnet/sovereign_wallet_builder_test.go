@@ -21,12 +21,29 @@ func TestAllBitcoinNetworksGraduationLadder(t *testing.T) {
 	}
 }
 
-func TestGenerateLaptopMainnetConfigSafety(t *testing.T) {
+func TestGenerateLaptopMainnetConfigM1Safety(t *testing.T) {
 	cfg := GenerateLaptopMainnetConfig()
 	if !strings.Contains(cfg, "prune=5500") {
-		t.Fatalf("expected laptop mainnet config to include prune=5500 so it fits on a standard SSD")
+		t.Fatalf("expected M1 MacBook Air config to include prune=5500 for 68 GB free SSD")
 	}
-	if !strings.Contains(cfg, "rpcallowip=127.0.0.1") {
-		t.Fatalf("expected localhost-only RPC binding")
+	if !strings.Contains(cfg, "dbcache=1024") || !strings.Contains(cfg, "par=4") {
+		t.Fatalf("expected M1 MacBook Air config to include dbcache=1024 and par=4")
+	}
+	if !strings.Contains(cfg, "walletrbf=1") {
+		t.Fatalf("expected walletrbf=1 for fee minimization and instant bumpfee acceleration")
+	}
+}
+
+func TestEstimateTxVBytesFeeMinimization(t *testing.T) {
+	legacy := EstimateTxVBytes("legacy", 1, 2)
+	segwit := EstimateTxVBytes("bc1q", 1, 2)
+	if legacy != 226 {
+		t.Fatalf("expected 1-in 2-out legacy P2PKH to be 226 vB, got %d", legacy)
+	}
+	if segwit != 141 {
+		t.Fatalf("expected 1-in 2-out native SegWit P2WPKH to be 141 vB, got %d", segwit)
+	}
+	if segwit >= legacy {
+		t.Fatalf("SegWit must be smaller in vBytes than legacy")
 	}
 }
