@@ -1,37 +1,41 @@
 # ⚡ Bitcoin Core & Lightning Protocol Lab
 
 > *"A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution."* — **Satoshi Nakamoto**  
-> An open-source repository of first-principles Bitcoin Core C++ consensus verification, functional tests, upstream PR reviews (`bitcoin/bitcoin`), sovereign custody, and a pure-Bitcoin Go application starter kit.
+> An open-source repository of first-principles Bitcoin Core C++ consensus verification, functional tests, maintainer-grade upstream PR audits (`bitcoin/bitcoin`), sovereign custody, and a pure-Bitcoin Go application starter kit.
 
 ### 📚 Core Guides & Offline Study System
+- 🛡️ **[The Guardian's Manual: If Satoshi Taught His Son How to Protect & Audit Bitcoin](./SATOSHI_GUARDIAN_MANUAL.md)**
 - 📘 **[Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
 - 🗓️ **[30-Day Offline Bitcoin Core & Lightning Mastery Curriculum](./OFFLINE_30_DAY_CURRICULUM.md)**
 - 📄 **[Satoshi Nakamoto's Original 2008 Whitepaper (Annotated w/ C++ Source Links)](./offline-library/SATOSHI_WHITEPAPER.md)**
 - 🗂️ **[Offline BIPs (`1–431+`) & Lightning BOLTs (`1–11`) Index](./offline-library/OFFLINE_INDEX.md)**
-- 🔍 **[Upstream `bitcoin/bitcoin` PR Reviews (`pr-reviews/`)](./pr-reviews/)**
+- 🔍 **[Upstream `bitcoin/bitcoin` Maintainer PR Audits (`pr-reviews/`)](./pr-reviews/)**
 
 ---
 
-## 🚀 Quickstart: Practice, Review PRs & Commit Offline (`./lab.sh`)
+## 🚀 Quickstart: Practice, Audit PRs & Commit Offline (`./lab.sh`)
 
 ```bash
-# 1. Check live regtest daemon height, offline libraries & queued offline commits
+# 1. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield (CVE-2010-5139 / CVE-2018-17144)
+./lab.sh genesis
+
+# 2. Check live regtest daemon height, offline libraries & queued offline commits
 ./lab.sh status
 
-# 2. Read any BIP or Lightning BOLT specification 100% offline
+# 3. Read any BIP or Lightning BOLT specification 100% offline
 ./lab.sh bip 340
 ./lab.sh bolt 3
 
-# 3. Practice any specific protocol stage (01 through 08)
+# 4. Practice any specific protocol stage (01 through 08)
 ./lab.sh practice 01
 ./lab.sh practice 08
 
-# 4. List & review upstream bitcoin/bitcoin PRs 100% offline from local git history
+# 5. List & run a 6-Point Guardian Security Audit on any upstream PR 100% offline
 ./lab.sh pr-list
-./lab.sh pr-review 32800
+./lab.sh pr-audit 35320
 
-# 5. Commit your daily study/review offline, then push when internet returns
-./lab.sh commit-offline "docs(pr-review): complete review of bitcoin#32800"
+# 6. Commit your daily study/audit offline, then push when internet returns
+./lab.sh commit-offline "docs(pr-audit): complete 6-point guardian audit of bitcoin#35320"
 ./lab.sh sync
 ```
 
