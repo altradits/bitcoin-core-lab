@@ -235,13 +235,17 @@ practice_stage() {
       echo "=== Stage 10: Bitcoin Protocol Primitives From Scratch ==="
       go -C "$LAB_DIR/10-protocol-primitives-from-scratch" test -v ./...
       ;;
-
+    11)
+      echo "=== Stage 11: From Regtest to Live Signet & Sovereign Mainnet ==="
+      go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" test -v ./...
+      go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" run .
+      ;;
     09|9)
       echo "=== Stage 09: Bitcoin Core Bug Dojo & PR Fix Arena ==="
       run_dojo check all
       ;;
     *)
-      echo "Unknown stage: $STAGE (choose 00..10)"
+      echo "Unknown stage: $STAGE (choose 00..11)"
       exit 1
       ;;
   esac
