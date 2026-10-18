@@ -296,18 +296,29 @@ pr_audit() {
     exit 1
   fi
   MERGE_COMMIT=$(git -C "$BITCOIN_ROOT" log master --merges --grep="bitcoin/bitcoin#${PR_NUM}:" -n 1 --format="%H")
-  if [ -z "$MERGE_COMMIT" ]; then
-    echo "PR #$PR_NUM not found in local git history. Run './lab.sh pr-list' to see available offline PRs."
-    exit 1
+  if [ -n "$MERGE_COMMIT" ]; then
+    TITLE=$(git -C "$BITCOIN_ROOT" log -n 1 "$MERGE_COMMIT" --format="%s")
+    BODY=$(git -C "$BITCOIN_ROOT" log -n 1 "$MERGE_COMMIT" --format="%b")
+    PR_HEAD=$(git -C "$BITCOIN_ROOT" rev-parse "${MERGE_COMMIT}^2")
+    BASE_COMMIT=$(git -C "$BITCOIN_ROOT" rev-parse "${MERGE_COMMIT}^1")
+  else
+    if ! git -C "$BITCOIN_ROOT" rev-parse --verify "pr-${PR_NUM}" >/dev/null 2>&1; then
+      echo "🌐 Fetching live unmerged PR #${PR_NUM} from GitHub into branch pr-${PR_NUM}..."
+      git -C "$BITCOIN_ROOT" fetch origin "pull/${PR_NUM}/head:pr-${PR_NUM}" || {
+        echo "PR #$PR_NUM not found locally and could not be fetched."
+        exit 1
+      }
+    fi
+    MERGE_COMMIT="UNMERGED (Open PR Branch: pr-${PR_NUM})"
+    PR_HEAD=$(git -C "$BITCOIN_ROOT" rev-parse "pr-${PR_NUM}")
+    BASE_COMMIT=$(git -C "$BITCOIN_ROOT" merge-base master "$PR_HEAD")
+    TITLE=$(git -C "$BITCOIN_ROOT" log -n 1 "$PR_HEAD" --format="%s")
+    BODY=$(git -C "$BITCOIN_ROOT" log -n 1 "$PR_HEAD" --format="%b")
   fi
-  TITLE=$(git -C "$BITCOIN_ROOT" log -n 1 "$MERGE_COMMIT" --format="%s")
-  BODY=$(git -C "$BITCOIN_ROOT" log -n 1 "$MERGE_COMMIT" --format="%b")
-  PR_HEAD=$(git -C "$BITCOIN_ROOT" rev-parse "${MERGE_COMMIT}^2")
-  BASE_COMMIT=$(git -C "$BITCOIN_ROOT" rev-parse "${MERGE_COMMIT}^1")
   TOUCHED_FILES=$(git -C "$BITCOIN_ROOT" diff --name-only "${BASE_COMMIT}...${PR_HEAD}")
 
   RING="🟢 Ring 3 — Wallet / RPC / Build / Tests"
-  if echo "$TOUCHED_FILES" | grep -qE "^src/(consensus|script|primitives|secp256k1|pow)"; then
+  if echo "$TOUCHED_FILES" | grep -qE "^src/(consensus|script|primitives|secp256k1|pow|crypto)"; then
     RING="🔴 Ring 0 — CRITICAL CONSENSUS & CRYPTOGRAPHY (Chain-Split / Inflation Risk)"
   elif echo "$TOUCHED_FILES" | grep -qE "^src/(validation|txmempool|policy|cluster_linearize)"; then
     RING="🟠 Ring 1 — VALIDATION & MEMPOOL POLICY (Pinning / DoS / Censorship Risk)"
