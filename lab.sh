@@ -52,6 +52,35 @@ show_genesis() {
   cat -n "$BITCOIN_ROOT/src/consensus/tx_check.cpp"
 }
 
+run_dojo() {
+  ACTION="${1:-check}"
+  MISSION="${2:-all}"
+  DOJO_DIR="$LAB_DIR/09-bug-dojo-and-pr-mastery"
+  case "$ACTION" in
+    break)
+      cp "$DOJO_DIR/broken/dojo_missions_broken.go" "$DOJO_DIR/dojo_missions.go"
+      echo "💥 Loaded BROKEN pre-PR code into 09-bug-dojo-and-pr-mastery/dojo_missions.go!"
+      echo "👉 Run './lab.sh dojo check' to see the failing exploits, then open dojo_missions.go and fix them!"
+      ;;
+    solve)
+      cp "$DOJO_DIR/solutions/dojo_missions_solved.go" "$DOJO_DIR/dojo_missions.go"
+      echo "✅ Restored verified upstream solutions into 09-bug-dojo-and-pr-mastery/dojo_missions.go!"
+      go -C "$DOJO_DIR" test -v ./...
+      ;;
+    check)
+      if [ "$MISSION" = "all" ]; then
+        go -C "$DOJO_DIR" test -v ./...
+      else
+        go -C "$DOJO_DIR" test -v -run "TestMission${MISSION}_" ./...
+      fi
+      ;;
+    *)
+      echo "Usage: ./lab.sh dojo [break | check [1..5] | solve]"
+      exit 1
+      ;;
+  esac
+}
+
 practice_stage() {
   ensure_daemon
   STAGE="${1:-01}"
@@ -97,8 +126,12 @@ practice_stage() {
       go -C "$LAB_DIR/08-builder-starter-kit" test -v ./...
       go -C "$LAB_DIR/08-builder-starter-kit" run . --demo
       ;;
+    09|9)
+      echo "=== Stage 09: Bitcoin Core Bug Dojo & PR Fix Arena ==="
+      run_dojo check all
+      ;;
     *)
-      echo "Unknown stage: $STAGE (choose 01..08)"
+      echo "Unknown stage: $STAGE (choose 01..09)"
       exit 1
       ;;
   esac
@@ -212,7 +245,6 @@ Tested ACK ${PR_HEAD}
 \`\`\`
 INNER_EOF
   echo "✅ Generated Guardian PR Audit Report at: $OUT_FILE"
-  cat "$OUT_FILE"
 }
 
 commit_offline() {
@@ -240,6 +272,9 @@ case "${1:-help}" in
   genesis)
     show_genesis
     ;;
+  dojo)
+    run_dojo "${2:-check}" "${3:-all}"
+    ;;
   practice)
     practice_stage "${2:-01}"
     ;;
@@ -263,7 +298,7 @@ case "${1:-help}" in
     ;;
   verify-all)
     show_status
-    for s in 01 02 03 05 06 07 08; do
+    for s in 01 02 03 05 06 07 08 09; do
       echo ""
       practice_stage "$s"
     done
@@ -271,12 +306,17 @@ case "${1:-help}" in
   *)
     echo "Usage: ./lab.sh <command> [args]"
     echo ""
+    echo "Bug Dojo (Break, Fix & Verify Real Bitcoin Core Bugs):"
+    echo "  ./lab.sh dojo break              Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go"
+    echo "  ./lab.sh dojo check [1..5]       Run the Dojo exploit test suite to verify your fixes"
+    echo "  ./lab.sh dojo solve              Restore verified upstream solutions into dojo_missions.go"
+    echo ""
     echo "Satoshi Foundations & Offline Study:"
     echo "  ./lab.sh genesis                 Inspect Genesis Block & 61-Line Consensus Shield (CVE-2010-5139 / CVE-2018-17144)"
     echo "  ./lab.sh status                  Show regtest node, offline libraries & unpushed commit count"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
-    echo "  ./lab.sh practice <01..08>       Run and study a specific stage interactively"
+    echo "  ./lab.sh practice <01..09>       Run and study a specific stage interactively"
     echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
     echo ""
     echo "Maintainer-Grade Offline PR Auditing & Sync:"
