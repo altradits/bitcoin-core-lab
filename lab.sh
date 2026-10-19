@@ -254,6 +254,14 @@ practice_stage() {
       exit 1
       ;;
   esac
+  echo ""
+  echo "📚 Offline Supplementary Knowledge Bank (Zero Internet / Zero AI / Zero Google):"
+  echo "   • Stuck on Go/Systems building blocks? Run: ./lab.sh book 1"
+  echo "   • Stuck on C++20/Python test blocks?   Run: ./lab.sh book 2"
+  echo "   • Stuck on Crypto/Schnorr/Taproot?     Run: ./lab.sh book 3  (or './lab.sh book pb')"
+  echo "   • Stuck on Tx Bytes/Script/Timelocks?  Run: ./lab.sh book 4  (or './lab.sh book mb')"
+  echo "   • Stuck on Lightning/HTLCs/LND?        Run: ./lab.sh book 5  (or './lab.sh book ln')"
+  echo "   • Practice coding from pure memory:    Run: ./lab.sh recall check"
 }
 
 read_bip() {
@@ -713,6 +721,97 @@ case "${1:-help}" in
   bolt)
     read_bolt "${2:-1}"
     ;;
+  book|library)
+    BOOK_ID="${2:-index}"
+    CHAPTER="${3:-}"
+    case "$BOOK_ID" in
+      index|list|"")
+        cat "$LAB_DIR/offline-library/OFFLINE_INDEX.md"
+        ;;
+      1|go)
+        cat "$LAB_DIR/offline-library/books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md"
+        ;;
+      2|cpp|python)
+        cat "$LAB_DIR/offline-library/books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md"
+        ;;
+      3|crypto)
+        cat "$LAB_DIR/offline-library/books/BOOK-3-CRYPTOGRAPHY-AND-SERIALIZATION-PRIMER.md"
+        ;;
+      4|tx|script|consensus)
+        cat "$LAB_DIR/offline-library/books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md"
+        ;;
+      5|lightning|lnd)
+        cat "$LAB_DIR/offline-library/books/BOOK-5-LIGHTNING-BOLTS-AND-LND-ARCHITECTURE.md"
+        ;;
+      mb|mastering-bitcoin)
+        if [ -z "$CHAPTER" ]; then
+          echo "📘 Mastering Bitcoin (Offline at $REF_DIR/books/mastering-bitcoin/):"
+          ls "$REF_DIR/books/mastering-bitcoin/"ch*.adoc
+          echo "👉 Run: ./lab.sh book mb ch04  (or any ch01..ch12)"
+        else
+          head -n 120 "$REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc"
+          echo "--- (Read full chapter: less $REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc) ---"
+        fi
+        ;;
+      pb|programming-bitcoin)
+        if [ -z "$CHAPTER" ]; then
+          echo "📘 Programming Bitcoin by Jimmy Song (Offline at $REF_DIR/books/programming-bitcoin/):"
+          ls "$REF_DIR/books/programming-bitcoin/"ch*.asciidoc
+          echo "👉 Run: ./lab.sh book pb ch05  (or any ch01..ch13)"
+        else
+          head -n 120 "$REF_DIR/books/programming-bitcoin/${CHAPTER}.asciidoc"
+          echo "--- (Read full chapter: less $REF_DIR/books/programming-bitcoin/${CHAPTER}.asciidoc) ---"
+        fi
+        ;;
+      cli|learning-bitcoin-cli)
+        if [ -z "$CHAPTER" ]; then
+          echo "📘 Learning Bitcoin from the Command Line (Offline at $REF_DIR/books/learning-bitcoin-cli/):"
+          ls "$REF_DIR/books/learning-bitcoin-cli/"[0-9][0-9]_*.md
+          echo "👉 Run: ./lab.sh book cli 04   (or any 01..20 prefix)"
+        else
+          FILE=$(find "$REF_DIR/books/learning-bitcoin-cli" -maxdepth 1 -name "${CHAPTER}_*.md" | head -n 1)
+          head -n 120 "$FILE"
+          echo "--- (Read full chapter: less $FILE) ---"
+        fi
+        ;;
+      ln|mastering-lightning)
+        if [ -z "$CHAPTER" ]; then
+          echo "⚡ Mastering the Lightning Network (Offline at $REF_DIR/books/mastering-lightning/):"
+          ls "$REF_DIR/books/mastering-lightning/"[0-9][0-9]_*.asciidoc
+          echo "👉 Run: ./lab.sh book ln 07    (or any 01..16 prefix)"
+        else
+          FILE=$(find "$REF_DIR/books/mastering-lightning" -maxdepth 1 -name "${CHAPTER}_*.asciidoc" | head -n 1)
+          head -n 120 "$FILE"
+          echo "--- (Read full chapter: less $FILE) ---"
+        fi
+        ;;
+      *)
+        echo "Unknown book '$BOOK_ID'. Use: 1..5, mb, pb, cli, ln, or index"
+        ;;
+    esac
+    ;;
+  recall)
+    ACTION="${2:-check}"
+    m1_health_snapshot "BEFORE BLIND RECALL ($ACTION)"
+    case "$ACTION" in
+      blank)
+        cp "$LAB_DIR/offline-library/books/.blank_memory_drills.go" "$LAB_DIR/offline-library/books/memory_drills.go"
+        echo "🧠 Blanked out all 8 building-block functions in offline-library/books/memory_drills.go!"
+        echo "👉 Open offline-library/books/memory_drills.go and implement them 100% from memory."
+        echo "👉 Run './lab.sh recall check' to test your recall, or './lab.sh book 1..5' if you need to review."
+        ;;
+      solve)
+        cp "$LAB_DIR/offline-library/books/.solved_memory_drills.go" "$LAB_DIR/offline-library/books/memory_drills.go"
+        echo "✅ Restored verified reference implementations into offline-library/books/memory_drills.go!"
+        go -C "$LAB_DIR/offline-library/books" test -v ./...
+        ;;
+      check|*)
+        echo "🧠 Running 8 Blind-Recall Building Block Tests (offline-library/books/memory_drills.go)..."
+        go -C "$LAB_DIR/offline-library/books" test -v ./...
+        ;;
+    esac
+    m1_health_snapshot "AFTER BLIND RECALL ($ACTION)"
+    ;;
   pr-list)
     pr_list
     ;;
@@ -789,6 +888,12 @@ PYEOF
     echo "🍏 Apple M1 Laptop Health & RAM Protection (Run Anytime):"
     echo "  ./lab.sh health                  Full M1 CPU, 8 GB RAM, SSD Swap & process health report with explanation"
     echo "  ./lab.sh rest                    Stop bitcoind & Polar containers when done studying to free RAM"
+    echo ""
+    echo "📚 Offline Knowledge Bank & Blind-Recall Drills (Zero Internet / Zero AI / Zero Google):"
+    echo "  ./lab.sh book                    Show the Stage-to-Book Learner Journey Map & all offline books"
+    echo "  ./lab.sh book [1..5]             Read From-Memory Workbooks (1:Go, 2:C++/Py, 3:Crypto, 4:Tx/Script, 5:LN)"
+    echo "  ./lab.sh book [mb|pb|cli|ln]     Read Mastering Bitcoin, Programming Bitcoin, Learning CLI, or Mastering LN"
+    echo "  ./lab.sh recall [blank|check|solve] Practice coding 8 core Bitcoin building blocks 100% from memory"
     echo ""
     echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
     echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps (with Before/After M1 health check)"
