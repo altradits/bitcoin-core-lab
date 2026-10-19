@@ -1,0 +1,2904 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjE4NDE5NDQ=",
+    "is_bot": false,
+    "login": "l0rinc",
+    "name": "l0rinc"
+  },
+  "body": "### Summary\r\n\r\nThis PR fixes `cachedCoinsUsage` accounting bugs in `CCoinsViewCache` that caused UBSan `unsigned-integer-overflow` violations during testing. The issues stemmed from incorrect decrement timing in `AddCoin()`, unconditional reset in `Flush()` on failure, and incorrect increment in `EmplaceCoinInternalDANGER()` when insertion fails.\r\n\r\n### Problems Fixed\r\n\r\n**1. `AddCoin()` underflow on exception**\r\n- Previously decremented `cachedCoinsUsage` *before* the `possible_overwrite` validation\r\n- If validation threw, the map entry remained unchanged but counter was decremented\r\n- This corrupted accounting and later caused underflow\r\n- **Impact**: Test-only in current codebase, but unsound accounting that could affect future changes\r\n\r\n**2. `Flush()` accounting drift on failure**\r\n- Unconditionally reset `cachedCoinsUsage` to 0, even when `BatchWrite()` failed\r\n- Left the map populated while the counter read zero\r\n- **Impact**: Test-only (production `BatchWrite()` returns `true`), but broke accounting consistency\r\n\r\n**3. Cursor redundant usage tracking**\r\n- `CoinsViewCacheCursor::NextAndMaybeErase()` subtracted usage when erasing spent entries\r\n- However, `SpendCoin()` already decremented and cleared the `scriptPubKey`, leaving `DynamicMemoryUsage()` at 0\r\n- **Impact**: Redundant code that obscured actual accounting behavior\r\n\r\n**4. `EmplaceCoinInternalDANGER()` double-counting**\r\n- Incremented `cachedCoinsUsage` even when `try_emplace` did not insert (duplicate key)\r\n- Inflated the counter on duplicate attempts\r\n- **Impact**: Mostly test-reachable (AssumeUTXO doesn't overwrite in production), but incorrect accounting\r\n\r\n### Testing\r\n\r\nTo reproduce the historical UBSan failures on the referenced baseline and to verify the fix, run:\r\n```\r\nMAKEJOBS=\"-j$(nproc)\" FILE_ENV=\"./ci/test/00_setup_env_native_fuzz.sh\" ./ci/test_run_all.sh\r\n```\r\n\r\nThe change was tested with the related unit and fuzz test, and asserted before/after each `cachedCoinsUsage` change (in production code and fuzz) that the calculations are still correct by recalculating them from scratch.\r\n\r\n<details>\r\n<summary>Details</summary>\r\n\r\n```C++\r\nbool CCoinsViewCache::CacheUsageValid() const\r\n{\r\n    size_t actual{0};\r\n    for (auto& entry : cacheCoins | std::views::values) actual += entry.coin.DynamicMemoryUsage();\r\n    return actual == cachedCoinsUsage;\r\n}\r\n```\r\nor\r\n```patch\r\ndiff --git a/src/coins.cpp b/src/coins.cpp\r\n--- a/src/coins.cpp\t(revision fd3b1a7f4bb2ac527f23d4eb4cfa40a3215906e5)\r\n+++ b/src/coins.cpp\t(revision 872a05633bfdbd06ad82190d7fe34b42d13ebfe9)\r\n@@ -96,6 +96,7 @@\r\n         fresh = !it->second.IsDirty();\r\n     }\r\n     if (!inserted) {\r\n+        Assert(cachedCoinsUsage >= it->second.coin.DynamicMemoryUsage());\r\n         cachedCoinsUsage -= it->second.coin.DynamicMemoryUsage();\r\n     }\r\n     it->second.coin = std::move(coin);\r\n@@ -133,6 +134,7 @@\r\n bool CCoinsViewCache::SpendCoin(const COutPoint &outpoint, Coin* moveout) {\r\n     CCoinsMap::iterator it = FetchCoin(outpoint);\r\n     if (it == cacheCoins.end()) return false;\r\n+    Assert(cachedCoinsUsage >= it->second.coin.DynamicMemoryUsage());\r\n     cachedCoinsUsage -= it->second.coin.DynamicMemoryUsage();\r\n     TRACEPOINT(utxocache, spent,\r\n            outpoint.hash.data(),\r\n@@ -226,10 +228,12 @@\r\n             if (itUs->second.IsFresh() && it->second.coin.IsSpent()) {\r\n                 // The grandparent cache does not have an entry, and the coin\r\n                 // has been spent. We can just delete it from the parent cache.\r\n+                Assert(cachedCoinsUsage >= itUs->second.coin.DynamicMemoryUsage());\r\n                 cachedCoinsUsage -= itUs->second.coin.DynamicMemoryUsage();\r\n                 cacheCoins.erase(itUs);\r\n             } else {\r\n                 // A normal modification.\r\n+                Assert(cachedCoinsUsage >= itUs->second.coin.DynamicMemoryUsage());\r\n                 cachedCoinsUsage -= itUs->second.coin.DynamicMemoryUsage();\r\n                 if (cursor.WillErase(*it)) {\r\n                     // Since this entry will be erased,\r\n@@ -279,6 +283,7 @@\r\n {\r\n     CCoinsMap::iterator it = cacheCoins.find(hash);\r\n     if (it != cacheCoins.end() && !it->second.IsDirty() && !it->second.IsFresh()) {\r\n+        Assert(cachedCoinsUsage >= it->second.coin.DynamicMemoryUsage());\r\n         cachedCoinsUsage -= it->second.coin.DynamicMemoryUsage();\r\n         TRACEPOINT(utxocache, uncache,\r\n                hash.hash.data(),\r\n```\r\n\r\n</details>",
+  "comments": [
+    {
+      "id": "IC_kwDOABII586n7BPn",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--006a51241073e994b41acfe9ec718e94-->\n### Code Coverage & Benchmarks\nFor details see: https://corecheck.dev/bitcoin/bitcoin/pulls/32313.\n<!--021abf342d371248e50ceaed478a90ca-->\n### Reviews\nSee [the guideline](https://github.com/bitcoin/bitcoin/blob/master/CONTRIBUTING.md#code-review) for information on the review process.\n| Type | Reviewers |\n| ---- | --------- |\n| ACK | [andrewtoth](https://github.com/bitcoin/bitcoin/pull/32313#pullrequestreview-3329398843), [optout21](https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3400987547), [sipa](https://github.com/bitcoin/bitcoin/pull/32313#pullrequestreview-3335978023), [w0xlt](https://github.com/bitcoin/bitcoin/pull/32313#pullrequestreview-3335987656) |\n| Stale ACK | [ryanofsky](https://github.com/bitcoin/bitcoin/pull/32313#pullrequestreview-3325631861) |\n\nIf your review is incorrectly listed, please react with \ud83d\udc4e to this comment and the bot will ignore it on the next update.\n<!--174a7506f384e20aa4161008e828411d-->\n### Conflicts\nReviewers, this pull request conflicts with the following ones:\n\n* [#33602](https://github.com/bitcoin/bitcoin/pull/33602) ([IBD] coins: reduce lookups in dbcache layer propagation by l0rinc)\n* [#33512](https://github.com/bitcoin/bitcoin/pull/33512) (coins: use number of dirty cache entries in flush warnings/logs by l0rinc)\n* [#33018](https://github.com/bitcoin/bitcoin/pull/33018) (coins: remove SetFresh method from CCoinsCacheEntry by andrewtoth)\n* [#31132](https://github.com/bitcoin/bitcoin/pull/31132) (validation: fetch block inputs on parallel threads >10% faster IBD by andrewtoth)\n\nIf you consider this pull request important, please also help to review the conflicting pull requests. Ideally, start with the one that should be merged first.\n<!--5faf32d7da4f0f540f40219e4f7537a3-->",
+      "createdAt": "2025-04-20T17:33:13Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-2817266663",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII586pKtwB",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Rebased to allow CI running the new tests.",
+      "createdAt": "2025-04-29T09:50:46Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-2838158337",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII586wXEOe",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Rebased after fuzz conflicts, ready for review again.",
+      "createdAt": "2025-06-10T11:36:14Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-2958836638",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587IJuPw",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Rebased and adjusted the commits to minimize conflict with https://github.com/bitcoin/bitcoin/pull/33512",
+      "createdAt": "2025-10-01T20:18:46Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3357991920",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587JbYIs",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Added an AssumeUTXO fuzz test here that was requested in https://github.com/bitcoin/bitcoin/pull/33512#discussion_r2404014654 - but it needs the fixes here to work.",
+      "createdAt": "2025-10-08T03:03:23Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3379397164",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587Jn64F",
+      "author": {
+        "login": "ryanofsky"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Just a quick code review for 2b11c47f60b85fe72ab9d093c9f8e5f597182fbc. Sorry if I missed anything obvious, my comments below are mostly asking for things to be explained a little better. Overall the changes seem positive and I did not see any problems.\r\n\r\n- Can PR description be updated to say what types of \"violations\" are being \"fixed\" and clarify what purpose of the changes are? Would be helpful if description was self contained and did not start out referencing a comment in another PR.\r\n\r\n- Purpose of first commit 6b842138c33d8663603d1d0a528cb90c54c70163 seems opaque. Commit description says a check is being moved but not why, and it is not clear what effect this change has or if it can be tested.\r\n\r\n- Third commit 62c600f79a13e8772f3d6d7aaf6593c6dc55ddfe seems to be a refactoring that does not change behavior. Would be helpful to say this explicitly and maybe start commit title with \"refactor\".\r\n\r\n- From what I can tell the second and third commits both seem to be refactorings that do not depend on each other and aren't really related to the rest of the PR. If would be nice if commit messages clarified if they are independent cleanups or if something depends on them. It might also be good to move these refactorings before the bugfix in the first commit if they do not depend on it.\r\n\r\n- Fourth commit f1791d64b437eab31ad941fb4c9e4051e0274c4a seems like a good bugfix. But would be good if commit description could say what impact of bug is. Is it a rare thing that happens only when disk writes fail? What's the actual effect if the bug does happen? Too much memory is allocated? Something else?\r\n\r\n- Last commit a9eb8dfab1c35c2563d3267432b64bb6a812f08f seems to be doing a few unrelated things and would be nice to split up. The main thing it seems to be doing is dropping the \"coins_view_cache.Flush()\" workaround because of an accounting bug \"fixed in a previous commit\". It would be much nicer IMO if the workaround could be dropped in the same commit which actually fixes the accounting bug. Moving this change should make the bugfix and test change both easier to understand.\r\n\r\n- Additionally, the last commit seems to be dropping the `expected_code_path` check which makes sure that after many writes, at least one coin will be overwritten. Unclear why that check is being dropped and would be good to explain in commit message. Adding the EmplaceCoinInternalDANGER call there does seem good and useful to check the accounting.",
+      "createdAt": "2025-10-08T18:13:44Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "THUMBS_UP",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3382685189",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587JqoMP",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Thank you for the quick review, I have restructured the change to tell a more intuitive story and added more commit message guidance for the context and rewrote the intro to make more sense (it helped that I wrote this a longer time ago and I also didn't remember the context).\r\n\r\nThe new structure starts with the simple refactorings and assertions and adding extra guards to document why and where the accounting is incorrect. Most of the accounting problems are test-only, so it's unlikely to fix anything in production - but it enabled us writing more correct tests for coins.\r\n\r\nBased on the feedback I merged the changes in `AddCoin` and `Flush` since this way I can also enable the suppressions in the same commit, proving that they fix the problem.\r\nI have also split out the `Flush()` workaround in `coins_view` which removed the workaround in https://github.com/bitcoin/bitcoin/pull/32602/files#r2113749842 (cc: @marcofleon, @darosior).\r\nThe `expected_code_path` didn't check any overwrites, just that all codepaths result in success - which is simplified in the last commit.\r\n\r\nThe latest push is [zero-diff](https://github.com/bitcoin/bitcoin/compare/a9eb8dfab1c35c2563d3267432b64bb6a812f08f..c4293c7b21971e7ddd813ad3fbe574eb5605d60e), only reorganized and explained better - thanks for the review.",
+      "createdAt": "2025-10-08T22:03:43Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3383395087",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587JwzGx",
+      "author": {
+        "login": "optout21"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK c4293c7b21971e7ddd813ad3fbe574eb5605d60e\r\n\r\nWith the recent commit restructuring the steps are clear.\r\nThe code change is sound and looks well tested.\r\nI've left one non-blocking nit, no other comment.",
+      "createdAt": "2025-10-09T09:38:30Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3385012657",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587KNH4V",
+      "author": {
+        "login": "optout21"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "> * It looks to me like the `expected_code_path` assert is confirming that the `std::logic_error` exception throws at least once and that test coverage is complete.\r\n\r\nI don't think it checks that exception is thrown at least once, but it checks that either there is no exception, or if there is, it is that specific exception. With this change there is an assert to make sure the exception is the one expected. So I think the test code change is correct, but I agree that the \"that all codepaths result in success.\" description is not precise.",
+      "createdAt": "2025-10-10T22:00:24Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3392437781",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587KSeV3",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Thanks for the comments, the latest push makes it even simpler, removed the temporary asserts, added unit tests instead (thanks @w0xlt), changed the order of the `AddCoin` and `EmplaceCoinInternalDANGER` commits which did indeed allow me to fixup the latest commit with the fuzz simplifications into the `AddCoin` one.\r\n\r\n> In the last commit I'm still not sure why expected_code_path assert is being removed\r\n\r\nThe role of the variable was to verify that code execution follows only expected paths, either successful addition, or if it's an exception, the message is verified and checked that overwrite was disallowed in the first place.",
+      "createdAt": "2025-10-12T02:12:01Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3393840503",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587KtvOb",
+      "author": {
+        "login": "optout21"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "reACK 24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "createdAt": "2025-10-14T09:42:58Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/32313#issuecomment-3400987547",
+      "viewerDidAuthor": false
+    }
+  ],
+  "files": [
+    {
+      "path": "src/coins.cpp",
+      "additions": 12,
+      "deletions": 8,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/coins.h",
+      "additions": 5,
+      "deletions": 7,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/coins_tests.cpp",
+      "additions": 38,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/fuzz/coins_view.cpp",
+      "additions": 11,
+      "deletions": 19,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "test/sanitizer_suppressions/ubsan",
+      "additions": 0,
+      "deletions": 5,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefOid": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+  "mergeCommit": {
+    "oid": "f76e1ae38991bfb76f6b966e3b040bee24e620b3"
+  },
+  "mergedAt": "2025-10-15T13:48:22Z",
+  "number": 32313,
+  "reviews": [
+    {
+      "id": "PRR_kwDOABII586lt_04",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-20T17:48:21Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586luHrE",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-20T20:57:42Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586luHrd",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-20T20:57:48Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586luHr5",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-20T20:57:58Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nMaM3",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-04-29T20:46:02Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nQjzE",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-30T07:54:26Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nTqjo",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-30T12:51:05Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nUHrN",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-04-30T13:31:55Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nZdYS",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-04-30T21:15:36Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nsvFj",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-05-04T17:36:54Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nsv7g",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-04T17:54:20Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586nsw7T",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-05-04T18:17:12Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586ns38s",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-04T20:20:37Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586n3mKZ",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-05T23:23:07Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586n6efH",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-06T07:14:53Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586n_cPL",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-06T14:05:44Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586n_yeE",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-06T14:30:05Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586olk69",
+      "author": {
+        "login": "fanquake"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-05-09T13:41:50Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586ovrnZ",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-10T21:52:36Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586pGoBP",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-05-13T14:43:30Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII586pG-Gk",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-05-13T15:09:10Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587FxT1b",
+      "author": {
+        "login": "optout21"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-09T09:33:25Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587F0NDm",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-09T12:44:25Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587F8kj0",
+      "author": {
+        "login": "w0xlt"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-10T00:19:17Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587F8r0L",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-10T00:45:50Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587GOR11",
+      "author": {
+        "login": "ryanofsky"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Code review ACK c4293c7b21971e7ddd813ad3fbe574eb5605d60e. The changes are nice simplifications addition to fixing overflows, and they are all nicely explained. Few suggestions you could consider (but ignore them if you prefer current implementation):\n\n- I feel like the new asserts added in b905a592d429b4b4edd48c8b0fa29ea4fdf8d251 and removed later don't really add much value or explain much since they can basically only trigger when there are one or two coins in the cache. I'd consider dropping them from the PR, and just posting them a diff if they are helpful for testing, so the PR is simpler.\n\n- Seems like it would be nice to order 33a8150315d8880be75c4117aa9457b7c2eb5ce1 before bf1f9907d47fc93cc0ca67fe65a03466d93381c3 so 33a8150315d8880be75c4117aa9457b7c2eb5ce1 can drop the flush workaround from the fuzz test, and bf1f9907d47fc93cc0ca67fe65a03466d93381c3 can just add the EmplaceCoinInternalDANGER call to the fuzz test. This way the fuzz test changes would illustrate the code changes and be minimal.\n\n- In the last commit I'm still not sure why `expected_code_path` assert is being removed. You last comment suggests that `expected_code_path` is removed because it just checks \"that all codepaths result in success.\" But I don't think this is true. It looks to me like the `expected_code_path` assert is confirming that the `std::logic_error` exception throws at least once and that test coverage is complete. It seems ok to drop this, but I don't think it's redundant or no longer necessary due to changes here.",
+      "submittedAt": "2025-10-10T20:09:57Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [
+        {
+          "content": "THUMBS_UP",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "state": "APPROVED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587GWkIZ",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-12T02:11:23Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587GbRnk",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-12T16:18:40Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587GbgSy",
+      "author": {
+        "login": "l0rinc"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-12T16:38:15Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587Gcpg7",
+      "author": {
+        "login": "andrewtoth"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK 24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "submittedAt": "2025-10-12T19:29:16Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "24d861da7894add47747eff69dd3fc71fbcdd7d0"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587G1vwn",
+      "author": {
+        "login": "sipa"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "ACK 24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "submittedAt": "2025-10-14T14:23:01Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "24d861da7894add47747eff69dd3fc71fbcdd7d0"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587G1yHI",
+      "author": {
+        "login": "w0xlt"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK https://github.com/bitcoin/bitcoin/pull/32313/commits/24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "submittedAt": "2025-10-14T14:25:13Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "24d861da7894add47747eff69dd3fc71fbcdd7d0"
+      }
+    }
+  ],
+  "state": "MERGED",
+  "title": "coins: fix `cachedCoinsUsage` accounting in `CCoinsViewCache`",
+  "inline_review_comments": [
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051774641",
+      "pull_request_review_id": 2780298552,
+      "id": 2051774641,
+      "node_id": "PRRC_kwDOABII5856S5ix",
+      "diff_hunk": "@@ -76,13 +76,13 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n     bool inserted;\n     std::tie(it, inserted) = cacheCoins.emplace(std::piecewise_construct, std::forward_as_tuple(outpoint), std::tuple<>());\n     bool fresh = false;\n+    if (!possible_overwrite && !it->second.coin.IsSpent()) { // check before any other partial state change\n+        throw std::logic_error(\"Attempted to overwrite an unspent coin (when possible_overwrite is false)\");\n+    }\n     if (!inserted) {",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Would it be simpler to just move this `if` block below the `if` block that throws, instead of pulling the throw out?",
+      "created_at": "2025-04-20T17:36:47Z",
+      "updated_at": "2025-04-20T17:48:21Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051774641",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051774641"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051774641"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051774641/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 82,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 7,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775463",
+      "pull_request_review_id": 2780298552,
+      "id": 2051775463,
+      "node_id": "PRRC_kwDOABII5856S5vn",
+      "diff_hunk": "@@ -110,10 +110,16 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n            (bool)it->second.coin.IsCoinBase());\n }\n \n-void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin) {\n-    cachedCoinsUsage += coin.DynamicMemoryUsage();\n-    auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint), std::move(coin));\n-    if (inserted) CCoinsCacheEntry::SetDirty(*it, m_sentinel);\n+void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin)\n+{\n+    auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint));",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I think this would be simpler if we kept the original behavior of moving the `coin` here as well, and then only increment the `cachedCoinsUsage` if the coin is inserted.\r\n\r\nIn practice it's not possible to get `!inserted` unless the assume utxo payload was generated incorrectly.",
+      "created_at": "2025-04-20T17:41:56Z",
+      "updated_at": "2025-04-20T17:48:21Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051775463",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775463"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051775463"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775463/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 115,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 27,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775760",
+      "pull_request_review_id": 2780298552,
+      "id": 2051775760,
+      "node_id": "PRRC_kwDOABII5856S50Q",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The entry has an empty coin here, it was just created. So this is just subtracting zero.",
+      "created_at": "2025-04-20T17:43:18Z",
+      "updated_at": "2025-04-20T17:48:21Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051775760",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775760"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051775760"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051775760/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806640",
+      "pull_request_review_id": 2780330692,
+      "id": 2051806640,
+      "node_id": "PRRC_kwDOABII5856TBWw",
+      "diff_hunk": "@@ -76,13 +76,13 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n     bool inserted;\n     std::tie(it, inserted) = cacheCoins.emplace(std::piecewise_construct, std::forward_as_tuple(outpoint), std::tuple<>());\n     bool fresh = false;\n+    if (!possible_overwrite && !it->second.coin.IsSpent()) { // check before any other partial state change\n+        throw std::logic_error(\"Attempted to overwrite an unspent coin (when possible_overwrite is false)\");\n+    }\n     if (!inserted) {",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "If you think that's better, I don't mind - done",
+      "created_at": "2025-04-20T20:57:42Z",
+      "updated_at": "2025-04-20T20:57:42Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806640",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806640"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806640"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806640/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 82,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051774641,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 7,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806668",
+      "pull_request_review_id": 2780330717,
+      "id": 2051806668,
+      "node_id": "PRRC_kwDOABII5856TBXM",
+      "diff_hunk": "@@ -110,10 +110,16 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n            (bool)it->second.coin.IsCoinBase());\n }\n \n-void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin) {\n-    cachedCoinsUsage += coin.DynamicMemoryUsage();\n-    auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint), std::move(coin));\n-    if (inserted) CCoinsCacheEntry::SetDirty(*it, m_sentinel);\n+void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin)\n+{\n+    auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint));",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "> In practice it's not possible to get !inserted unless the assume utxo payload was generated incorrectly.\r\n\r\nAs far as I can see that's not a guarantee, but I've also noted it in the commit message that currently this is the case.\r\n\r\n> kept the original behavior of moving the coin here as well\r\n\r\nSure, if you think that's better - changed!",
+      "created_at": "2025-04-20T20:57:48Z",
+      "updated_at": "2025-04-20T20:57:48Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806668",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806668"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806668"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806668/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 115,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775463,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 27,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806682",
+      "pull_request_review_id": 2780330745,
+      "id": 2051806682,
+      "node_id": "PRRC_kwDOABII5856TBXa",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Thanks, I'll add an assert in that case to explain why this branch wasn't symmetric with the other one.",
+      "created_at": "2025-04-20T20:57:58Z",
+      "updated_at": "2025-04-20T20:57:58Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806682",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806682"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2051806682"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2051806682/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775760,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2067406415",
+      "pull_request_review_id": 2805048119,
+      "id": 2067406415,
+      "node_id": "PRRC_kwDOABII5857Oh5P",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "it would be better to file this separately and explain why it isn't needed (or rather since when)",
+      "created_at": "2025-04-29T20:46:02Z",
+      "updated_at": "2025-04-29T20:46:03Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2067406415",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2067406415"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2067406415"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2067406415/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068100317",
+      "pull_request_review_id": 2806136004,
+      "id": 2068100317,
+      "node_id": "PRRC_kwDOABII5857RLTd",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "They were introduced in https://github.com/bitcoin/bitcoin/pull/28865/files#diff-bca63b54ad7fcc2df12f3237fd8775810c1b849c49110f702920655778fcc248R45-R49, I don't see any concrete explanation for what the problem was - and couldn't reproduce any fuzzing problem when I've removed these.\r\n@fanquake, can you help us out here, do you remember why these were added?",
+      "created_at": "2025-04-30T07:54:26Z",
+      "updated_at": "2025-04-30T07:54:26Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068100317",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068100317"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068100317"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068100317/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068601939",
+      "pull_request_review_id": 2806950120,
+      "id": 2068601939,
+      "node_id": "PRRC_kwDOABII5857TFxT",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I ran the following on Linux for `a1fe87eb668e8a1eeeef335951547882b5fb52d8`:\r\n\r\n```bash\r\ncmake --preset=libfuzzer && cmake --build build_fuzz && \\\r\n  FUZZ=coin_grinder build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coin_grinder_is_optimal build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coincontrol build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coins_deserialize build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coins_view build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coinscache_sim build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coinselection_bnb build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coinselection_knapsack build_fuzz/bin/fuzz -runs=500000 && \\\r\n  FUZZ=coinselection_srd build_fuzz/bin/fuzz -runs=500000\r\n```\r\n\r\nThey all passed (actually ran a few until `-runs=1000000` but got bored at the end).\r\nAm I missing anything important here?",
+      "created_at": "2025-04-30T12:51:05Z",
+      "updated_at": "2025-04-30T12:51:06Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068601939",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068601939"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068601939"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068601939/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068672564",
+      "pull_request_review_id": 2807069389,
+      "id": 2068672564,
+      "node_id": "PRRC_kwDOABII5857TXA0",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "> Am I missing anything important here?\r\n\r\nYes, the preset doesn't check for those. You'll have to run with the integer sanitizer to be able to detect integer sanitizer issues.\r\n\r\nThe testing steps are also explained in the comment: https://github.com/bitcoin/bitcoin/pull/28865#issue-1991140953",
+      "created_at": "2025-04-30T13:31:55Z",
+      "updated_at": "2025-04-30T13:31:55Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068672564",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068672564"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2068672564"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2068672564/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2069453148",
+      "pull_request_review_id": 2808469010,
+      "id": 2069453148,
+      "node_id": "PRRC_kwDOABII5857WVlc",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "As mentioned in https://github.com/bitcoin/bitcoin/pull/32296#issuecomment-2813590511, I can't always reproduce these locally, it's why I used the CI to verify why these were needed in the first place.\r\nI have tried every combination I could think of locally, I couldn't reproduce any such errors in coins. If you can, please let me know how to do that exactly.\r\nIs there any other CI run I should be looking at to see if there are other failures?",
+      "created_at": "2025-04-30T21:15:36Z",
+      "updated_at": "2025-04-30T21:15:48Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2069453148",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2069453148"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2069453148"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2069453148/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072669835",
+      "pull_request_review_id": 2813522275,
+      "id": 2072669835,
+      "node_id": "PRRC_kwDOABII5857im6L",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The CI should be deterministic and trivially reproducible, as explained in https://github.com/bitcoin/bitcoin/blob/master/ci/README.md. If you can't reproduce it, please share the exact steps you tried, starting from a fresh system. For example, you can start with a fresh Hetzner Cloud VM (or any other fresh VM of your choice).\r\n\r\nThe integer sanitizer should equally be deterministic and reproducible.\r\n\r\n",
+      "created_at": "2025-05-04T17:36:54Z",
+      "updated_at": "2025-05-04T17:36:54Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072669835",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072669835"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072669835"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072669835/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072673025",
+      "pull_request_review_id": 2813525728,
+      "id": 2072673025,
+      "node_id": "PRRC_kwDOABII5857insB",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I meant I couldn't reproduce any of the supposed failures that suppressions were meant to avoid - but neither is the CI, so I'm not sure what to explain about the removals: they don't seem to be needed for CI to pass.\r\nUnless there's a secret CI which shows these failures - or any other way that you can reproduce them, please let me know how to do it.",
+      "created_at": "2025-05-04T17:54:20Z",
+      "updated_at": "2025-05-04T17:54:20Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072673025",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072673025"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072673025"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072673025/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072676770",
+      "pull_request_review_id": 2813529811,
+      "id": 2072676770,
+      "node_id": "PRRC_kwDOABII5857iomi",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "In https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2067406415 I was saying it would be good to known since when they are unused. To test an earlier commit, you can just switch to it in git.",
+      "created_at": "2025-05-04T18:17:12Z",
+      "updated_at": "2025-05-04T18:17:12Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072676770",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072676770"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072676770"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072676770/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072702883",
+      "pull_request_review_id": 2813558572,
+      "id": 2072702883,
+      "node_id": "PRRC_kwDOABII5857iu-j",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Whenever I tried going back to pre-cmake times, I couldn't get it to compile and run again (on Mac or on Linux). Not the first time I try to do a git bisect, but it always turns bad really quickly.\r\n\r\nI tried pushing a PR to my fork with the [original PR](https://github.com/bitcoin/bitcoin/pull/28865) that introduced the suppressions + removing `DynamicMemoryUsage`, `SpendCoin` and `Uncache` suppressionss from ubsan.\r\nThe build is [failing with similar problems](https://github.com/l0rinc/bitcoin/actions/runs/14824254981/job/41615310082?pr=10) that I see locally but don't see any `unsigned-integer-overflow` complaints. https://github.com/bitcoin/bitcoin/pull/28865 https://github.com/l0rinc/bitcoin/pull/10\r\n\r\nCan you give me a hint of what else to try?",
+      "created_at": "2025-05-04T20:20:37Z",
+      "updated_at": "2025-05-04T20:20:59Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072702883",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072702883"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2072702883"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2072702883/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074362360",
+      "pull_request_review_id": 2816369305,
+      "id": 2074362360,
+      "node_id": "PRRC_kwDOABII5857pEH4",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I don't think we should add an assert here to explain. The comment right above says `Create the coin in the parent cache`.",
+      "created_at": "2025-05-05T23:23:07Z",
+      "updated_at": "2025-05-05T23:23:07Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2074362360",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074362360"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2074362360"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074362360/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775760,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074860730",
+      "pull_request_review_id": 2817124295,
+      "id": 2074860730,
+      "node_id": "PRRC_kwDOABII5857q9y6",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Doesn't the presence of the original cache-usage-update indicate that the comment isn't enough?",
+      "created_at": "2025-05-06T07:14:53Z",
+      "updated_at": "2025-05-06T07:14:53Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2074860730",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074860730"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2074860730"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2074860730/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775760,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075559595",
+      "pull_request_review_id": 2818425803,
+      "id": 2075559595,
+      "node_id": "PRRC_kwDOABII5857toar",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Sorry, what is the original cache-usage-update? AFAICT this line was added in this PR, and there is no cache-usage-update here?",
+      "created_at": "2025-05-06T14:05:44Z",
+      "updated_at": "2025-05-06T14:05:44Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2075559595",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075559595"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2075559595"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075559595/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775760,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075611741",
+      "pull_request_review_id": 2818516868,
+      "id": 2075611741,
+      "node_id": "PRRC_kwDOABII5857t1Jd",
+      "diff_hunk": "@@ -195,6 +201,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                cachedCoinsUsage -= entry.coin.DynamicMemoryUsage();",
+      "path": "src/coins.cpp",
+      "commit_id": "c7d9c4253dc38b9996282d821a97bb9d89ed7f02",
+      "original_commit_id": "4bd48052173e04e706c4a377c502a8798f8c881d",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I prefer code over comments (the comment can be wrong, the code validates) - and since the usual pattern is basically:\r\n```C++\r\ncachedCoinsUsage -= itUs->second.coin.DynamicMemoryUsage();\r\nif (cursor.WillErase(*it)) {\r\n    itUs->second.coin = std::move(it->second.coin);\r\n} else {\r\n    itUs->second.coin = it->second.coin;\r\n}\r\ncachedCoinsUsage += itUs->second.coin.DynamicMemoryUsage();\r\n```\r\n\r\nit makes sense to explain (via code) why here we don't need the first part:\r\n```C++\r\nassert(entry.coin.DynamicMemoryUsage() == 0); // i.e. we didn't forget the symmetry, it's on purpose\r\nif (cursor.WillErase(*it)) {\r\n    entry.coin = std::move(it->second.coin);\r\n} else {\r\n    entry.coin = it->second.coin;\r\n}\r\ncachedCoinsUsage += entry.coin.DynamicMemoryUsage();\r\n```\r\n\r\nDo you still think we don't need it?",
+      "created_at": "2025-05-06T14:30:04Z",
+      "updated_at": "2025-05-06T14:30:52Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2075611741",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075611741"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2075611741"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2075611741/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 204,
+      "side": "RIGHT",
+      "in_reply_to_id": 2051775760,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 42,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2081724770",
+      "pull_request_review_id": 2828422845,
+      "id": 2081724770,
+      "node_id": "PRRC_kwDOABII5858FJli",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "fanquake",
+        "id": 863730,
+        "node_id": "MDQ6VXNlcjg2MzczMA==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/863730?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/fanquake",
+        "html_url": "https://github.com/fanquake",
+        "followers_url": "https://api.github.com/users/fanquake/followers",
+        "following_url": "https://api.github.com/users/fanquake/following{/other_user}",
+        "gists_url": "https://api.github.com/users/fanquake/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/fanquake/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/fanquake/subscriptions",
+        "organizations_url": "https://api.github.com/users/fanquake/orgs",
+        "repos_url": "https://api.github.com/users/fanquake/repos",
+        "events_url": "https://api.github.com/users/fanquake/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/fanquake/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "> They were introduced in https://github.com/bitcoin/bitcoin/pull/28865/files#diff-bca63b54ad7fcc2df12f3237fd8775810c1b849c49110f702920655778fcc248R45-R49,\r\n> @fanquake, can you help us out here, do you remember why these were added?\r\n\r\nYou can recreate the failures by checking out to that commit (fd30e9688e15fe6e0f8b64202a6e9c7d96333394), applying this diff (which includes the supression being done here):\r\n```diff\r\ndiff --git a/ci/test/00_setup_env_native_fuzz.sh b/ci/test/00_setup_env_native_fuzz.sh\r\nindex 3585b2b417..ce45917e99 100755\r\n--- a/ci/test/00_setup_env_native_fuzz.sh\r\n+++ b/ci/test/00_setup_env_native_fuzz.sh\r\n@@ -6,7 +6,7 @@\r\n \r\n export LC_ALL=C.UTF-8\r\n \r\n-export CI_IMAGE_NAME_TAG=\"docker.io/ubuntu:23.10\"  # This version will reach EOL in Jul 2024, and can be replaced by \"ubuntu:24.04\" (or anything else that ships the wanted clang version).\r\n+export CI_IMAGE_NAME_TAG=\"docker.io/ubuntu:24.04\"  # This version will reach EOL in Jul 2024, and can be replaced by \"ubuntu:24.04\" (or anything else that ships the wanted clang version).\r\n export CONTAINER_NAME=ci_native_fuzz\r\n export PACKAGES=\"clang-17 llvm-17 libclang-rt-17-dev libevent-dev libboost-dev libsqlite3-dev\"\r\n export NO_DEPENDS=1\r\ndiff --git a/test/sanitizer_suppressions/ubsan b/test/sanitizer_suppressions/ubsan\r\nindex 63d2215aab..d3fc2a59ff 100644\r\n--- a/test/sanitizer_suppressions/ubsan\r\n+++ b/test/sanitizer_suppressions/ubsan\r\n@@ -42,11 +42,6 @@ unsigned-integer-overflow:arith_uint256.h\r\n unsigned-integer-overflow:CBloomFilter::Hash\r\n unsigned-integer-overflow:CRollingBloomFilter::insert\r\n unsigned-integer-overflow:RollingBloomHash\r\n-unsigned-integer-overflow:CCoinsViewCache::AddCoin\r\n-unsigned-integer-overflow:CCoinsViewCache::BatchWrite\r\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\r\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\r\n-unsigned-integer-overflow:CCoinsViewCache::Uncache\r\n unsigned-integer-overflow:CompressAmount\r\n unsigned-integer-overflow:DecompressAmount\r\n unsigned-integer-overflow:crypto/\r\n```\r\nand running the native_fuzz CI job (on aarch64):\r\n```bash\r\ntime env -i HOME=\"$HOME\" PATH=\"$PATH\" USER=\"$USER\" bash -c 'MAKEJOBS=\"-j17\" FILE_ENV=\"./ci/test/00_setup_env_native_fuzz.sh\" ./ci/test_run_all.sh'\r\n<snip>\r\n#170921\tREDUCE cov: 1694 ft: 6197 corp: 478/22Kb lim: 240 exec/s: 3351 rss: 208Mb L: 20/219 MS: 1 EraseBytes-\r\n#171261\tREDUCE cov: 1694 ft: 6200 corp: 479/22Kb lim: 240 exec/s: 3358 rss: 208Mb L: 193/219 MS: 5 ChangeBinInt-ChangeBit-ChangeByte-CrossOver-CrossOver-\r\n#171550\tREDUCE cov: 1694 ft: 6200 corp: 479/22Kb lim: 240 exec/s: 3363 rss: 208Mb L: 42/219 MS: 4 CopyPart-ChangeByte-PersAutoDict-EraseBytes- DE: \"\\024\\000\"-\r\n#171657\tREDUCE cov: 1694 ft: 6200 corp: 479/22Kb lim: 240 exec/s: 3365 rss: 208Mb L: 51/219 MS: 2 InsertByte-EraseBytes-\r\ncoins.cpp:132:22: runtime error: unsigned integer overflow: 0 - 64 cannot be represented in type 'size_t' (aka 'unsigned long')\r\n    #0 0xaaaab73bc134 in CCoinsViewCache::SpendCoin(COutPoint const&, Coin*) src/coins.cpp:132:22\r\n    #1 0xaaaab57cbc94 in coins_view_fuzz_target(Span<unsigned char const>)::$_4::operator()() const src/test/fuzz/coins_view.cpp:89:40\r\n    #2 0xaaaab57cbc94 in unsigned long CallOneOf<coins_view_fuzz_target(Span<unsigned char const>)::$_0, coins_view_fuzz_target(Span<unsigned char const>)::$_1, coins_view_fuzz_target(Span<unsigned char const>)::$_2, coins_view_fuzz_target(Span<unsigned char const>)::$_3, coins_view_fuzz_target(Span<unsigned char const>)::$_4, coins_view_fuzz_target(Span<unsigned char const>)::$_5, coins_view_fuzz_target(Span<unsigned char const>)::$_6, coins_view_fuzz_target(Span<unsigned char const>)::$_7, coins_view_fuzz_target(Span<unsigned char const>)::$_8, coins_view_fuzz_target(Span<unsigned char const>)::$_9, coins_view_fuzz_target(Span<unsigned char const>)::$_10>(FuzzedDataProvider&, coins_view_fuzz_target(Span<unsigned char const>)::$_0, coins_view_fuzz_target(Span<unsigned char const>)::$_1, coins_view_fuzz_target(Span<unsigned char const>)::$_2, coins_view_fuzz_target(Span<unsigned char const>)::$_3, coins_view_fuzz_target(Span<unsigned char const>)::$_4, coins_view_fuzz_target(Span<unsigned char const>)::$_5, coins_view_fuzz_target(Span<unsigned char const>)::$_6, coins_view_fuzz_target(Span<unsigned char const>)::$_7, coins_view_fuzz_target(Span<unsigned char const>)::$_8, coins_view_fuzz_target(Span<unsigned char const>)::$_9, coins_view_fuzz_target(Span<unsigned char const>)::$_10) src/./test/fuzz/util.h:43:27\r\n    #3 0xaaaab57cbc94 in coins_view_fuzz_target(Span<unsigned char const>) src/test/fuzz/coins_view.cpp:58:9\r\n    #4 0xaaaab5d2319c in std::function<void (Span<unsigned char const>)>::operator()(Span<unsigned char const>) const /usr/bin/../lib/gcc/aarch64-linux-gnu/13/../../../../include/c++/13/bits/std_function.h:591:9\r\n    #5 0xaaaab5d2319c in LLVMFuzzerTestOneInput src/test/fuzz/fuzz.cpp:178:5\r\n    #6 0xaaaab5545050 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x1925050) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #7 0xaaaab5544798 in fuzzer::Fuzzer::RunOne(unsigned char const*, unsigned long, bool, fuzzer::InputInfo*, bool, bool*) (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x1924798) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #8 0xaaaab5545f90 in fuzzer::Fuzzer::MutateAndTestOne() (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x1925f90) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #9 0xaaaab5546cdc in fuzzer::Fuzzer::Loop(std::vector<fuzzer::SizedFile, std::allocator<fuzzer::SizedFile>>&) (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x1926cdc) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #10 0xaaaab5534e70 in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x1914e70) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #11 0xaaaab555e0ac in main (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x193e0ac) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n    #12 0xffffb4aa84c0  (/lib/aarch64-linux-gnu/libc.so.6+0x284c0) (BuildId: 1d7249a4f207d07166ff4be43acdc68a01faaa04)\r\n    #13 0xffffb4aa8594 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x28594) (BuildId: 1d7249a4f207d07166ff4be43acdc68a01faaa04)\r\n    #14 0xaaaab552afac in _start (/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz+0x190afac) (BuildId: 82e180570288de2f70ceeee1ed5d7cd3729696ab)\r\n\r\nSUMMARY: UndefinedBehaviorSanitizer: unsigned-integer-overflow coins.cpp:132:22 in \r\nMS: 1 CopyPart-; base unit: 81111e927920a57969bb7efb23d89de00d09a5ec\r\n0xff,0xef,0xfe,0x0,0x1,0x3,0x0,0x1,0xff,0xff,0xff,0xff,0xff,0x3,0x0,0x1,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x3,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe,0xff,0xfa,0x0,0x0,0x0,0x0,0x80,0x76,0x0,0x0,0x0,0x0,0x68,0x5c,0xff,0xff,0xff,0xff,0xef,0xfe,0x0,0x1,0x3,0x0,0x1,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x3,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x3,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe,0xff,0xfa,0x0,0x0,0x0,0x0,0x80,0x76,0x0,0x0,0x0,0x0,0x68,0x5c,0xff,0xff,0xff,0xff,0xef,0xfe,0x0,0x1,0x3,0x0,0x1,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x3,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe,0xff,0xfa,0x7,\r\n\\377\\357\\376\\000\\001\\003\\000\\001\\377\\377\\377\\377\\377\\003\\000\\001\\377\\377\\377\\377\\377\\377\\377\\003\\377\\377\\377\\377\\377\\377\\377\\377\\377\\377\\376\\377\\372\\000\\000\\000\\000\\200v\\000\\000\\000\\000h\\\\\\377\\377\\377\\377\\357\\376\\000\\001\\003\\000\\001\\377\\377\\377\\377\\377\\377\\377\\003\\377\\377\\377\\377\\377\\377\\377\\377\\377\\377\\377\\003\\377\\377\\377\\377\\377\\377\\377\\377\\377\\377\\376\\377\\372\\000\\000\\000\\000\\200v\\000\\000\\000\\000h\\\\\\377\\377\\377\\377\\357\\376\\000\\001\\003\\000\\001\\377\\377\\377\\377\\377\\377\\377\\003\\377\\377\\377\\377\\377\\377\\377\\377\\377\\377\\376\\377\\372\\007\r\nartifact_prefix='./'; Test unit written to ./crash-2ea01576a6e0a74d403920761ea2ff6f0bf41752\r\nBase64: /+/+AAEDAAH//////wMAAf////////8D//////////////7/+gAAAACAdgAAAABoXP/////v/gABAwAB/////////wP//////////////wP//////////////v/6AAAAAIB2AAAAAGhc/////+/+AAEDAAH/////////A//////////////+//oH\r\n\r\nTarget ['/ci_container_base/ci/scratch/build/bitcoin-aarch64-unknown-linux-gnu/src/test/fuzz/fuzz', '-max_total_time=60'] failed with exit code 1\r\n```",
+      "created_at": "2025-05-09T13:41:50Z",
+      "updated_at": "2025-05-09T13:41:50Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2081724770",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2081724770"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2081724770"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2081724770/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2083296383",
+      "pull_request_review_id": 2831071705,
+      "id": 2083296383,
+      "node_id": "PRRC_kwDOABII5858LJR_",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "> You can recreate the failures\r\n\r\nThanks a lot @fanquake, I managed to reproduce it this way (seeing that https://github.com/l0rinc/bitcoin/pull/10 was failing, I was trying to run them manually instead of relying on the ci scripts).\r\n\r\n> why it isn't needed (or rather since when)\r\n\r\nThanks @maflcko for insisting, I have changed the order of commits to place the suppression removal at the very end since we still had a few failures for the first few commits - it's easier to remove them all at the end only, where I couldn't reproduce any such failure anymore.",
+      "created_at": "2025-05-10T21:52:36Z",
+      "updated_at": "2025-05-10T21:52:36Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2083296383",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2083296383"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2083296383"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2083296383/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087011545",
+      "pull_request_review_id": 2837086287,
+      "id": 2087011545,
+      "node_id": "PRRC_kwDOABII5858ZUTZ",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Seems fine, but it may be better to remove the suppression in the exact commit that removes the need for it. This would make it easier to revert the commit atomically in one go, if there is need for whatever reason.\r\n\r\n",
+      "created_at": "2025-05-13T14:43:30Z",
+      "updated_at": "2025-05-13T14:43:30Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2087011545",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087011545"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2087011545"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087011545/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087066691",
+      "pull_request_review_id": 2837176740,
+      "id": 2087066691,
+      "node_id": "PRRC_kwDOABII5858ZhxD",
+      "diff_hunk": "@@ -46,9 +46,6 @@ unsigned-integer-overflow:CRollingBloomFilter::insert\n unsigned-integer-overflow:RollingBloomHash\n unsigned-integer-overflow:CCoinsViewCache::AddCoin\n unsigned-integer-overflow:CCoinsViewCache::BatchWrite\n-unsigned-integer-overflow:CCoinsViewCache::DynamicMemoryUsage\n-unsigned-integer-overflow:CCoinsViewCache::SpendCoin\n-unsigned-integer-overflow:CCoinsViewCache::Uncache",
+      "path": "test/sanitizer_suppressions/ubsan",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "a1fe87eb668e8a1eeeef335951547882b5fb52d8",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Any accounting inconsistency could've caused it to become negative and fail, so instead of removing these suppressions in the last commit that fixed the problem (giving the impression that it was just one change that enabled us removing it), I did it separately instead.\r\nIs this important, is this holding back the ACK from your part?",
+      "created_at": "2025-05-13T15:09:10Z",
+      "updated_at": "2025-05-13T15:09:11Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2087066691",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087066691"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2087066691"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2087066691/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 54,
+      "original_line": 51,
+      "side": "LEFT",
+      "in_reply_to_id": 2067406415,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416151924",
+      "pull_request_review_id": 3318037851,
+      "id": 2416151924,
+      "node_id": "PRRC_kwDOABII586QA410",
+      "diff_hunk": "@@ -59,25 +59,30 @@ void TestCoinsView(FuzzedDataProvider& fuzzed_data_provider, CCoinsView& backend\n                 if (random_coin.IsSpent()) {\n                     return;\n                 }\n-                Coin coin = random_coin;\n-                bool expected_code_path = false;\n-                const bool possible_overwrite = fuzzed_data_provider.ConsumeBool();\n-                try {\n-                    coins_view_cache.AddCoin(random_out_point, std::move(coin), possible_overwrite);\n-                    expected_code_path = true;\n-                } catch (const std::logic_error& e) {\n-                    if (e.what() == std::string{\"Attempted to overwrite an unspent coin (when possible_overwrite is false)\"}) {\n-                        assert(!possible_overwrite);\n+                COutPoint outpoint{random_out_point};",
+      "path": "src/test/fuzz/coins_view.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "bf1f9907d47fc93cc0ca67fe65a03466d93381c3",
+      "user": {
+        "login": "optout21",
+        "id": 13562139,
+        "node_id": "MDQ6VXNlcjEzNTYyMTM5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13562139?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/optout21",
+        "html_url": "https://github.com/optout21",
+        "followers_url": "https://api.github.com/users/optout21/followers",
+        "following_url": "https://api.github.com/users/optout21/following{/other_user}",
+        "gists_url": "https://api.github.com/users/optout21/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/optout21/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/optout21/subscriptions",
+        "organizations_url": "https://api.github.com/users/optout21/orgs",
+        "repos_url": "https://api.github.com/users/optout21/repos",
+        "events_url": "https://api.github.com/users/optout21/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/optout21/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "nit: This declaration of `outpoint` is enough to be placed in the `else` branch\r\n\r\n``` diff\r\ndiff --git a/src/test/fuzz/coins_view.cpp b/src/test/fuzz/coins_view.cpp\r\nindex 3928120a3f..055c3c4b31 100644\r\n--- a/src/test/fuzz/coins_view.cpp\r\n+++ b/src/test/fuzz/coins_view.cpp\r\n@@ -59,13 +59,12 @@ void TestCoinsView(FuzzedDataProvider& fuzzed_data_provider, CCoinsView& backend\r\n                 if (random_coin.IsSpent()) {\r\n                     return;\r\n                 }\r\n-                COutPoint outpoint{random_out_point};\r\n                 Coin coin{random_coin};\r\n                 if (fuzzed_data_provider.ConsumeBool()) {\r\n                     bool expected_code_path = false;\r\n                     const bool possible_overwrite = fuzzed_data_provider.ConsumeBool();\r\n                     try {\r\n-                        coins_view_cache.AddCoin(outpoint, std::move(coin), possible_overwrite);\r\n+                        coins_view_cache.AddCoin(random_out_point, std::move(coin), possible_overwrite);\r\n                         expected_code_path = true;\r\n                     } catch (const std::logic_error& e) {\r\n                         if (e.what() == std::string{\"Attempted to overwrite an unspent coin (when possible_overwrite is false)\"}) {\r\n@@ -81,6 +80,7 @@ void TestCoinsView(FuzzedDataProvider& fuzzed_data_provider, CCoinsView& backend\r\n                     }\r\n                     assert(expected_code_path);\r\n                 } else {\r\n+                    COutPoint outpoint{random_out_point};\r\n                     coins_view_cache.EmplaceCoinInternalDANGER(std::move(outpoint), std::move(coin));\r\n                 }\r\n             },\r\n```",
+      "created_at": "2025-10-09T09:33:24Z",
+      "updated_at": "2025-10-09T09:33:25Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2416151924",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416151924"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2416151924"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416151924/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 62,
+      "original_line": 62,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 13,
+      "position": 12,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416674361",
+      "pull_request_review_id": 3318796518,
+      "id": 2416674361,
+      "node_id": "PRRC_kwDOABII586QC4Y5",
+      "diff_hunk": "@@ -59,25 +59,30 @@ void TestCoinsView(FuzzedDataProvider& fuzzed_data_provider, CCoinsView& backend\n                 if (random_coin.IsSpent()) {\n                     return;\n                 }\n-                Coin coin = random_coin;\n-                bool expected_code_path = false;\n-                const bool possible_overwrite = fuzzed_data_provider.ConsumeBool();\n-                try {\n-                    coins_view_cache.AddCoin(random_out_point, std::move(coin), possible_overwrite);\n-                    expected_code_path = true;\n-                } catch (const std::logic_error& e) {\n-                    if (e.what() == std::string{\"Attempted to overwrite an unspent coin (when possible_overwrite is false)\"}) {\n-                        assert(!possible_overwrite);\n+                COutPoint outpoint{random_out_point};",
+      "path": "src/test/fuzz/coins_view.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "bf1f9907d47fc93cc0ca67fe65a03466d93381c3",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I have extracted it on purpose to signal that both branches are doing something similar and have the same dependencies",
+      "created_at": "2025-10-09T12:44:25Z",
+      "updated_at": "2025-10-09T12:44:25Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2416674361",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416674361"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2416674361"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2416674361/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 62,
+      "original_line": 62,
+      "side": "RIGHT",
+      "in_reply_to_id": 2416151924,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 13,
+      "position": 12,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418231037",
+      "pull_request_review_id": 3320989940,
+      "id": 2418231037,
+      "node_id": "PRRC_kwDOABII586QI0b9",
+      "diff_hunk": "@@ -111,9 +111,12 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n }\n \n void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin) {\n-    cachedCoinsUsage += coin.DynamicMemoryUsage();\n+    const auto mem_usage{coin.DynamicMemoryUsage()};\n     auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint), std::move(coin));\n-    if (inserted) CCoinsCacheEntry::SetDirty(*it, m_sentinel);\n+    if (inserted) {",
+      "path": "src/coins.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "c4293c7b21971e7ddd813ad3fbe574eb5605d60e",
+      "user": {
+        "login": "w0xlt",
+        "id": 94266259,
+        "node_id": "U_kgDOBZ5jkw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/94266259?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/w0xlt",
+        "html_url": "https://github.com/w0xlt",
+        "followers_url": "https://api.github.com/users/w0xlt/followers",
+        "following_url": "https://api.github.com/users/w0xlt/following{/other_user}",
+        "gists_url": "https://api.github.com/users/w0xlt/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/w0xlt/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/w0xlt/subscriptions",
+        "organizations_url": "https://api.github.com/users/w0xlt/orgs",
+        "repos_url": "https://api.github.com/users/w0xlt/repos",
+        "events_url": "https://api.github.com/users/w0xlt/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/w0xlt/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "If `inserted=false`, you've still moved from `coin`.\r\nIs this expected behavior ?",
+      "created_at": "2025-10-10T00:19:02Z",
+      "updated_at": "2025-10-10T00:19:17Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2418231037",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418231037"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2418231037"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418231037/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 116,
+      "original_line": 116,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 28,
+      "position": 28,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418258249",
+      "pull_request_review_id": 3321019659,
+      "id": 2418258249,
+      "node_id": "PRRC_kwDOABII586QI7FJ",
+      "diff_hunk": "@@ -111,9 +111,12 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi\n }\n \n void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin) {\n-    cachedCoinsUsage += coin.DynamicMemoryUsage();\n+    const auto mem_usage{coin.DynamicMemoryUsage()};\n     auto [it, inserted] = cacheCoins.try_emplace(std::move(outpoint), std::move(coin));\n-    if (inserted) CCoinsCacheEntry::SetDirty(*it, m_sentinel);\n+    if (inserted) {",
+      "path": "src/coins.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "c4293c7b21971e7ddd813ad3fbe574eb5605d60e",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Yes. `coin` is an rvalue, so it is already moved out of the caller. `inserted` should always be true anyways.",
+      "created_at": "2025-10-10T00:45:50Z",
+      "updated_at": "2025-10-14T19:16:05Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2418258249",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418258249"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2418258249"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2418258249/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 116,
+      "original_line": 116,
+      "side": "RIGHT",
+      "in_reply_to_id": 2418231037,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 28,
+      "position": 28,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2421864146",
+      "pull_request_review_id": 3325631861,
+      "id": 2421864146,
+      "node_id": "PRRC_kwDOABII586QWrbS",
+      "diff_hunk": "@@ -195,6 +195,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                assert(entry.coin.DynamicMemoryUsage() == 0);",
+      "path": "src/coins.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "8d5e323b5f475fe9a2bed1402a20e48a40a45137",
+      "user": {
+        "login": "ryanofsky",
+        "id": 7133040,
+        "node_id": "MDQ6VXNlcjcxMzMwNDA=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/7133040?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ryanofsky",
+        "html_url": "https://github.com/ryanofsky",
+        "followers_url": "https://api.github.com/users/ryanofsky/followers",
+        "following_url": "https://api.github.com/users/ryanofsky/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ryanofsky/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ryanofsky/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ryanofsky/subscriptions",
+        "organizations_url": "https://api.github.com/users/ryanofsky/orgs",
+        "repos_url": "https://api.github.com/users/ryanofsky/repos",
+        "events_url": "https://api.github.com/users/ryanofsky/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ryanofsky/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "In commit \"refactor: assert newly-created parent cache entry has zero memory usage\" (8d5e323b5f475fe9a2bed1402a20e48a40a45137)\r\n\r\nNote: this assert will be true because `itUs == cacheCoins.end()` condition above means try_emplace will always insert and  `itUs->second` will be a new empty coin",
+      "created_at": "2025-10-10T19:31:07Z",
+      "updated_at": "2025-10-10T20:09:57Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2421864146",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2421864146"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2421864146"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2421864146/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 201,
+      "original_line": 198,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 39,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2423281826",
+      "pull_request_review_id": 3327803929,
+      "id": 2423281826,
+      "node_id": "PRRC_kwDOABII586QcFii",
+      "diff_hunk": "@@ -195,6 +195,7 @@ bool CCoinsViewCache::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &ha\n                 // and mark it as dirty.\n                 itUs = cacheCoins.try_emplace(it->first).first;\n                 CCoinsCacheEntry& entry{itUs->second};\n+                assert(entry.coin.DynamicMemoryUsage() == 0);",
+      "path": "src/coins.cpp",
+      "commit_id": "24d861da7894add47747eff69dd3fc71fbcdd7d0",
+      "original_commit_id": "8d5e323b5f475fe9a2bed1402a20e48a40a45137",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I think that's what I also wrote in the commit message, but rephrased it slightly, let me know if it's better.",
+      "created_at": "2025-10-12T02:11:23Z",
+      "updated_at": "2025-10-12T02:11:24Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2423281826",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2423281826"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2423281826"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2423281826/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 201,
+      "original_line": 198,
+      "side": "RIGHT",
+      "in_reply_to_id": 2421864146,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 39,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424497697",
+      "pull_request_review_id": 3329038820,
+      "id": 2424497697,
+      "node_id": "PRRC_kwDOABII586QguYh",
+      "diff_hunk": "@@ -1103,4 +1103,20 @@ BOOST_AUTO_TEST_CASE(ccoins_addcoin_exception_keeps_usage_balanced)\n     BOOST_CHECK(cache.AccessCoin(outpoint) == coin1);\n }\n \n+BOOST_AUTO_TEST_CASE(ccoins_emplace_duplicate_keeps_usage_balanced)\n+{\n+    CCoinsView root;\n+    CCoinsViewCacheTest cache{&root};\n+\n+    const COutPoint outpoint{Txid::FromUint256(m_rng.rand256()), m_rng.rand32()};\n+    const Coin coin{CTxOut{m_rng.randrange(10), CScript{} << m_rng.randbytes(CScriptBase::STATIC_SIZE + 1)}, 1, false};\n+\n+    cache.EmplaceCoinInternalDANGER(COutPoint{outpoint}, Coin{coin});\n+    cache.SelfTest();\n+    cache.EmplaceCoinInternalDANGER(COutPoint{outpoint}, Coin{coin});",
+      "path": "src/test/coins_tests.cpp",
+      "commit_id": "0d5f7d24bde2bcc2cf7345fa46cb84ac0ecec41f",
+      "original_commit_id": "0d5f7d24bde2bcc2cf7345fa46cb84ac0ecec41f",
+      "user": {
+        "login": "andrewtoth",
+        "id": 237213,
+        "node_id": "MDQ6VXNlcjIzNzIxMw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/237213?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andrewtoth",
+        "html_url": "https://github.com/andrewtoth",
+        "followers_url": "https://api.github.com/users/andrewtoth/followers",
+        "following_url": "https://api.github.com/users/andrewtoth/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andrewtoth/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andrewtoth/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andrewtoth/subscriptions",
+        "organizations_url": "https://api.github.com/users/andrewtoth/orgs",
+        "repos_url": "https://api.github.com/users/andrewtoth/repos",
+        "events_url": "https://api.github.com/users/andrewtoth/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andrewtoth/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "We should try and insert a different `coin` at the same `outpoint`, like we do for the `AddCoin` test above. That way the below check `cache.AccessCoin(outpoint) == coin` makes sure the original `coin` emplaced was not overwritten by the second one.\r\n\r\nWe should also make sure the two coins have different `DynamicMemoryUsage` so the accounting is correct for the coin that was actually inserted.",
+      "created_at": "2025-10-12T16:18:40Z",
+      "updated_at": "2025-10-12T16:20:55Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2424497697",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424497697"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2424497697"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424497697/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 1116,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424544149",
+      "pull_request_review_id": 3329098930,
+      "id": 2424544149,
+      "node_id": "PRRC_kwDOABII586Qg5uV",
+      "diff_hunk": "@@ -1103,4 +1103,20 @@ BOOST_AUTO_TEST_CASE(ccoins_addcoin_exception_keeps_usage_balanced)\n     BOOST_CHECK(cache.AccessCoin(outpoint) == coin1);\n }\n \n+BOOST_AUTO_TEST_CASE(ccoins_emplace_duplicate_keeps_usage_balanced)\n+{\n+    CCoinsView root;\n+    CCoinsViewCacheTest cache{&root};\n+\n+    const COutPoint outpoint{Txid::FromUint256(m_rng.rand256()), m_rng.rand32()};\n+    const Coin coin{CTxOut{m_rng.randrange(10), CScript{} << m_rng.randbytes(CScriptBase::STATIC_SIZE + 1)}, 1, false};\n+\n+    cache.EmplaceCoinInternalDANGER(COutPoint{outpoint}, Coin{coin});\n+    cache.SelfTest();\n+    cache.EmplaceCoinInternalDANGER(COutPoint{outpoint}, Coin{coin});",
+      "path": "src/test/coins_tests.cpp",
+      "commit_id": "0d5f7d24bde2bcc2cf7345fa46cb84ac0ecec41f",
+      "original_commit_id": "0d5f7d24bde2bcc2cf7345fa46cb84ac0ecec41f",
+      "user": {
+        "login": "l0rinc",
+        "id": 1841944,
+        "node_id": "MDQ6VXNlcjE4NDE5NDQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1841944?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/l0rinc",
+        "html_url": "https://github.com/l0rinc",
+        "followers_url": "https://api.github.com/users/l0rinc/followers",
+        "following_url": "https://api.github.com/users/l0rinc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/l0rinc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/l0rinc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/l0rinc/subscriptions",
+        "organizations_url": "https://api.github.com/users/l0rinc/orgs",
+        "repos_url": "https://api.github.com/users/l0rinc/repos",
+        "events_url": "https://api.github.com/users/l0rinc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/l0rinc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Good idea, [done](https://github.com/bitcoin/bitcoin/compare/0d5f7d24bde2bcc2cf7345fa46cb84ac0ecec41f..24d861da7894add47747eff69dd3fc71fbcdd7d0)",
+      "created_at": "2025-10-12T16:38:15Z",
+      "updated_at": "2025-10-12T16:38:15Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2424544149",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424544149"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/32313#discussion_r2424544149"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/32313"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2424544149/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 1116,
+      "side": "RIGHT",
+      "in_reply_to_id": 2424497697,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

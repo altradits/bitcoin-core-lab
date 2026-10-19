@@ -1,0 +1,679 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjYzOTk2Nzk=",
+    "is_bot": false,
+    "login": "maflcko",
+    "name": ""
+  },
+  "body": "`TestChain100Setup` enqueues 100 validation events from blocks. Unit tests using that setup and their own validation events may run into non-determinism and even intermittent test failures.\r\n\r\nFix all issues by draining the pending validation events in the ctor.\r\n\r\nThis can be tested with a diff like:\r\n\r\n```diff\r\ndiff --git a/src/validationinterface.cpp b/src/validationinterface.cpp\r\nindex 128f14a6d5..2ea3ec8d4c 100644\r\n--- a/src/validationinterface.cpp\r\n+++ b/src/validationinterface.cpp\r\n@@ -14,2 +14,3 @@\r\n #include <primitives/transaction.h>\r\n+#include <random.h>\r\n #include <util/check.h>\r\n@@ -156,2 +157,4 @@ void ValidationSignals::SyncWithValidationInterfaceQueue()\r\n \r\n+static FastRandomContext g_rnd{};\r\n+\r\n // Use a macro instead of a function for conditional logging to prevent\r\n@@ -168,2 +171,3 @@ void ValidationSignals::SyncWithValidationInterfaceQueue()\r\n             LOG_EVENT(\"%s\", local_log_msg);                                                                      \\\r\n+            UninterruptibleSleep(1ms * g_rnd.randrange(105));   \\\r\n             local_event();                                                                                       \\\r\n```\r\n\r\nand then running the test `scan_for_wallet_transactions_attach_chain` a few times.\r\n\r\nOr master (or the first commit), it should fail with: `error: scan_for_wallet_transactions_attach_chain\": check wallet->mapWallet.size() == static_cast<size_t>(NEW_BLOCKS + 1) has failed [7 != 6]`.\r\n\r\n(Also included is a commit to move-only the many rescan tests to a separate file)\r\n\r\n(Also included is a commit to fix unsafe index shutdowns in tests)",
+  "comments": [
+    {
+      "id": "IC_kwDOABII588AAAABZtXYJw",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--006a51241073e994b41acfe9ec718e94-->\n### External sites\n\n* Code coverage & benchmarks: https://corecheck.dev/bitcoin/bitcoin/pulls/36447\n* Ralph review <img src=https://review.fish.foo/assets/bitcoin/bitcoin/36447.png alt=\"Ralph review status\"> https://git.fish.foo/bitcoin/bitcoin/pulls/36447#author-ralph\n<!--021abf342d371248e50ceaed478a90ca-->\n### Reviews\nSee [the guideline](https://github.com/bitcoin/bitcoin/blob/master/CONTRIBUTING.md#code-review) and [AI policy](https://github.com/bitcoin/bitcoin/blob/master/doc/AI_POLICY.md) for information on the review process.\n| Type | Reviewers |\n| ---- | --------- |\n| ACK | [sedited](https://github.com/bitcoin/bitcoin/pull/36447#pullrequestreview-5441437290), [willcl-ark](https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6036942281) |\n| Concept ACK | [StephenChi-hi](https://github.com/bitcoin/bitcoin/pull/36447#pullrequestreview-5441985558) |\n| Stale ACK | [ismaelsadeeq](https://github.com/bitcoin/bitcoin/pull/36447#pullrequestreview-5439436476) |\n\nIf your review is incorrectly listed, please copy-paste <code>&lt;!--meta-tag:bot-skip--&gt;</code> into the comment that the bot should ignore.\n<!--174a7506f384e20aa4161008e828411d-->\n### Conflicts\nReviewers, this pull request conflicts with the following ones:\n\n* [#36444](https://github.com/bitcoin/bitcoin/pull/36444) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/36444.svg\"></sub> (wallet: Store information about created and imported multipath descriptors by achow101)\n* [#36443](https://github.com/bitcoin/bitcoin/pull/36443) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/36443.svg\"></sub> (descriptor: Reconstruct a multipath descriptor from its expansion by achow101)\n* [#36442](https://github.com/bitcoin/bitcoin/pull/36442) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/36442.svg\"></sub> (descriptor: Represent multipath descriptors in a single Descriptor object by achow101)\n* [#36337](https://github.com/bitcoin/bitcoin/pull/36337) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/36337.svg\"></sub> (fuzz: Cover block filter P2P messages by maflcko)\n* [#35474](https://github.com/bitcoin/bitcoin/pull/35474) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/35474.svg\"></sub> (node: move index ownership to NodeContext by w0xlt)\n* [#24230](https://github.com/bitcoin/bitcoin/pull/24230) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/24230.svg\"></sub> (indexes: Stop using node internal types and locking cs_main, improve sync logic by ryanofsky)\n\nIf you consider this pull request important, please also help to review the conflicting pull requests. Ideally, start with the one that should be merged first.\n<!--5faf32d7da4f0f540f40219e4f7537a3-->\n### LLM Linter (\u2728 experimental)\n\n\n\nPossible typos and grammar issues:\n\n- `src/wallet/test/rescan_tests.cpp`: `the one of the recorded best block` \u2192 `the coinbase of the recorded best block` [the original phrasing is unclear]\n\n\n\n<sup>2026-10-07 10:42:25</sup>\n",
+      "createdAt": "2026-10-06T16:01:55Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6020257831",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZxYhRw",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "Hmm, looks like Ralph Review found another race. To repo:\r\n\r\n```diff\r\ndiff --git a/src/wallet/test/rescan_tests.cpp b/src/wallet/test/rescan_tests.cpp\r\nindex 4c5cf76ced..d838e1fc70 100644\r\n--- a/src/wallet/test/rescan_tests.cpp\r\n+++ b/src/wallet/test/rescan_tests.cpp\r\n@@ -29,2 +29,3 @@\r\n #include <string>\r\n+#include <thread>\r\n #include <utility>\r\n@@ -567,4 +568,12 @@ BOOST_FIXTURE_TEST_CASE(scan_for_wallet_transactions_attach_chain, TestChain100S\r\n     constexpr int NEW_BLOCKS{5};\r\n+    const auto delayed_blocks_start = std::chrono::steady_clock::now();\r\n     for (int i = 0; i < NEW_BLOCKS; ++i) {\r\n+        if (i >= 3) {\r\n+            m_node.validation_signals->CallFunctionInValidationInterfaceQueue(\r\n+                [] { std::this_thread::sleep_for(std::chrono::milliseconds{500}); });\r\n+        }\r\n         CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));\r\n+        if (i < 3) {\r\n+            m_node.validation_signals->SyncWithValidationInterfaceQueue();\r\n+        }\r\n     }\r\n@@ -582,4 +591,9 @@ BOOST_FIXTURE_TEST_CASE(scan_for_wallet_transactions_attach_chain, TestChain100S\r\n     wallet = TestLoadWallet(context);\r\n+    BOOST_TEST_MESSAGE(\"Wallet load returned \" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - delayed_blocks_start).count() << \" ms after starting delayed blocks\");\r\n+\r\n+    // Allow some delayed callbacks to run before checking the wallet tip.\r\n+    std::this_thread::sleep_for(std::chrono::milliseconds{500});\r\n     {\r\n         LOCK(wallet->cs_wallet);\r\n+        BOOST_TEST_MESSAGE(\"Assertions at \" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - delayed_blocks_start).count() << \" ms, wallet height \" << wallet->GetLastBlockHeight());\r\n         BOOST_CHECK_EQUAL(wallet->GetLastBlockHeight(), tip_height);\r\n```\r\n\r\nLet me push a fix for that as well ...",
+      "createdAt": "2026-10-06T20:05:32Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6024470855",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZx12Rw",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "ok, now the CI is failing because there is another UB race :(\r\n\r\nLet's fix that here as well, I guess ...",
+      "createdAt": "2026-10-06T20:34:55Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "CONFUSED",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6024951367",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZyKXXg",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--85328a0da195eb286784d51f73fa0af9-->\n\ud83d\udea7 At least one of the CI tasks failed.\n<sub>Task `TSan`: https://github.com/bitcoin/bitcoin/actions/runs/37524113100/job/112476629653</sub>\n<sub>LLM reason (\u2728 experimental): CI failed because ThreadSanitizer detected a data race on a vptr in `BaseIndex::~BaseIndex()` during `coinstatsindex_tests`.</sub>\n\n<details><summary>Hints</summary>\n\nTry to run the tests locally, according to the documentation. However, a CI failure may still\nhappen due to a number of reasons, for example:\n\n* Possibly due to a silent merge conflict (the changes in this pull request being\nincompatible with the current code in the target branch). If so, make sure to rebase on the latest\ncommit of the target branch.\n\n* A sanitizer issue, which can only be found by compiling with the sanitizer and running the\n  affected test.\n\n* An intermittent issue.\n\nLeave a comment here, if you need help tracking down a confusing failure.\n\n</details>\n\n",
+      "createdAt": "2026-10-06T20:55:57Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6025287518",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZ9RtyQ",
+      "author": {
+        "login": "willcl-ark"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "reACK fa466dea808dedfc281cdff842cbefafae574d8a",
+      "createdAt": "2026-10-07T11:27:25Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36447#issuecomment-6036942281",
+      "viewerDidAuthor": false
+    }
+  ],
+  "files": [
+    {
+      "path": "src/bench/index_blockfilter.cpp",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/baseindex_tests.cpp",
+      "additions": 2,
+      "deletions": 8,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/blockfilter_index_tests.cpp",
+      "additions": 2,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/coinstatsindex_tests.cpp",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/txindex_tests.cpp",
+      "additions": 5,
+      "deletions": 5,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/txospenderindex_tests.cpp",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/util/setup_common.cpp",
+      "additions": 5,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/util/setup_common.h",
+      "additions": 7,
+      "deletions": 6,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/util/validation.cpp",
+      "additions": 8,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/util/validation.h",
+      "additions": 5,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/wallet/test/CMakeLists.txt",
+      "additions": 1,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/wallet/test/rescan_tests.cpp",
+      "additions": 597,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "src/wallet/test/util.cpp",
+      "additions": 13,
+      "deletions": 8,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/wallet/test/util.h",
+      "additions": 2,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/wallet/test/wallet_tests.cpp",
+      "additions": 2,
+      "deletions": 576,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefOid": "fa466dea808dedfc281cdff842cbefafae574d8a",
+  "mergeCommit": {
+    "oid": "9dfde64cc3262329051fd05fffe40eecc786a99f"
+  },
+  "mergedAt": "2026-10-07T12:56:49Z",
+  "number": 36447,
+  "reviews": [
+    {
+      "id": "PRR_kwDOABII588AAAABQ9X3dg",
+      "author": {
+        "login": "sedited"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK 9999557b77224be0f6d079af53fa90042bfd01b9",
+      "submittedAt": "2026-10-06T18:41:06Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "9999557b77224be0f6d079af53fa90042bfd01b9"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABQ-EKSA",
+      "author": {
+        "login": "willcl-ark"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "ACK 9999557b77224be0f6d079af53fa90042bfd01b9\n\nNice!",
+      "submittedAt": "2026-10-06T19:47:56Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "9999557b77224be0f6d079af53fa90042bfd01b9"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRCLNKA",
+      "author": {
+        "login": "ismaelsadeeq"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "Code review ACK fa77f27f98211167d9dfeba8933e6866df5fce8b\n\nMinor comments below",
+      "submittedAt": "2026-10-07T05:41:06Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "fa77f27f98211167d9dfeba8933e6866df5fce8b"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRCmk7A",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2026-10-07T06:37:41Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "9999557b77224be0f6d079af53fa90042bfd01b9"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRDc2vA",
+      "author": {
+        "login": "ismaelsadeeq"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "reACK fa10ab5fdbb8ca3fede08dd7c93c7359a5e25433",
+      "submittedAt": "2026-10-07T08:11:11Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "fa10ab5fdbb8ca3fede08dd7c93c7359a5e25433"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABREqdVQ",
+      "author": {
+        "login": "sedited"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2026-10-07T10:04:07Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "facf6a5ee32048ddd6012818a3983b434b96f837"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRFEHXQ",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2026-10-07T10:43:47Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "facf6a5ee32048ddd6012818a3983b434b96f837"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRFW-ag",
+      "author": {
+        "login": "sedited"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK fa466dea808dedfc281cdff842cbefafae574d8a",
+      "submittedAt": "2026-10-07T11:13:07Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "fa466dea808dedfc281cdff842cbefafae574d8a"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRF4cFg",
+      "author": {
+        "login": "StephenChi-hi"
+      },
+      "authorAssociation": "NONE",
+      "body": "tACK\r\n\r\nI agree, this will sure help to prevent flaky test failures.\r\nbuilt and verified changes, all 862 unit test cases in test_bitcoin passed cleanly.\r\n\r\n\r\n",
+      "submittedAt": "2026-10-07T12:03:52Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "fa466dea808dedfc281cdff842cbefafae574d8a"
+      }
+    }
+  ],
+  "state": "MERGED",
+  "title": "test: Misc fixes for pending validation events races",
+  "inline_review_comments": [
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203460416",
+      "pull_request_review_id": 5438098728,
+      "id": 4203460416,
+      "node_id": "PRRC_kwDOABII5876i7dA",
+      "diff_hunk": "@@ -431,6 +431,10 @@ TestChain100Setup::TestChain100Setup(\n     // Generate a 100-block chain:\n     this->mineBlocks(COINBASE_MATURITY);\n \n+    // Make the fixture deterministic. Tests requiring validation callbacks\n+    // should explicitly create them.\n+    if (m_node.validation_signals) m_node.validation_signals->SyncWithValidationInterfaceQueue();",
+      "path": "src/test/util/setup_common.cpp",
+      "commit_id": "9999557b77224be0f6d079af53fa90042bfd01b9",
+      "original_commit_id": "9999557b77224be0f6d079af53fa90042bfd01b9",
+      "user": {
+        "login": "ismaelsadeeq",
+        "id": 48946461,
+        "node_id": "MDQ6VXNlcjQ4OTQ2NDYx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/48946461?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ismaelsadeeq",
+        "html_url": "https://github.com/ismaelsadeeq",
+        "followers_url": "https://api.github.com/users/ismaelsadeeq/followers",
+        "following_url": "https://api.github.com/users/ismaelsadeeq/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ismaelsadeeq/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ismaelsadeeq/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ismaelsadeeq/subscriptions",
+        "organizations_url": "https://api.github.com/users/ismaelsadeeq/orgs",
+        "repos_url": "https://api.github.com/users/ismaelsadeeq/repos",
+        "events_url": "https://api.github.com/users/ismaelsadeeq/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ismaelsadeeq/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Perhaps it may be better to just drain in mineBlock? That way other callers that will mine a block get the notification emitted for free, without them having to drain themselves?",
+      "created_at": "2026-10-07T05:38:42Z",
+      "updated_at": "2026-10-07T05:41:06Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203460416",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203460416"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203460416"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203460416/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 436,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203468207",
+      "pull_request_review_id": 5438098728,
+      "id": 4203468207,
+      "node_id": "PRRC_kwDOABII5876i9Wv",
+      "diff_hunk": "@@ -569,6 +569,10 @@ BOOST_FIXTURE_TEST_CASE(scan_for_wallet_transactions_attach_chain, TestChain100S\n         CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));\n     }\n \n+    // Drain BlockConnected callbacks before loading the wallet, so stale\n+    // notifications will not update its tip during test checks.\n+    m_node.chain->waitForNotifications();",
+      "path": "src/wallet/test/rescan_tests.cpp",
+      "commit_id": "fa0df16886cc98c00e16a3c490083b718475fc3a",
+      "original_commit_id": "fa0df16886cc98c00e16a3c490083b718475fc3a",
+      "user": {
+        "login": "ismaelsadeeq",
+        "id": 48946461,
+        "node_id": "MDQ6VXNlcjQ4OTQ2NDYx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/48946461?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ismaelsadeeq",
+        "html_url": "https://github.com/ismaelsadeeq",
+        "followers_url": "https://api.github.com/users/ismaelsadeeq/followers",
+        "following_url": "https://api.github.com/users/ismaelsadeeq/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ismaelsadeeq/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ismaelsadeeq/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ismaelsadeeq/subscriptions",
+        "organizations_url": "https://api.github.com/users/ismaelsadeeq/orgs",
+        "repos_url": "https://api.github.com/users/ismaelsadeeq/repos",
+        "events_url": "https://api.github.com/users/ismaelsadeeq/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ismaelsadeeq/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Same comment here: can we move the drain to CreateAndProcessBlock?",
+      "created_at": "2026-10-07T05:40:08Z",
+      "updated_at": "2026-10-07T05:41:06Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203468207",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203468207"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203468207"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203468207/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 574,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203839242",
+      "pull_request_review_id": 5438547180,
+      "id": 4203839242,
+      "node_id": "PRRC_kwDOABII5876kX8K",
+      "diff_hunk": "@@ -431,6 +431,10 @@ TestChain100Setup::TestChain100Setup(\n     // Generate a 100-block chain:\n     this->mineBlocks(COINBASE_MATURITY);\n \n+    // Make the fixture deterministic. Tests requiring validation callbacks\n+    // should explicitly create them.\n+    if (m_node.validation_signals) m_node.validation_signals->SyncWithValidationInterfaceQueue();",
+      "path": "src/test/util/setup_common.cpp",
+      "commit_id": "9999557b77224be0f6d079af53fa90042bfd01b9",
+      "original_commit_id": "9999557b77224be0f6d079af53fa90042bfd01b9",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "I was thinking that it could be useful coverage for the unit tests to be async here. But then, I don't know if they have ever found an issue here. Of course, we still need the option to be async, but maybe it is fine to sync by default.\r\n\r\nI'll push that ...",
+      "created_at": "2026-10-07T06:37:41Z",
+      "updated_at": "2026-10-07T06:37:42Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203839242",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203839242"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4203839242"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4203839242/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 436,
+      "side": "RIGHT",
+      "in_reply_to_id": 4203460416,
+      "author_association": "MEMBER",
+      "original_position": 6,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205575851",
+      "pull_request_review_id": 5440707925,
+      "id": 4205575851,
+      "node_id": "PRRC_kwDOABII5876q_6r",
+      "diff_hunk": "@@ -170,8 +171,7 @@ BOOST_FIXTURE_TEST_CASE(txindex_initial_sync, TestChain100Setup)\n         LookupTx(txindex, txn.GetHash());\n     }\n \n-    // shutdown sequence (c.f. Shutdown() in init.cpp)\n-    txindex.Stop();\n+    StopIndex(txindex, m_node);",
+      "path": "src/test/txindex_tests.cpp",
+      "commit_id": "fa466dea808dedfc281cdff842cbefafae574d8a",
+      "original_commit_id": "facf6a5ee32048ddd6012818a3983b434b96f837",
+      "user": {
+        "login": "sedited",
+        "id": 8421793,
+        "node_id": "MDQ6VXNlcjg0MjE3OTM=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/8421793?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sedited",
+        "html_url": "https://github.com/sedited",
+        "followers_url": "https://api.github.com/users/sedited/followers",
+        "following_url": "https://api.github.com/users/sedited/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sedited/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sedited/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sedited/subscriptions",
+        "organizations_url": "https://api.github.com/users/sedited/orgs",
+        "repos_url": "https://api.github.com/users/sedited/repos",
+        "events_url": "https://api.github.com/users/sedited/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sedited/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "What about the other cases of `txindex.Stop()` in this file? I guess most don't produce more blocks, but the last test for example does, so maybe we should also sync there?",
+      "created_at": "2026-10-07T10:04:08Z",
+      "updated_at": "2026-10-07T10:04:08Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4205575851",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205575851"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4205575851"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205575851/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 174,
+      "original_line": 174,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 14,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205926732",
+      "pull_request_review_id": 5441128285,
+      "id": 4205926732,
+      "node_id": "PRRC_kwDOABII5876sVlM",
+      "diff_hunk": "@@ -170,8 +171,7 @@ BOOST_FIXTURE_TEST_CASE(txindex_initial_sync, TestChain100Setup)\n         LookupTx(txindex, txn.GetHash());\n     }\n \n-    // shutdown sequence (c.f. Shutdown() in init.cpp)\n-    txindex.Stop();\n+    StopIndex(txindex, m_node);",
+      "path": "src/test/txindex_tests.cpp",
+      "commit_id": "fa466dea808dedfc281cdff842cbefafae574d8a",
+      "original_commit_id": "facf6a5ee32048ddd6012818a3983b434b96f837",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "ah, I only grepped for the comment. Fixed the others as well now.",
+      "created_at": "2026-10-07T10:43:46Z",
+      "updated_at": "2026-10-07T10:43:47Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4205926732",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205926732"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36447#discussion_r4205926732"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36447"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4205926732/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 174,
+      "original_line": 174,
+      "side": "RIGHT",
+      "in_reply_to_id": 4205575851,
+      "author_association": "MEMBER",
+      "original_position": 14,
+      "position": 14,
+      "subject_type": "line"
+    }
+  ]
+}

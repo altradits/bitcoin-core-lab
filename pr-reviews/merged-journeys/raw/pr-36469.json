@@ -1,0 +1,175 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjY2OTEyMzM1",
+    "is_bot": false,
+    "login": "enirox001",
+    "name": "Enoch Azariah"
+  },
+  "body": "As mentioned in https://github.com/bitcoin/bitcoin/pull/34644#discussion_r2889315162 and https://github.com/bitcoin/bitcoin/pull/35675#discussion_r360301816, the validation state catchers were defined in the block template manager, `submitblock` rpc and mining test helpers, even though they do the same thing.\n\nMoved this helper into `node/block_validation_state_catcher.h` and reuse it across all three callers. An optional validation state replaces the separate `found` flag where used, preserving each caller's registration and result handling\n\nReplaces #36389 with the same commit on a dedicated branch.\n",
+  "comments": [
+    {
+      "id": "IC_kwDOABII588AAAABaRfc9g",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--006a51241073e994b41acfe9ec718e94-->\n### External sites\n\n* Code coverage & benchmarks: https://corecheck.dev/bitcoin/bitcoin/pulls/36469\n* Ralph review <img src=https://review.fish.foo/assets/bitcoin/bitcoin/36469.png alt=\"Ralph review status\"> https://git.fish.foo/bitcoin/bitcoin/pulls/36469#author-ralph\n<!--021abf342d371248e50ceaed478a90ca-->\n### Reviews\nSee [the guideline](https://github.com/bitcoin/bitcoin/blob/master/CONTRIBUTING.md#code-review) and [AI policy](https://github.com/bitcoin/bitcoin/blob/master/doc/AI_POLICY.md) for information on the review process.\n| Type | Reviewers |\n| ---- | --------- |\n| ACK | [ismaelsadeeq](https://github.com/bitcoin/bitcoin/pull/36469#pullrequestreview-5465543502), [maflcko](https://github.com/bitcoin/bitcoin/pull/36469#issuecomment-6142563063), [sedited](https://github.com/bitcoin/bitcoin/pull/36469#pullrequestreview-5514674775), [w0xlt](https://github.com/bitcoin/bitcoin/pull/36469#pullrequestreview-5514709387) |\n| Concept ACK | [Grace-Ujah](https://github.com/bitcoin/bitcoin/pull/36469#pullrequestreview-5457367649) |\n\nIf your review is incorrectly listed, please copy-paste <code>&lt;!--meta-tag:bot-skip--&gt;</code> into the comment that the bot should ignore.\n<!--174a7506f384e20aa4161008e828411d-->\n### Conflicts\nReviewers, this pull request conflicts with the following ones:\n\n* [#36356](https://github.com/bitcoin/bitcoin/pull/36356) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/36356.svg\"></sub> (mining: move getblocktemplate cache into BlockTemplateManager by w0xlt)\n* [#35671](https://github.com/bitcoin/bitcoin/pull/35671) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/35671.svg\"></sub> (mining: add TxCollection to bandwidth-efficiently validate external block templates by Sjors)\n* [#35300](https://github.com/bitcoin/bitcoin/pull/35300) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/35300.svg\"></sub> (mining: add precious option to IPC block submission by w0xlt)\n* [#33922](https://github.com/bitcoin/bitcoin/pull/33922) <sub><img src=\"https://drahtbot.space/ack_count/bitcoin/bitcoin/33922.svg\"></sub> (mining: add getMemoryLoad() and track template non-mempool memory footprint by Sjors)\n\nIf you consider this pull request important, please also help to review the conflicting pull requests. Ideally, start with the one that should be merged first.\n<!--5faf32d7da4f0f540f40219e4f7537a3-->\n### LLM Linter (\u2728 experimental)\n\n\n\nPossible places where named args for integral literals may be used (e.g. `func(x, /*named_arg=*/0)` in C++, and `func(x, named_arg=0)` in Python):\n\n- `src/test/util/mining.cpp`: `ProcessNewBlock(block, true, true, &new_block)`\n\n\n\n<sup>2026-10-08 15:06:00</sup>\n",
+      "createdAt": "2026-10-08T10:44:50Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36469#issuecomment-6058138870",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABaRi5yg",
+      "author": {
+        "login": "sedited"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Concept ACK",
+      "createdAt": "2026-10-08T10:48:15Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36469#issuecomment-6058195402",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABaWXgpw",
+      "author": {
+        "login": "w0xlt"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Concept ACK",
+      "createdAt": "2026-10-08T15:26:22Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36469#issuecomment-6063251623",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABbiAS9w",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "review ACK c9cccf6d68c682e533876b4450f5ad7044a79f1 \ud83d\udd8b\r\n\r\n<details><summary>Show signature</summary>\r\n\r\nSignature:\r\n\r\n```\r\nuntrusted comment: signature from minisign secret key on empty file; verify via: minisign -Vm \"${path_to_any_empty_file}\" -P RWTRmVTMeKV5noAMqVlsMugDDCyyTSbA3Re5AkUrhvLVln0tSaFWglOw -x \"${path_to_this_whole_four_line_signature_blob}\"\r\nRUTRmVTMeKV5npGrKx1nqXCw5zeVHdtdYURB/KlyA/LMFgpNCs+SkW9a8N95d+U4AP1RJMi+krxU1A3Yux4bpwZNLvVBKy0wLgM=\r\ntrusted comment: review ACK c9cccf6d68c682e533876b4450f5ad7044a79f1 \ud83d\udd8b\r\nYXg33xQFEsbGv20Co4NpeVSPnWpOcqgCqsMdHbG2gR8/X8uOlrpulBHHty/HdgRpeaOXwWwxp3O2G+hpd7ZxAw==\r\n```\r\n\r\n</details>\r\n\r\n",
+      "createdAt": "2026-10-13T09:30:27Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36469#issuecomment-6142563063",
+      "viewerDidAuthor": false
+    }
+  ],
+  "files": [
+    {
+      "path": "src/node/block_template_manager.cpp",
+      "additions": 7,
+      "deletions": 29,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/node/block_validation_state_catcher.h",
+      "additions": 37,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "src/rpc/mining.cpp",
+      "additions": 4,
+      "deletions": 21,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "src/test/util/mining.cpp",
+      "additions": 2,
+      "deletions": 17,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefOid": "c9cccf6d68c682e533876b4450f5ad7044a79f10",
+  "mergeCommit": {
+    "oid": "f13ae519de94394314cd63a27924b0998ac65d45"
+  },
+  "mergedAt": "2026-10-14T08:07:56Z",
+  "number": 36469,
+  "reviews": [
+    {
+      "id": "PRR_kwDOABII588AAAABRUjSYQ",
+      "author": {
+        "login": "Grace-Ujah"
+      },
+      "authorAssociation": "NONE",
+      "body": "Concept ACK 5852e3d35a42749d267f2783269a9568bf67e53d",
+      "submittedAt": "2026-10-08T13:31:08Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "5852e3d35a42749d267f2783269a9568bf67e53d"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABRcWTTg",
+      "author": {
+        "login": "ismaelsadeeq"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "ACK c9cccf6d68c682e533876b4450f5ad7044a79f10\n\ndedup is clean.",
+      "submittedAt": "2026-10-09T03:55:29Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "c9cccf6d68c682e533876b4450f5ad7044a79f10"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSLNCVw",
+      "author": {
+        "login": "sedited"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK c9cccf6d68c682e533876b4450f5ad7044a79f10",
+      "submittedAt": "2026-10-14T07:48:08Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "c9cccf6d68c682e533876b4450f5ad7044a79f10"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSLPJiw",
+      "author": {
+        "login": "w0xlt"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK c9cccf6d68c682e533876b4450f5ad7044a79f10",
+      "submittedAt": "2026-10-14T07:51:26Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "c9cccf6d68c682e533876b4450f5ad7044a79f10"
+      }
+    }
+  ],
+  "state": "MERGED",
+  "title": "refactor: deduplicate block validation state catcher",
+  "inline_review_comments": []
+}

@@ -719,6 +719,55 @@ case "${1:-help}" in
   pr-review|pr-audit)
     pr_audit "${2:-}"
     ;;
+  journeys|pr-journeys)
+    if [ -z "${2:-}" ]; then
+      cat "$LAB_DIR/pr-reviews/merged-journeys/README.md"
+    else
+      JOURNEY_FILE="$LAB_DIR/pr-reviews/merged-journeys/PR-${2}-JOURNEY.md"
+      if [ ! -f "$JOURNEY_FILE" ]; then
+        echo "🌐 Downloading PR #${2} review journey from bitcoin/bitcoin..."
+        git -C "$BITCOIN_ROOT" fetch origin "pull/${2}/head:pr-${2}" || true
+        python3 - "${2}" "$LAB_DIR" "$BITCOIN_ROOT" << 'PYEOF'
+import sys, subprocess, json, os
+pr = int(sys.argv[1])
+lab_dir = sys.argv[2]
+btc_root = sys.argv[3]
+out_dir = f"{lab_dir}/pr-reviews/merged-journeys"
+os.makedirs(f"{out_dir}/raw", exist_ok=True)
+cmd1 = ["gh", "pr", "view", str(pr), "--repo", "bitcoin/bitcoin", "--json", "number,title,author,body,state,mergedAt,mergeCommit,headRefOid,comments,reviews,files"]
+data = json.loads(subprocess.run(cmd1, capture_output=True, text=True, check=True).stdout)
+cmd2 = ["gh", "api", f"repos/bitcoin/bitcoin/pulls/{pr}/comments", "--paginate"]
+data["inline_review_comments"] = json.loads(subprocess.run(cmd2, capture_output=True, text=True, check=True).stdout)
+with open(f"{out_dir}/raw/pr-{pr}.json", "w") as f:
+    json.dump(data, f, indent=2)
+stat_res = subprocess.run(["git", "-C", btc_root, "show", "--stat", f"pr-{pr}"], capture_output=True, text=True)
+md = [
+    f"# PR #{pr} Review Journey: `{data['title']}`\n",
+    f"- **Author:** `@{data['author']['login']}`",
+    f"- **State / Merged At:** `{data['state']}` / `{data.get('mergedAt')}`",
+    f"- **Head Commit:** `{data['headRefOid']}`\n---\n",
+    "## 1. Original PR Description\n```text\n" + (data.get("body") or "").strip() + "\n```\n",
+    "## 2. Commit & Diff Stat\n```text\n" + stat_res.stdout.strip() + "\n```\n",
+    "## 3. Inline Code Review Comments\n"
+]
+for ic in data.get("inline_review_comments", []):
+    md.append(f"### `@{ic['user']['login']}` on `{ic.get('path')}:{ic.get('line') or ic.get('original_line')}`\n> " + ic.get("body", "").strip().replace("\n", "\n> ") + "\n")
+md.append("## 4. General Discussion & Maintainer Feedback\n")
+for c in data.get("comments", []):
+    if c["author"]["login"] == "DrahtBot": continue
+    md.append(f"### `@{c['author']['login']}`\n{c['body'].strip()}\n\n---\n")
+md.append("## 5. Formal Reviews & Final `ACK`s\n")
+for r in data.get("reviews", []):
+    if not (r.get("body") or "").strip(): continue
+    md.append(f"### `@{r['author']['login']}` (`{r['state']}`)\n{r['body'].strip()}\n\n---\n")
+with open(f"{out_dir}/PR-{pr}-JOURNEY.md", "w") as f:
+    f.write("\n".join(md))
+print(f"Saved {out_dir}/PR-{pr}-JOURNEY.md")
+PYEOF
+      fi
+      cat "$JOURNEY_FILE"
+    fi
+    ;;
   commit-offline)
     commit_offline "${2:-}"
     ;;
@@ -765,7 +814,8 @@ case "${1:-help}" in
     echo "  ./lab.sh practice <00..12>       Run and study a specific stage interactively"
     echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
     echo ""
-    echo "Maintainer-Grade Offline PR Auditing & Sync:"
+    echo "Maintainer-Grade Offline PR Auditing, Review Journeys & Sync:"
+    echo "  ./lab.sh journeys [PR_NUMBER]    Study 8 real merged PR review journeys (or download any PR's journey)"
     echo "  ./lab.sh pr-list                 List upstream bitcoin/bitcoin PRs stored locally for offline review"
     echo "  ./lab.sh pr-audit <PR_NUMBER>    Run a 6-Point Guardian Security Audit on an upstream PR offline"
     echo "  ./lab.sh commit-offline \"<msg>\"  Commit your work locally while offline"

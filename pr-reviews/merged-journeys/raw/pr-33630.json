@@ -1,0 +1,459 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjI1MTgzMDAx",
+    "is_bot": false,
+    "login": "glozow",
+    "name": "Gloria Zhao"
+  },
+  "body": "This doc is outdated since #31385. Also made it explicit that a singleton is ok.\r\n\r\nCan be backported to 30.x, but doesn't need to be backported earlier (\"if any\" covers #31096).",
+  "comments": [
+    {
+      "id": "IC_kwDOABII587K3AnV",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--006a51241073e994b41acfe9ec718e94-->\n### Code Coverage & Benchmarks\nFor details see: https://corecheck.dev/bitcoin/bitcoin/pulls/33630.\n<!--021abf342d371248e50ceaed478a90ca-->\n### Reviews\nSee [the guideline](https://github.com/bitcoin/bitcoin/blob/master/CONTRIBUTING.md#code-review) for information on the review process.\n| Type | Reviewers |\n| ---- | --------- |\n| ACK | [janb84](https://github.com/bitcoin/bitcoin/pull/33630#pullrequestreview-3350421480), [instagibbs](https://github.com/bitcoin/bitcoin/pull/33630#pullrequestreview-3350431854) |\n| Stale ACK | [kevkevinpal](https://github.com/bitcoin/bitcoin/pull/33630#issuecomment-3403688479) |\n\nIf your review is incorrectly listed, please react with \ud83d\udc4e to this comment and the bot will ignore it on the next update.\n<!--5faf32d7da4f0f540f40219e4f7537a3-->",
+      "createdAt": "2025-10-14T20:02:26Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/33630#issuecomment-3403418069",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587K4Cof",
+      "author": {
+        "login": "kevkevinpal"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK [501b030](https://github.com/bitcoin/bitcoin/pull/33630/commits/501b030769ae538c5fc445729e82f0b08bcd288a)\r\n\r\nFairly straightforward change and makes it clearer what is accepted",
+      "createdAt": "2025-10-14T21:31:16Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/33630#issuecomment-3403688479",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587LlnDl",
+      "author": {
+        "login": "glozow"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Thanks for the reviews! Re-pushed to address comments.",
+      "createdAt": "2025-10-17T13:30:19Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/33630#issuecomment-3415634149",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII587LmV_M",
+      "author": {
+        "login": "fanquake"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "Backported to `30.x` in #33609.",
+      "createdAt": "2025-10-17T14:24:37Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/33630#issuecomment-3415826380",
+      "viewerDidAuthor": false
+    }
+  ],
+  "files": [
+    {
+      "path": "src/rpc/mempool.cpp",
+      "additions": 3,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefOid": "3d222825642bfb052ce40cbc1c69318a0d8835bf",
+  "mergeCommit": {
+    "oid": "d30f149360d10de31bd7f7369aa61ce8be0837b5"
+  },
+  "mergedAt": "2025-10-17T14:16:13Z",
+  "number": 33630,
+  "reviews": [
+    {
+      "id": "PRR_kwDOABII587HEi2G",
+      "author": {
+        "login": "janb84"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-15T11:18:21Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587HsLMc",
+      "author": {
+        "login": "instagibbs"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2025-10-17T12:57:27Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587HstGA",
+      "author": {
+        "login": "glozow"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-17T13:29:54Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587HstOS",
+      "author": {
+        "login": "glozow"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2025-10-17T13:30:03Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": ""
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587Hs1_o",
+      "author": {
+        "login": "janb84"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "ACK 3d222825642bfb052ce40cbc1c69318a0d8835bf\r\n\r\nPR updates helptext of submitpackage to be up 2 date with the reent changes in #31385 . New help text reflects changes in #31385 and is clear.\r\n\r\nThanks for incorporating my nit!   ",
+      "submittedAt": "2025-10-17T13:38:59Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "3d222825642bfb052ce40cbc1c69318a0d8835bf"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII587Hs4hu",
+      "author": {
+        "login": "instagibbs"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "ACK 3d222825642bfb052ce40cbc1c69318a0d8835bf",
+      "submittedAt": "2025-10-17T13:41:35Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "APPROVED",
+      "commit": {
+        "oid": "3d222825642bfb052ce40cbc1c69318a0d8835bf"
+      }
+    }
+  ],
+  "state": "MERGED",
+  "title": "doc: correct topology requirements in submitpackage helptext",
+  "inline_review_comments": [
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2432181432",
+      "pull_request_review_id": 3339857286,
+      "id": 2432181432,
+      "node_id": "PRRC_kwDOABII586Q-CS4",
+      "diff_hunk": "@@ -936,7 +936,7 @@ static RPCHelpMan submitpackage()\n         ,\n         {\n             {\"package\", RPCArg::Type::ARR, RPCArg::Optional::NO, \"An array of raw transactions.\\n\"\n-                \"The package must solely consist of a child transaction and all of its unconfirmed parents, if any. None of the parents may depend on each other.\\n\"\n+                \"The package must consist of either: exactly 1 transaction, or 1 transaction with its unconfirmed parents. None of the parents may depend on each other. Not all parents need to be present.\\n\"",
+      "path": "src/rpc/mempool.cpp",
+      "commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "original_commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "user": {
+        "login": "janb84",
+        "id": 608446,
+        "node_id": "MDQ6VXNlcjYwODQ0Ng==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/608446?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/janb84",
+        "html_url": "https://github.com/janb84",
+        "followers_url": "https://api.github.com/users/janb84/followers",
+        "following_url": "https://api.github.com/users/janb84/following{/other_user}",
+        "gists_url": "https://api.github.com/users/janb84/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/janb84/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/janb84/subscriptions",
+        "organizations_url": "https://api.github.com/users/janb84/orgs",
+        "repos_url": "https://api.github.com/users/janb84/repos",
+        "events_url": "https://api.github.com/users/janb84/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/janb84/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Text is not completely clear to me on the parents point. \"or 1 transaction with its unconfirmed parents\" but \"Not all parents need to be present\" so some of the unconfirmed parents ? all but not the confirmed parents ?  \r\n\r\nMaybe NIT;\r\n```suggestion\r\n                \"The package must consist of either: exactly 1 transaction, or 1 transaction with (some of) its unconfirmed parents. None of the parents may depend on each other. Not all parents need to be present.\\n\"\r\n```",
+      "created_at": "2025-10-15T11:18:20Z",
+      "updated_at": "2025-10-15T11:18:21Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2432181432",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2432181432"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2432181432"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2432181432/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 939,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2439936432",
+      "pull_request_review_id": 3350246172,
+      "id": 2439936432,
+      "node_id": "PRRC_kwDOABII586Rbnmw",
+      "diff_hunk": "@@ -936,7 +936,7 @@ static RPCHelpMan submitpackage()\n         ,\n         {\n             {\"package\", RPCArg::Type::ARR, RPCArg::Optional::NO, \"An array of raw transactions.\\n\"\n-                \"The package must solely consist of a child transaction and all of its unconfirmed parents, if any. None of the parents may depend on each other.\\n\"\n+                \"The package must consist of either: exactly 1 transaction, or 1 transaction with its unconfirmed parents. None of the parents may depend on each other. Not all parents need to be present.\\n\"",
+      "path": "src/rpc/mempool.cpp",
+      "commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "original_commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "user": {
+        "login": "instagibbs",
+        "id": 5767891,
+        "node_id": "MDQ6VXNlcjU3Njc4OTE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5767891?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/instagibbs",
+        "html_url": "https://github.com/instagibbs",
+        "followers_url": "https://api.github.com/users/instagibbs/followers",
+        "following_url": "https://api.github.com/users/instagibbs/following{/other_user}",
+        "gists_url": "https://api.github.com/users/instagibbs/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/instagibbs/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/instagibbs/subscriptions",
+        "organizations_url": "https://api.github.com/users/instagibbs/orgs",
+        "repos_url": "https://api.github.com/users/instagibbs/repos",
+        "events_url": "https://api.github.com/users/instagibbs/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/instagibbs/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "maybe?\r\n\r\n```suggestion\r\n                \"The package must consist of either: exactly 1 transaction, or 1 transaction with its unconfirmed parents. None of the parents may depend on each other. Not all in-mempool parents need to be present in the package.\\n\"\r\n```",
+      "created_at": "2025-10-17T12:57:27Z",
+      "updated_at": "2025-10-17T12:57:50Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2439936432",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2439936432"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2439936432"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2439936432/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 939,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440039778",
+      "pull_request_review_id": 3350385024,
+      "id": 2440039778,
+      "node_id": "PRRC_kwDOABII586RcA1i",
+      "diff_hunk": "@@ -936,7 +936,7 @@ static RPCHelpMan submitpackage()\n         ,\n         {\n             {\"package\", RPCArg::Type::ARR, RPCArg::Optional::NO, \"An array of raw transactions.\\n\"\n-                \"The package must solely consist of a child transaction and all of its unconfirmed parents, if any. None of the parents may depend on each other.\\n\"\n+                \"The package must consist of either: exactly 1 transaction, or 1 transaction with its unconfirmed parents. None of the parents may depend on each other. Not all parents need to be present.\\n\"",
+      "path": "src/rpc/mempool.cpp",
+      "commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "original_commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "user": {
+        "login": "glozow",
+        "id": 25183001,
+        "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/glozow",
+        "html_url": "https://github.com/glozow",
+        "followers_url": "https://api.github.com/users/glozow/followers",
+        "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+        "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+        "organizations_url": "https://api.github.com/users/glozow/orgs",
+        "repos_url": "https://api.github.com/users/glozow/repos",
+        "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/glozow/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Incorporated this as (some, all, or none of)",
+      "created_at": "2025-10-17T13:29:54Z",
+      "updated_at": "2025-10-17T13:29:55Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2440039778",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440039778"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2440039778"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440039778/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 1,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 939,
+      "side": "RIGHT",
+      "in_reply_to_id": 2432181432,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440040161",
+      "pull_request_review_id": 3350385554,
+      "id": 2440040161,
+      "node_id": "PRRC_kwDOABII586RcA7h",
+      "diff_hunk": "@@ -936,7 +936,7 @@ static RPCHelpMan submitpackage()\n         ,\n         {\n             {\"package\", RPCArg::Type::ARR, RPCArg::Optional::NO, \"An array of raw transactions.\\n\"\n-                \"The package must solely consist of a child transaction and all of its unconfirmed parents, if any. None of the parents may depend on each other.\\n\"\n+                \"The package must consist of either: exactly 1 transaction, or 1 transaction with its unconfirmed parents. None of the parents may depend on each other. Not all parents need to be present.\\n\"",
+      "path": "src/rpc/mempool.cpp",
+      "commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "original_commit_id": "501b030769ae538c5fc445729e82f0b08bcd288a",
+      "user": {
+        "login": "glozow",
+        "id": 25183001,
+        "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/glozow",
+        "html_url": "https://github.com/glozow",
+        "followers_url": "https://api.github.com/users/glozow/followers",
+        "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+        "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+        "organizations_url": "https://api.github.com/users/glozow/orgs",
+        "repos_url": "https://api.github.com/users/glozow/repos",
+        "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/glozow/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Took this, but reworded a little bit.",
+      "created_at": "2025-10-17T13:30:03Z",
+      "updated_at": "2025-10-17T13:30:03Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2440040161",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440040161"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/33630#discussion_r2440040161"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/33630"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/2440040161/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 939,
+      "side": "RIGHT",
+      "in_reply_to_id": 2439936432,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

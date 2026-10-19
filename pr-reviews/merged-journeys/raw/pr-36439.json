@@ -1,0 +1,816 @@
+{
+  "author": {
+    "id": "U_kgDOB3D3MA",
+    "is_bot": false,
+    "login": "ViniciusCestarii",
+    "name": "Vinicius Cestari"
+  },
+  "body": "Tested on  my x86-64 machine:\r\n\r\n- Wall time (-j=18): 110.8s to 96.4s (\u221213%)\r\n- Accumulated: 1715s to 1369s (\u221220%)\r\n\r\nAlso compared the CI on my fork (time for test_runner.py runtime):\r\n\r\n- macOS native: [1287s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758264512#step:9:4745) to [1175s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791769239#step:9:4744) (-9%)\r\n- 32 bit ARM: [776s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758264778#step:10:6336) to [690s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791769348#step:10:5806) (-11%)\r\n- Windows native, VS: [1456s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758264639#step:14:1486) to [1252s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791768933#step:14:1486) (-14%)\r\n- previous releases: [930s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758264815#step:10:5510) to [786s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791769195#step:10:6016) (-15%)\r\n- No wallet: [614s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758264997#step:10:5421) to [572s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791769524#step:10:5813) (-7%)\r\n- Alpine (musl): [1958s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37308619216/job/111758265011#step:10:5041) to [1970s](https://github.com/ViniciusCestarii/bitcoin/actions/runs/37318654530/job/111791769871#step:10:5489) (+0.6%)\r\n\r\nSanitizer jobs are left out because they vary too much between runs.\r\n\r\nAlpine (musl) uses --usecli, so more frequent poll creates a new bitcoin-cli process each time, making it not faster with these changes. Also tried locally with --usecli: from 2060s to 2051s accumulated.",
+  "comments": [
+    {
+      "id": "IC_kwDOABII588AAAABZXxW-A",
+      "author": {
+        "login": "DrahtBot"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--006a51241073e994b41acfe9ec718e94-->\n### External sites\n\n* Code coverage & benchmarks: https://corecheck.dev/bitcoin/bitcoin/pulls/36439\n* Ralph review <img src=https://review.fish.foo/assets/bitcoin/bitcoin/36439.png alt=\"Ralph review status\"> https://git.fish.foo/bitcoin/bitcoin/pulls/36439#author-ralph\n<!--021abf342d371248e50ceaed478a90ca-->\n### Reviews\nSee [the guideline](https://github.com/bitcoin/bitcoin/blob/master/CONTRIBUTING.md#code-review) and [AI policy](https://github.com/bitcoin/bitcoin/blob/master/doc/AI_POLICY.md) for information on the review process.\n| Type | Reviewers |\n| ---- | --------- |\n| ACK | [maflcko](https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6191263770) |\n\nIf your review is incorrectly listed, please copy-paste <code>&lt;!--meta-tag:bot-skip--&gt;</code> into the comment that the bot should ignore.\n<!--5faf32d7da4f0f540f40219e4f7537a3-->",
+      "createdAt": "2026-10-05T15:28:45Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-5997614840",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZqbrpw",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "Thanks @maflcko for reviewing. Force-pushed 88d40ec15510a8d029c1eaffbae9c068da18f5f9 addressing https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4192615551\r\n\r\n> I think functional tests are run at double saturation (2*nproc) sometimes, so it would be good to check this doesn't regress either.\r\n\r\nBy what I found, [only the job \"test ancestor commits\" does it](https://github.com/bitcoin/bitcoin/blob/master/.github/ci-test-each-commit-exec.py#L64). Agree it's worth checking.\r\n\r\n> create some plots to show this is an improvement (and to see the performance plot around the values)\r\n\r\nWill do.",
+      "createdAt": "2026-10-06T13:20:54Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6017182631",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABZweVsQ",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "I benchmarked these changes on my x86-64 machine with 20 logic processors:\r\n\r\n<img width=\"960\" height=\"790\" alt=\"image\" src=\"https://github.com/user-attachments/assets/0c346527-71bb-4288-9ca2-22eaf5240f17\" />\r\n\r\n- master is the baseline and w0.05 is this PR.\r\n- rpc20 is only the `wait_for_rpc_connection` change, sync0.05 is only the sync changes.\r\n- w0.X sets both the sync wait and the RPC connection poll interval to X seconds.\r\n- Wall time is how long the whole suite took, running the tests in parallel.\r\n- The sum is the total of each test's own wall-clock duration, measured while running in parallel.\r\n\r\nMost of the gain comes from the sync change and RPC poll change adds a smaller one on top. Below 0.05 there is no further improvement and at -j40 polling faster (w0.01) starts to cost more than it saves, so 0.05 looks like the right value.\r\n\r\nIt'd be great if others could run it too.\r\n\r\nI measured this with this script: https://gist.github.com/ViniciusCestarii/72216066d3707b41b3b5b2292b07055b usign the command:\r\n\r\n```\r\npython3 pollbench.py --jobs 20,40 --runs 5 --variants master=1:4,w0.25=0.25:4,w0.1=0.1:10,w0.05=0.05:20,w0.025=0.025:40,w0.01=0.01:100,sync0.05=0.05:4,rpc20=1:20\r\n```\r\n\r\nI used AI to help me make this benchmark script and plot the data.",
+      "createdAt": "2026-10-06T19:08:34Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "THUMBS_UP",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6023517617",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABcNp2HQ",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "> I used AI to help me make this benchmark script and plot the data.\r\n\r\nNice. I asked an LLM bot to run a few benches on my Travel Laptop (155H cpu).\r\n\r\n* It seems that 0.05 is ideal when running tests stand-alone (-j1) on this weaker CPU. On your machine I expect for -j1, that w0.025 may be faster (but not significantly).\r\n* For saturated runs (with or without valgrind), on the 155H machine 0.1 was faster. But I don't really run the tests often on this machine, and there was a lot of noise anyway.\r\n* The valgrind test runs failed (probably due to a small --timeout-factor )\r\n\r\n<img src=\"https://drahtbot.space/temp_scratch/pollbench.png?w\"></img>\r\n\r\n\r\nSo I think the takeaway is that 0.05 is a valid choice.\r\n\r\nI wonder if some sanitizer-heavy CIs (tsan, msan, asan) will also benefit from this, or is the variance too high to see something here?",
+      "createdAt": "2026-10-15T08:56:05Z",
+      "includesCreatedEdit": true,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "HEART",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6188332573",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABcNuFjw",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "Lgtm. Just curious about the sanitizer CI, but not a blocker.\r\n\r\nreview ACK 0b928e01df34e46e1604a3e9c88acc7b5910b82f \ud83d\udcd7\r\n\r\n<details><summary>Show signature</summary>\r\n\r\nSignature:\r\n\r\n```\r\nuntrusted comment: signature from minisign secret key on empty file; verify via: minisign -Vm \"${path_to_any_empty_file}\" -P RWTRmVTMeKV5noAMqVlsMugDDCyyTSbA3Re5AkUrhvLVln0tSaFWglOw -x \"${path_to_this_whole_four_line_signature_blob}\"\r\nRUTRmVTMeKV5npGrKx1nqXCw5zeVHdtdYURB/KlyA/LMFgpNCs+SkW9a8N95d+U4AP1RJMi+krxU1A3Yux4bpwZNLvVBKy0wLgM=\r\ntrusted comment: review ACK 0b928e01df34e46e1604a3e9c88acc7b5910b82f \ud83d\udcd7\r\n0IXqiylZQjxuuk6J4C7wqmmSdT8AVA47WEeDErc3gRB7ImQUDzovFJuxaJx4jadY9vJeNQ3eGB8UaLjServ9DQ==\r\n```\r\n\r\n</details>\r\n",
+      "createdAt": "2026-10-15T09:00:07Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6188402063",
+      "viewerDidAuthor": false
+    },
+    {
+      "id": "IC_kwDOABII588AAAABcQcwGg",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "The latest Ralph Review is hallucinated AI slop (https://review.fish.foo/traces/36439-8898f832d9d86d5a6a8ad8719e1009c702bbf4bd-804-4.html). cc @willcl-ark for awareness, but seems fine to just ignore.\r\n\r\nOnly change is addressing the prior Ralph Review nit.\r\n\r\nreview ACK 8898f832d9d86d5a6a8ad8719e1009c702bbf4bd \ud83d\udc6a\r\n\r\n<details><summary>Show signature</summary>\r\n\r\nSignature:\r\n\r\n```\r\nuntrusted comment: signature from minisign secret key on empty file; verify via: minisign -Vm \"${path_to_any_empty_file}\" -P RWTRmVTMeKV5noAMqVlsMugDDCyyTSbA3Re5AkUrhvLVln0tSaFWglOw -x \"${path_to_this_whole_four_line_signature_blob}\"\r\nRUTRmVTMeKV5npGrKx1nqXCw5zeVHdtdYURB/KlyA/LMFgpNCs+SkW9a8N95d+U4AP1RJMi+krxU1A3Yux4bpwZNLvVBKy0wLgM=\r\ntrusted comment: review ACK 8898f832d9d86d5a6a8ad8719e1009c702bbf4bd \ud83d\udc6a\r\n14xsoD5byMfCVUC6Zz159xzCmz5IFtA3/d5pz3EanTOQ9XUI6lwhMh1Cc7X5EUgdyAb2O4WdAMhMdqJYgVEVCQ==\r\n```\r\n\r\n</details>\r\n",
+      "createdAt": "2026-10-15T11:44:49Z",
+      "includesCreatedEdit": false,
+      "isMinimized": false,
+      "minimizedReason": "",
+      "reactionGroups": [
+        {
+          "content": "THUMBS_UP",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "url": "https://github.com/bitcoin/bitcoin/pull/36439#issuecomment-6191263770",
+      "viewerDidAuthor": false
+    }
+  ],
+  "files": [
+    {
+      "path": "test/functional/test_framework/test_framework.py",
+      "additions": 2,
+      "deletions": 2,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "test/functional/test_framework/test_node.py",
+      "additions": 4,
+      "deletions": 3,
+      "changeType": "MODIFIED"
+    }
+  ],
+  "headRefOid": "8898f832d9d86d5a6a8ad8719e1009c702bbf4bd",
+  "mergeCommit": {
+    "oid": "b13ba1a7d3a126471f970b96ee892705aea96b8b"
+  },
+  "mergedAt": "2026-10-16T06:37:42Z",
+  "number": 36439,
+  "reviews": [
+    {
+      "id": "PRR_kwDOABII588AAAABQ1x4WA",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "haven't tested this, but it seems fine. I wonder if someone wants to create some plots to show this is an improvement (and to see the performance plot around the values). Also, I think functional tests are run at double saturation (2*nproc) sometimes, so it would be good to check this doesn't regress either.",
+      "submittedAt": "2026-10-06T07:27:40Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [
+        {
+          "content": "THUMBS_UP",
+          "users": {
+            "totalCount": 1
+          }
+        }
+      ],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "12caa3325d8781d1aaabb720da03a3f872d00f7b"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABQ4_W0w",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2026-10-06T12:41:00Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "12caa3325d8781d1aaabb720da03a3f872d00f7b"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABQ5gc2g",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2026-10-06T13:23:16Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "12caa3325d8781d1aaabb720da03a3f872d00f7b"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSN80CA",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2026-10-14T12:03:16Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "88d40ec15510a8d029c1eaffbae9c068da18f5f9"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSO-K4w",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2026-10-14T13:26:00Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "88d40ec15510a8d029c1eaffbae9c068da18f5f9"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSaXW_A",
+      "author": {
+        "login": "maflcko"
+      },
+      "authorAssociation": "MEMBER",
+      "body": "",
+      "submittedAt": "2026-10-15T08:57:41Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "0b928e01df34e46e1604a3e9c88acc7b5910b82f"
+      }
+    },
+    {
+      "id": "PRR_kwDOABII588AAAABSbsyLQ",
+      "author": {
+        "login": "ViniciusCestarii"
+      },
+      "authorAssociation": "CONTRIBUTOR",
+      "body": "",
+      "submittedAt": "2026-10-15T10:53:49Z",
+      "includesCreatedEdit": false,
+      "reactionGroups": [],
+      "state": "COMMENTED",
+      "commit": {
+        "oid": "0b928e01df34e46e1604a3e9c88acc7b5910b82f"
+      }
+    }
+  ],
+  "state": "MERGED",
+  "title": "test: poll more frequently in sync helpers and RPC connection wait",
+  "inline_review_comments": [
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192615551",
+      "pull_request_review_id": 5425100888,
+      "id": 4192615551,
+      "node_id": "PRRC_kwDOABII58755jx_",
+      "diff_hunk": "@@ -353,8 +353,8 @@ def create_new_rpc_connection(self, *, mode=\"AUTO\", client_timeout=None):\n \n     def wait_for_rpc_connection(self, *, wait_for_import=True):\n         \"\"\"Sets up an RPC connection to the bitcoind process. Returns False if unable to connect.\"\"\"\n-        # Poll at a rate of four times per second\n-        poll_per_s = 4\n+        # Poll at a rate of twenty times per second\n+        poll_per_s = 20",
+      "path": "test/functional/test_framework/test_node.py",
+      "commit_id": "8898f832d9d86d5a6a8ad8719e1009c702bbf4bd",
+      "original_commit_id": "12caa3325d8781d1aaabb720da03a3f872d00f7b",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "nit: Use a deadline time here as well?",
+      "created_at": "2026-10-06T07:24:23Z",
+      "updated_at": "2026-10-06T07:27:40Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4192615551",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192615551"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4192615551"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192615551/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 357,
+      "original_line": 357,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 7,
+      "position": 7,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192616583",
+      "pull_request_review_id": 5425100888,
+      "id": 4192616583,
+      "node_id": "PRRC_kwDOABII58755kCH",
+      "diff_hunk": "@@ -717,7 +717,7 @@ def sync_blocks(self, nodes=None, wait=1, timeout=60):\n             \"\".join(\"\\n  {!r}\".format(b) for b in best_hash),\n         ))\n \n-    def sync_mempools(self, nodes=None, wait=1, timeout=60, flush_scheduler=True):\n+    def sync_mempools(self, nodes=None, wait=0.05, timeout=60, flush_scheduler=True):",
+      "path": "test/functional/test_framework/test_framework.py",
+      "commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "original_commit_id": "12caa3325d8781d1aaabb720da03a3f872d00f7b",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Pretty sure I tried this one in the past, but it didn't result in a speed-up. I guess back then the trickle relay was used, and dominated. Now, the immediate tx relay is used for most tests and it can help.",
+      "created_at": "2026-10-06T07:24:30Z",
+      "updated_at": "2026-10-06T07:27:40Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4192616583",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192616583"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4192616583"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4192616583/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 720,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195355645",
+      "pull_request_review_id": 5428467411,
+      "id": 4195355645,
+      "node_id": "PRRC_kwDOABII5876EAv9",
+      "diff_hunk": "@@ -353,8 +353,8 @@ def create_new_rpc_connection(self, *, mode=\"AUTO\", client_timeout=None):\n \n     def wait_for_rpc_connection(self, *, wait_for_import=True):\n         \"\"\"Sets up an RPC connection to the bitcoind process. Returns False if unable to connect.\"\"\"\n-        # Poll at a rate of four times per second\n-        poll_per_s = 4\n+        # Poll at a rate of twenty times per second\n+        poll_per_s = 20",
+      "path": "test/functional/test_framework/test_node.py",
+      "commit_id": "8898f832d9d86d5a6a8ad8719e1009c702bbf4bd",
+      "original_commit_id": "12caa3325d8781d1aaabb720da03a3f872d00f7b",
+      "user": {
+        "login": "ViniciusCestarii",
+        "id": 124843824,
+        "node_id": "U_kgDOB3D3MA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/124843824?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ViniciusCestarii",
+        "html_url": "https://github.com/ViniciusCestarii",
+        "followers_url": "https://api.github.com/users/ViniciusCestarii/followers",
+        "following_url": "https://api.github.com/users/ViniciusCestarii/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ViniciusCestarii/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ViniciusCestarii/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ViniciusCestarii/subscriptions",
+        "organizations_url": "https://api.github.com/users/ViniciusCestarii/orgs",
+        "repos_url": "https://api.github.com/users/ViniciusCestarii/repos",
+        "events_url": "https://api.github.com/users/ViniciusCestarii/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ViniciusCestarii/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Makes sense,  Done in 88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "created_at": "2026-10-06T12:41:00Z",
+      "updated_at": "2026-10-06T12:41:01Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4195355645",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195355645"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4195355645"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195355645/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 357,
+      "original_line": 357,
+      "side": "RIGHT",
+      "in_reply_to_id": 4192615551,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 7,
+      "position": 7,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195792518",
+      "pull_request_review_id": 5429009626,
+      "id": 4195792518,
+      "node_id": "PRRC_kwDOABII5876FraG",
+      "diff_hunk": "@@ -717,7 +717,7 @@ def sync_blocks(self, nodes=None, wait=1, timeout=60):\n             \"\".join(\"\\n  {!r}\".format(b) for b in best_hash),\n         ))\n \n-    def sync_mempools(self, nodes=None, wait=1, timeout=60, flush_scheduler=True):\n+    def sync_mempools(self, nodes=None, wait=0.05, timeout=60, flush_scheduler=True):",
+      "path": "test/functional/test_framework/test_framework.py",
+      "commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "original_commit_id": "12caa3325d8781d1aaabb720da03a3f872d00f7b",
+      "user": {
+        "login": "ViniciusCestarii",
+        "id": 124843824,
+        "node_id": "U_kgDOB3D3MA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/124843824?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ViniciusCestarii",
+        "html_url": "https://github.com/ViniciusCestarii",
+        "followers_url": "https://api.github.com/users/ViniciusCestarii/followers",
+        "following_url": "https://api.github.com/users/ViniciusCestarii/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ViniciusCestarii/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ViniciusCestarii/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ViniciusCestarii/subscriptions",
+        "organizations_url": "https://api.github.com/users/ViniciusCestarii/orgs",
+        "repos_url": "https://api.github.com/users/ViniciusCestarii/repos",
+        "events_url": "https://api.github.com/users/ViniciusCestarii/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ViniciusCestarii/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Interesting, makes sense.",
+      "created_at": "2026-10-06T13:23:16Z",
+      "updated_at": "2026-10-06T13:23:17Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4195792518",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195792518"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4195792518"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4195792518/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 720,
+      "side": "RIGHT",
+      "in_reply_to_id": 4192616583,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4270484213",
+      "pull_request_review_id": 5517554696,
+      "id": 4270484213,
+      "node_id": "PRRC_kwDOABII587-imr1",
+      "diff_hunk": "@@ -695,7 +695,7 @@ def create_outpoints(self, node, *, outputs):\n             utxos.append({\"txid\": send_res[\"txid\"], \"vout\": vout})\n         return utxos\n \n-    def sync_blocks(self, nodes=None, wait=1, timeout=60):\n+    def sync_blocks(self, nodes=None, wait=0.05, timeout=60):",
+      "path": "test/functional/test_framework/test_framework.py",
+      "commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "original_commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "```suggestion\n    def sync_blocks(self, nodes=None, *, wait=0.05, timeout=60):\n```\n\nnit: force named kwargs while touching this line? Same below ",
+      "created_at": "2026-10-14T12:03:16Z",
+      "updated_at": "2026-10-14T12:03:16Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4270484213",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4270484213"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4270484213"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4270484213/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 698,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4271365830",
+      "pull_request_review_id": 5518625507,
+      "id": 4271365830,
+      "node_id": "PRRC_kwDOABII587-l97G",
+      "diff_hunk": "@@ -695,7 +695,7 @@ def create_outpoints(self, node, *, outputs):\n             utxos.append({\"txid\": send_res[\"txid\"], \"vout\": vout})\n         return utxos\n \n-    def sync_blocks(self, nodes=None, wait=1, timeout=60):\n+    def sync_blocks(self, nodes=None, wait=0.05, timeout=60):",
+      "path": "test/functional/test_framework/test_framework.py",
+      "commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "original_commit_id": "88d40ec15510a8d029c1eaffbae9c068da18f5f9",
+      "user": {
+        "login": "ViniciusCestarii",
+        "id": 124843824,
+        "node_id": "U_kgDOB3D3MA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/124843824?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ViniciusCestarii",
+        "html_url": "https://github.com/ViniciusCestarii",
+        "followers_url": "https://api.github.com/users/ViniciusCestarii/followers",
+        "following_url": "https://api.github.com/users/ViniciusCestarii/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ViniciusCestarii/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ViniciusCestarii/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ViniciusCestarii/subscriptions",
+        "organizations_url": "https://api.github.com/users/ViniciusCestarii/orgs",
+        "repos_url": "https://api.github.com/users/ViniciusCestarii/repos",
+        "events_url": "https://api.github.com/users/ViniciusCestarii/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ViniciusCestarii/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "kwargs are nice, done on 0b928e01df34e46e1604a3e9c88acc7b5910b82f",
+      "created_at": "2026-10-14T13:26:00Z",
+      "updated_at": "2026-10-14T13:26:01Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4271365830",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4271365830"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4271365830"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4271365830/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 698,
+      "side": "RIGHT",
+      "in_reply_to_id": 4270484213,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4281013249",
+      "pull_request_review_id": 5530572540,
+      "id": 4281013249,
+      "node_id": "PRRC_kwDOABII587_KxQB",
+      "diff_hunk": "@@ -353,16 +353,17 @@ def create_new_rpc_connection(self, *, mode=\"AUTO\", client_timeout=None):\n \n     def wait_for_rpc_connection(self, *, wait_for_import=True):\n         \"\"\"Sets up an RPC connection to the bitcoind process. Returns False if unable to connect.\"\"\"\n-        # Poll at a rate of four times per second\n-        poll_per_s = 4\n+        # Poll at a rate of twenty times per second\n+        poll_per_s = 20\n \n         suppressed_errors = collections.defaultdict(int)\n         latest_error = None\n         def suppress_error(category: str, e: Exception):\n             suppressed_errors[category] += 1\n             return (category, repr(e))\n \n-        for _ in range(poll_per_s * self.rpc_timeout):\n+        stop_time = time.time() + self.rpc_timeout\n+        while time.time() <= stop_time:",
+      "path": "test/functional/test_framework/test_node.py",
+      "commit_id": "0b928e01df34e46e1604a3e9c88acc7b5910b82f",
+      "original_commit_id": "0b928e01df34e46e1604a3e9c88acc7b5910b82f",
+      "user": {
+        "login": "maflcko",
+        "id": 6399679,
+        "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maflcko",
+        "html_url": "https://github.com/maflcko",
+        "followers_url": "https://api.github.com/users/maflcko/followers",
+        "following_url": "https://api.github.com/users/maflcko/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maflcko/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maflcko/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maflcko/subscriptions",
+        "organizations_url": "https://api.github.com/users/maflcko/orgs",
+        "repos_url": "https://api.github.com/users/maflcko/repos",
+        "events_url": "https://api.github.com/users/maflcko/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maflcko/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "\n\n<details><summary>nit from the Ralph LLM to use monotonic time.</summary>\n\nUse a monotonic clock for the RPC startup deadline (test/functional/test_framework/test_node.py:365, head)\n\ntime.time() can jump during startup polling: a forward adjustment can make the loop fail before rpc_timeout elapses, while a backward adjustment can extend the wait. Use time.monotonic() for both deadline creation and comparison. No actual host-clock adjustment during startup was identified, so the impact is conditional on that trigger.\n\n</details>",
+      "created_at": "2026-10-15T08:57:41Z",
+      "updated_at": "2026-10-15T08:57:41Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4281013249",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4281013249"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4281013249"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4281013249/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 365,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 366,
+      "side": "RIGHT",
+      "author_association": "MEMBER",
+      "original_position": 17,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4282076818",
+      "pull_request_review_id": 5531972141,
+      "id": 4282076818,
+      "node_id": "PRRC_kwDOABII587_O06S",
+      "diff_hunk": "@@ -353,16 +353,17 @@ def create_new_rpc_connection(self, *, mode=\"AUTO\", client_timeout=None):\n \n     def wait_for_rpc_connection(self, *, wait_for_import=True):\n         \"\"\"Sets up an RPC connection to the bitcoind process. Returns False if unable to connect.\"\"\"\n-        # Poll at a rate of four times per second\n-        poll_per_s = 4\n+        # Poll at a rate of twenty times per second\n+        poll_per_s = 20\n \n         suppressed_errors = collections.defaultdict(int)\n         latest_error = None\n         def suppress_error(category: str, e: Exception):\n             suppressed_errors[category] += 1\n             return (category, repr(e))\n \n-        for _ in range(poll_per_s * self.rpc_timeout):\n+        stop_time = time.time() + self.rpc_timeout\n+        while time.time() <= stop_time:",
+      "path": "test/functional/test_framework/test_node.py",
+      "commit_id": "0b928e01df34e46e1604a3e9c88acc7b5910b82f",
+      "original_commit_id": "0b928e01df34e46e1604a3e9c88acc7b5910b82f",
+      "user": {
+        "login": "ViniciusCestarii",
+        "id": 124843824,
+        "node_id": "U_kgDOB3D3MA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/124843824?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ViniciusCestarii",
+        "html_url": "https://github.com/ViniciusCestarii",
+        "followers_url": "https://api.github.com/users/ViniciusCestarii/followers",
+        "following_url": "https://api.github.com/users/ViniciusCestarii/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ViniciusCestarii/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ViniciusCestarii/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ViniciusCestarii/subscriptions",
+        "organizations_url": "https://api.github.com/users/ViniciusCestarii/orgs",
+        "repos_url": "https://api.github.com/users/ViniciusCestarii/repos",
+        "events_url": "https://api.github.com/users/ViniciusCestarii/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ViniciusCestarii/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Done in 8898f832d9d86d5a6a8ad8719e1009c702bbf4bd. There are also other tests that use time.time() for measuring duration instead of monotonic that could also be changed, but I guess clock jumping is not common so it is a non issue today.",
+      "created_at": "2026-10-15T10:53:49Z",
+      "updated_at": "2026-10-15T10:53:50Z",
+      "html_url": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4282076818",
+      "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4282076818"
+        },
+        "html": {
+          "href": "https://github.com/bitcoin/bitcoin/pull/36439#discussion_r4282076818"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/36439"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/4282076818/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 365,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 366,
+      "side": "RIGHT",
+      "in_reply_to_id": 4281013249,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 17,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}
