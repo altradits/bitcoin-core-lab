@@ -1,75 +1,70 @@
-# ⚡ Bitcoin Core & Lightning Protocol Lab
+# ⚡ Bitcoin Core & Lightning Protocol Lab (`bitcoin-core-lab`)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-F7931A.svg)](./LICENSE)
+[![Bitcoin Core](https://img.shields.io/badge/Bitcoin_Core-v29.0_From_Source-F7931A)](https://github.com/bitcoin/bitcoin)
+[![Lightning LND](https://img.shields.io/badge/Lightning-LND_%26_BOLTs-792EE5)](https://github.com/lightningnetwork/lnd)
+[![100% FOSS](https://img.shields.io/badge/100%25_Bitcoin_FOSS-Zero_Fiat-success)](./BTRUST_AND_BITDEVS_PLAYBOOK.md)
 
 > *"A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution."* — **Satoshi Nakamoto**  
-> An open-source repository of first-principles Bitcoin Core C++ consensus verification, protocol primitives from scratch, functional tests, maintainer-grade upstream PR audits (`bitcoin/bitcoin`), interactive bug-fix dojo, sovereign custody, and a pure-Bitcoin Go application starter kit.
-
-### 📚 Core Guides & Self-Contained Offline Study System
-- 🌱 **[Stage 00: Start Small — The 15-Minute Micro-Win Ladder (`00-start-small`)](./00-start-small/README.md)**
-- 🔨 **[Bitcoin Core From Source: The 8-Drill Repetition & Open-Source Mastery Manual (`./lab.sh drill 1..8`)](./BITCOIN_FROM_SOURCE_MASTERY.md)**
-- 🌍 **[Stage 11: Apple M1 Sovereign Node, Wallet of Satoshi Migration, Fee/Speed Mastery & PR Fix Proposals (`11-from-regtest-to-live-mainnet`)](./11-from-regtest-to-live-mainnet/README.md)**
-- ⚡ **[Stage 12: The Bitcoin-to-Lightning Readiness Gate & How `lnd` Interacts With `bitcoind` (`12-lightning-readiness-and-bitcoind-bridge`)](./12-lightning-readiness-and-bitcoind-bridge/README.md)**
-- ⚙️ **[Stage 10: Bitcoin Protocol Primitives From Scratch (`10-protocol-primitives-from-scratch`)](./10-protocol-primitives-from-scratch/README.md)**
-- 🥋 **[Stage 09: The Bitcoin Core Bug Dojo & PR Fix Arena (`09-bug-dojo-and-pr-mastery`)](./09-bug-dojo-and-pr-mastery/README.md)**
-- 🛡️ **[The Guardian's Manual: If Satoshi Taught His Son How to Protect & Audit Bitcoin](./SATOSHI_GUARDIAN_MANUAL.md)**
-- 📘 **[Mastering What Satoshi Intended — Step-by-Step Workbook & Btrust Guide](./MASTERING_SATOSHI_WORKBOOK.md)**
-- 🗓️ **[30-Day Offline Bitcoin Core & Lightning Mastery Curriculum](./OFFLINE_30_DAY_CURRICULUM.md)**
-- 📄 **[Satoshi Nakamoto's Original 2008 Whitepaper (Annotated w/ C++ Source Links)](./offline-library/SATOSHI_WHITEPAPER.md)**
-- 🗂️ **[Offline BIPs (`1–431+`) & Lightning BOLTs (`1–11`) Index](./offline-library/OFFLINE_INDEX.md)**
-- 🔍 **[Upstream `bitcoin/bitcoin` Maintainer PR Audits (`pr-reviews/`)](./pr-reviews/)**
+> An open-source, self-contained Bitcoin Core C++ & Lightning Network verification lab, offline textbook & blind-recall knowledge bank, interactive CVE Bug Dojo, maintainer PR review archive, and sovereign node/wallet toolkit built for **BitDevs Kisumu** and aspiring **Btrust / Brink / OpenSats** protocol contributors.
 
 ---
 
-## 🚀 Quickstart: Start Small, Drill From Source, Fix Bugs & Audit PRs (`./lab.sh`)
+## 📚 Complete Offline Study System & Navigation Map
+
+- 🌱 **[Stage 00: Start Small — The 15-Minute Micro-Win Ladder (`00-start-small/`)](./00-start-small/README.md)**
+- 🔨 **[Bitcoin Core From Source: The 8-Drill Repetition & Open-Source Mastery Manual (`./lab.sh drill 1..8`)](./BITCOIN_FROM_SOURCE_MASTERY.md)**
+- 📖 **[Offline Supplementary Knowledge Bank: 5 From-Memory Workbooks, 4 Full Books & 8 Blind-Recall Drills (`./lab.sh book` & `./lab.sh recall`)](./offline-library/OFFLINE_INDEX.md)**
+- 🔍 **[Maintainer PR Review Playbook: 8 Merged PR Review Journeys (`./lab.sh journeys`)](./pr-reviews/merged-journeys/README.md)** & **[10 Upstream PR Security Audits (`pr-reviews/`)](./pr-reviews/)**
+- 🥋 **[Stage 09: The Bitcoin Core Bug Dojo & PR Fix Arena (`09-bug-dojo-and-pr-mastery/`)](./09-bug-dojo-and-pr-mastery/README.md)**
+- ⚙️ **[Stage 10: Bitcoin Protocol Primitives From Scratch (`10-protocol-primitives-from-scratch/`)](./10-protocol-primitives-from-scratch/README.md)**
+- 🌍 **[Stage 11: Apple M1 Sovereign Node, Wallet Migration, Fee/Speed Mastery & PR Fix Proposals (`11-from-regtest-to-live-mainnet/`)](./11-from-regtest-to-live-mainnet/README.md)**
+- ⚡ **[Stage 12: Bitcoin-to-Lightning Readiness Gate, Polar/Docker & `lnd` $\leftrightarrow$ `bitcoind` Bridge (`12-lightning-readiness-and-bitcoind-bridge/`)](./12-lightning-readiness-and-bitcoind-bridge/README.md)**
+- 🤝 **[Btrust Grant Compliance & BitDevs Socratic Seminar Playbook (`BTRUST_AND_BITDEVS_PLAYBOOK.md`)](./BTRUST_AND_BITDEVS_PLAYBOOK.md)**
+- 🛡️ **[The Guardian's Manual: If Satoshi Taught His Son How to Protect & Audit Bitcoin](./SATOSHI_GUARDIAN_MANUAL.md)**
+- 📘 **[Mastering What Satoshi Intended — Step-by-Step Workbook](./MASTERING_SATOSHI_WORKBOOK.md)** & **[30-Day Offline Curriculum](./OFFLINE_30_DAY_CURRICULUM.md)**
+- 📄 **[Satoshi Nakamoto's Original 2008 Whitepaper (Annotated w/ C++ Source Links)](./offline-library/SATOSHI_WHITEPAPER.md)**
+
+---
+
+## 🚀 Quickstart CLI (`./lab.sh`)
 
 ```bash
-# 🍏 Check your Apple M1 CPU, 8 GB RAM, SSD Swap & Process Health anytime (or put daemons to rest)
-./lab.sh health           # Full M1 diagnostic with plain-English explanations
+# 🍏 1. Apple M1 Hardware Health & RAM Protection (Run Anytime)
+./lab.sh health           # Full M1 CPU, 8 GB RAM, SSD Swap & daemon footprint report
 ./lab.sh rest             # Stop bitcoind & Polar containers when done studying to free RAM
 
-# 0. Start Small (5-to-15 minute micro-wins with automatic Before/After M1 health checks)
+# 📚 2. Offline Knowledge Bank & Blind-Recall Code Arena (Zero Internet / Zero AI / Zero Google)
+./lab.sh book             # View the Stage-to-Book Learner Journey Map
+./lab.sh book 1           # Read From-Memory Workbooks (1:Go, 2:C++/Py, 3:Crypto, 4:Tx/Script, 5:LN)
+./lab.sh book mb ch04     # Read Mastering Bitcoin, Programming Bitcoin (pb), CLI (cli), or LN (ln)
+./lab.sh recall blank     # Blank out 8 core Bitcoin functions to test writing from pure memory
+./lab.sh recall check     # Run the 8 Blind-Recall unit tests
+./lab.sh recall solve     # Restore verified reference solutions
+
+# 🌱 3. Start Small & Master Bitcoin Core From Source by Repetition
 ./lab.sh step 1           # Walk through Micro-Steps 1..5
-./lab.sh practice 00      # Run & edit your first 60-line Bitcoin app
+./lab.sh drill 1          # Drill 1..8: git clone -> CMake build -> test_bitcoin -> PR review
 
-# 1. Master Bitcoin Core From Source by Repetition (Download -> CMake Build -> Test -> PR Review)
-./lab.sh drill 1          # Drill 1..8: Git clone, CMake build, wallets, test_bitcoin & Tested ACK
-
-# 2. Enter the Bug Dojo: load 5 real pre-PR vulnerabilities, watch exploits fail, then fix them!
-./lab.sh dojo break
+# 🥋 4. Bug Dojo: Break, Fix & Verify 5 Real Bitcoin Core Vulnerabilities
+./lab.sh dojo break       # Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go
 ./lab.sh dojo check 1     # Test Mission 1 (CVE-2010-5139 & CVE-2018-17144)
 ./lab.sh dojo solve       # Restore & verify all 5 upstream solutions
 
-# 3. Run Protocol Primitives, Apple M1 Sovereign Wallet & Lightning/Polar Readiness Bridge
-./lab.sh practice 10
-./lab.sh practice 11
-./lab.sh practice 12
-./lab.sh polar            # Inspect ~/.polar networks & print lncli / Docker terminal drills
+# 🔍 5. Study Real Maintainer Review Journeys & Audit Upstream PRs
+./lab.sh journeys         # Read 7 Maintainer Comment Patterns & 8 merged PR review journeys
+./lab.sh journeys 36447   # Inspect how reviewer comments improved PR #36447 before merge
+./lab.sh pr-audit 36553   # Run a 6-Point Guardian Security Audit on any open/merged PR
 
-# 4. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield
-./lab.sh genesis
-
-# 5. Read any BIP or Lightning BOLT specification 100% offline
-./lab.sh bip 340
-./lab.sh bolt 3
-
-# 6. List & run a 6-Point Guardian Security Audit on any upstream PR 100% offline
-./lab.sh pr-list
-./lab.sh pr-audit 35320
-
-# 7. Commit your daily study/audit offline, then push when internet returns
-./lab.sh commit-offline "docs(pr-audit): complete 6-point guardian audit of bitcoin#35320"
-./lab.sh sync
+# ⚡ 6. Sovereign Node, Lightning Readiness & Polar LND Simulation
+./lab.sh practice 11      # Apple M1 Pruned Mainnet profile, descriptor wallet & fee optimizer
+./lab.sh practice 12      # 6-Point Bitcoin->Lightning Readiness Gate & L1/L2 state simulator
+./lab.sh polar            # Inspect ~/.polar networks & print Docker lncli terminal drills
 ```
 
 ---
 
-## 🎯 Purpose & Goal
-This repository documents my hands-on protocol verification labs, functional test implementations, upstream code reviews, and sovereign application architecture as I work towards full-time open-source Bitcoin & Lightning protocol contribution (**Btrust Builders Fellowship**, **Brink**, **OpenSats**).
-
-Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)** and includes executable scripts, C++ source references into `bitcoin/bitcoin`, and empirical `regtest` verification traces.
-
----
-
-## 📝 Hands-On Protocol, Bug Dojo & Builder Lab Log
+## 📝 Complete 13-Stage Protocol, Bug Dojo & Builder Lab Log
 
 | Stage | Protocol Topic | Lab Directory & Code | Verified Consensus / Policy Outcome |
 | :---: | :--- | :--- | :--- |
@@ -84,19 +79,29 @@ Every module is **100% Bitcoin-native (zero fiat, zero custodial intermediaries)
 | **08** | **Sovereign Bitcoin Builder Starter Kit (Go HTTP + JSON-RPC Engine)** | [`08-builder-starter-kit`](./08-builder-starter-kit/) | Zero-dependency Go HTTP server & CLI building watch-only BIP21 satoshi invoices, dust/supply consensus validation, and `OP_RETURN` (`6a20...`) SHA-256 block timestamping. |
 | **09** | **The Bitcoin Core Bug Dojo & PR Fix Arena (5 Upstream Bugs)** | [`09-bug-dojo-and-pr-mastery`](./09-bug-dojo-and-pr-mastery/) | Interactive break-and-fix arena covering `CVE-2010-5139` overflow, `CVE-2018-17144` duplicate inputs, `PR #35320` BIP32 seed bounds, `PR #32800` sigop vsize, BIP125 RBF DoS, and `PR #33014` PSBT validation. |
 | **10** | **Protocol Primitives From Scratch (PoW, CompactSize, Merkle, Script VM)** | [`10-protocol-primitives-from-scratch`](./10-protocol-primitives-from-scratch/) | Zero-dependency Go implementation of `SHA256d`, BIP340 `TaggedHash`, canonical `CompactSize`, 80-byte Genesis Block PoW & `nBits` target math, Merkle tree root, and a stack-based Script interpreter. |
-| **11** | **Apple M1 Sovereign Node, WoS Migration, Fee Optimizer & PR Fix Proposals** | [`11-from-regtest-to-live-mainnet`](./11-from-regtest-to-live-mainnet/) | Profiled M1 Mac (`prune=5500`, `dbcache=1024`), Wallet of Satoshi -> sovereign `bc1q`/`bc1p` migration, `vByte` fee/speed math (`RBF`/`CPFP`/`sendmany`), and PR Fix Proposal Matrix. |
-| **12** | **Bitcoin-to-Lightning Readiness Gate & `lnd` <-> `bitcoind` Bridge** | [`12-lightning-readiness-and-bitcoind-bridge`](./12-lightning-readiness-and-bitcoind-bridge/) | Verified the 6 Bitcoin Core prerequisites for Lightning (2-of-2 multisig, SegWit `txid` fix, `OP_CSV` revocation penalty, HTLCs, TRUC/CPFP) and simulated off-chain channel state transitions & breach penalties. |
+| **11** | **Apple M1 Sovereign Node, Wallet Migration, Fee Optimizer & PR Fix Matrix** | [`11-from-regtest-to-live-mainnet`](./11-from-regtest-to-live-mainnet/) | Profiled M1 Mac (`prune=5500`, `dbcache=1024`), custodial-to-sovereign `bc1q`/`bc1p` migration, `vByte` fee/speed math (`RBF`/`CPFP`/`sendmany`), and PR Fix Proposal Matrix. |
+| **12** | **Bitcoin-to-Lightning Readiness Gate, Polar/Docker & `lnd` $\leftrightarrow$ `bitcoind` Bridge** | [`12-lightning-readiness-and-bitcoind-bridge`](./12-lightning-readiness-and-bitcoind-bridge/) | Verified the 6 Bitcoin Core prerequisites for Lightning, simulated off-chain channel state updates & `OP_CSV` revocation justice sweeps, and integrated Polar/Docker `lncli` drills. |
+
+---
+
+## 🔍 Upstream `bitcoin/bitcoin` PR Reviews & Merged Review Journeys
+
+- **Live Open PR Audits ([`pr-reviews/`](./pr-reviews/)):**
+  - [`PR-36553-AUDIT.md`](./pr-reviews/PR-36553-AUDIT.md) — `test: Add missing sync_mempools in wallet_conflicts.py` (`@maflcko`)
+  - [`PR-36555-AUDIT.md`](./pr-reviews/PR-36555-AUDIT.md) — `rpc: return error when invalidateblock fails` (`@ja7ad`)
+  - [`PR-36550-AUDIT.md`](./pr-reviews/PR-36550-AUDIT.md) — `crypto: cleanse CSHA512 state in its destructor` (`@fametrano`)
+- **8 Downloaded Merged PR Review Journeys ([`pr-reviews/merged-journeys/`](./pr-reviews/merged-journeys/README.md)):**
+  - Full verbatim maintainer discussion threads, inline code suggestions, and before/after code improvements across `#36545`, `#36447`, `#36469`, `#36439`, `#35724`, `#33630`, `#33624`, and `#32313`.
 
 ---
 
 ## 🛠️ Environment & Toolchain
-- **Hardware:** Apple M1 MacBook Air (`MacBookAir10,1`, 8 Cores, 8 GB RAM, Pruned Sovereign Node Ready)
-- **Base Chain:** Bitcoin Core v29.0 (`bitcoind`, compiled from source with CMake)
-- **Layer 2:** Lightning Network Daemon v0.21.3-beta (`lnd`)
-- **Offline Reference Vault:** `/Users/mac/bitcoin-references/` (`bitcoin.pdf`, all 270+ BIPs, all Lightning BOLTs)
-- **Language Stack:** C++ (Consensus/Mempool Core), Python 3 (Functional Testing), Go (Protocol Primitives, Bug Dojo, PSBT Coordinator & Sovereign HTTP Kit)
+- **Hardware:** Apple M1 MacBook Air (`MacBookAir10,1`, 8 Cores, 8 GB Unified RAM, 67 GiB Free SSD — Pruned Sovereign Mainnet Ready)
+- **Base Chain:** Bitcoin Core v29.0 (`bitcoind`, `bitcoin-cli`, `test_bitcoin` compiled from source with CMake + SQLite Descriptor Wallets)
+- **Layer 2:** Lightning Network Daemon (`lnd` + `lncli` + Polar Docker simulation clusters)
+- **Offline Reference Vault:** 5 In-Repo From-Memory Workbooks, 4 Full Open-Source Books (`Mastering Bitcoin`, `Programming Bitcoin`, `Learning Bitcoin from the Command Line`, `Mastering the Lightning Network`), `bitcoin.pdf`, 270+ BIPs, and 11 BOLTs.
 
 ---
 
 **Maintained by Stanley Chege Thuita ([@altradits](https://github.com/altradits))**  
-*Co-founder, BitDevs Kisumu ([@BitDevsKsm](https://x.com/BitDevsKsm))*
+*Co-founder, BitDevs Kisumu ([@BitDevsKsm](https://x.com/BitDevsKsm)) · MIT License*
