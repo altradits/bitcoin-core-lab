@@ -3,7 +3,7 @@
 - **Author:** `@ViniciusCestarii`
 - **Merged At:** `2026-10-16T06:37:42Z`
 - **Final Merged Head Commit:** `8898f832d9d86d5a6a8ad8719e1009c702bbf4bd`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-36439` (`git -C /Users/mac/bitcoin show pr-36439`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-36439` (`git -C $BITCOIN_ROOT show pr-36439`)
 - **Core Lesson for Reviewers:** How @maflcko requested benchmark plots for test framework speedups, suggested forcing named keyword arguments (`*, wait=0.05`), and separated valid monotonic-clock nits from 'hallucinated AI slop'.
 
 ---

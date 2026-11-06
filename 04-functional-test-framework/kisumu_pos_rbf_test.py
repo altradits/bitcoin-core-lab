@@ -5,7 +5,7 @@ from decimal import Decimal
 import os
 import sys
 
-BITCOIN_ROOT = os.environ.get("BITCOIN_ROOT", "/Users/mac/bitcoin")
+BITCOIN_ROOT = os.environ.get("BITCOIN_ROOT", os.path.expanduser("~/bitcoin"))
 sys.path.insert(0, os.path.join(BITCOIN_ROOT, "test/functional"))
 
 from test_framework.messages import MAX_BIP125_RBF_SEQUENCE

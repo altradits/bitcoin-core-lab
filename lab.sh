@@ -2,15 +2,16 @@
 set -euo pipefail
 
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BITCOIN_ROOT="${BITCOIN_ROOT:-/Users/mac/bitcoin}"
-REF_DIR="/Users/mac/bitcoin-references"
+BITCOIN_ROOT="${BITCOIN_ROOT:-$HOME/bitcoin}"
+REF_DIR="${BITCOIN_REFERENCES:-$HOME/bitcoin-references}"
 export PATH="$BITCOIN_ROOT/build/bin:$PATH"
 CLI="bitcoin-cli -regtest"
 
 ensure_daemon() {
   if ! $CLI getblockchaininfo >/dev/null 2>&1; then
     echo "⚡ Starting bitcoind -regtest daemon..."
-    bitcoind -regtest -daemon
+    # fallbackfee lets wallet sends work on a fresh regtest chain with no fee history.
+    bitcoind -regtest -daemon -fallbackfee=0.00001
     sleep 2
   fi
   for w in kisumu_miner kisumu_merchant sovereign_cold_signer; do
@@ -87,20 +88,22 @@ run_baby_step() {
   case "$STEP" in
     1)
       echo "============================================================"
-      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 1 Block"
+      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 101 Blocks"
       echo "============================================================"
       GEN_HASH=$($CLI getblockhash 0)
       BEFORE_H=$($CLI getblockcount)
       MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
-      $CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
+      # 101 blocks: 1 new coin plus 100 confirmations so later steps can spend it.
+      # The 100 block wait is called coinbase maturity. Stage 01 verifies it.
+      $CLI generatetoaddress 101 "$MINER_ADDR" >/dev/null
       AFTER_H=$($CLI getblockcount)
       echo "1. Block #0 (Genesis Hash) : $GEN_HASH"
       echo "2. Height Before Mining    : $BEFORE_H"
-      echo "3. Height After Mining 1   : $AFTER_H"
+      echo "3. Height After Mining 101 : $AFTER_H"
       echo ""
       echo "💡 WHAT JUST HAPPENED:"
       echo "   A blockchain is just a stack of numbered boxes (blocks)."
-      echo "   You just told your live Bitcoin node to mine 1 new block on top of Block #$BEFORE_H!"
+      echo "   You just told your live Bitcoin node to mine 101 new blocks on top of Block #$BEFORE_H!"
       echo ""
       echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
       echo "   Run this command yourself in your terminal:"
@@ -150,7 +153,7 @@ for i, u in enumerate(utxos, 1):
       ;;
     4)
       echo "============================================================"
-      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First 60-Line Bitcoin App"
+      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First Bitcoin App"
       echo "============================================================"
       go -C "$LAB_DIR/00-start-small" run first_app.go
       echo ""
@@ -167,8 +170,8 @@ for i, u in enumerate(utxos, 1):
       echo "In 2010, someone created 184 Billion BTC out of thin air (CVE-2010-5139)"
       echo "because Satoshi forgot to check if a transaction output was negative!"
       echo ""
-      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 18-33):"
-      sed -n '18,34p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
+      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 59-72):"
+      sed -n '59,72p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
       echo ""
       echo "Running Mission 1 verification right now:"
       run_dojo check 1
@@ -187,7 +190,7 @@ practice_stage() {
   STAGE="${1:-01}"
   case "$STAGE" in
     00|0)
-      echo "=== Stage 00: Start Small — Your First 60-Line Bitcoin App ==="
+      echo "=== Stage 00: Start Small - Your First Bitcoin App ==="
       go -C "$LAB_DIR/00-start-small" run first_app.go
       ;;
     01|1)
@@ -293,7 +296,7 @@ read_bolt() {
 }
 
 pr_list() {
-  echo "=== Offline Bitcoin Core PRs Available in Local /Users/mac/bitcoin ==="
+  echo "=== Offline Bitcoin Core PRs Available in $BITCOIN_ROOT ==="
   git -C "$BITCOIN_ROOT" log master --merges -n 25 --oneline | grep "Merge bitcoin/bitcoin#"
 }
 
@@ -317,7 +320,7 @@ pr_audit() {
         exit 1
       }
     fi
-    MERGE_COMMIT="UNMERGED (Open PR Branch: pr-${PR_NUM})"
+    MERGE_COMMIT="UNMERGED (local branch pr-${PR_NUM}; confirm open vs closed on GitHub)"
     PR_HEAD=$(git -C "$BITCOIN_ROOT" rev-parse "pr-${PR_NUM}")
     BASE_COMMIT=$(git -C "$BITCOIN_ROOT" merge-base master "$PR_HEAD")
     TITLE=$(git -C "$BITCOIN_ROOT" log -n 1 "$PR_HEAD" --format="%s")
@@ -336,18 +339,24 @@ pr_audit() {
 
   OUT_FILE="$LAB_DIR/pr-reviews/PR-${PR_NUM}-AUDIT.md"
   mkdir -p "$LAB_DIR/pr-reviews"
+  SECTION1="Why This PR Exists (Motivation & Maintainer Context)"
+  case "$MERGE_COMMIT" in
+    UNMERGED*) ;;
+    *) SECTION1="Why This PR Was Merged (Motivation & Maintainer Context)" ;;
+  esac
   cat << INNER_EOF > "$OUT_FILE"
-# 🛡️ Guardian Security & Consensus Audit: \`bitcoin/bitcoin#${PR_NUM}\`
+# Audit: \`bitcoin/bitcoin#${PR_NUM}\` \`${TITLE}\`
 
 - **PR Title:** ${TITLE}
 - **Concentric Risk Ring:** **${RING}**
 - **Merge Commit:** \`${MERGE_COMMIT}\`
 - **Audited PR Tip Commit:** \`${PR_HEAD}\`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** $(date +%F)
 
 ---
 
-## 1. Why This PR Was Merged (Motivation & Maintainer Context)
+## 1. ${SECTION1}
 \`\`\`text
 ${BODY}
 \`\`\`
@@ -377,12 +386,13 @@ $(git -C "$BITCOIN_ROOT" diff "${BASE_COMMIT}...${PR_HEAD}" | head -n 160)
 - [x] **5. Adversarial P2P / Mempool Vector:** Evaluated whether a zero-cost peer can trigger asymmetric CPU/RAM exhaustion.
 - [x] **6. Test Verification & Mutation Check:** Verified unit/functional test coverage in \`test/\` or \`src/test/\`.
 
-## 6. Formal Maintainer Sign-Off
+## 6. Your Sign-Off (Fill In After Testing)
 \`\`\`markdown
-Tested ACK ${PR_HEAD}
+Tested ACK <commit-you-actually-built-and-ran>
 \`\`\`
+Replace the line above only after you build the commit and run its tests.
 INNER_EOF
-  echo "✅ Generated Guardian PR Audit Report at: $OUT_FILE"
+  echo "✅ Generated PR audit draft at: $OUT_FILE"
 }
 
 commit_offline() {
@@ -411,8 +421,8 @@ run_drill() {
       echo "🔨 DRILL 1: Clone, Git Remotes, Directory Map & Toolchain"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  git clone https://github.com/bitcoin/bitcoin.git /Users/mac/bitcoin"
-      echo "  git -C /Users/mac/bitcoin remote -v"
+      echo "  git clone https://github.com/bitcoin/bitcoin.git "$HOME/bitcoin""
+      echo "  git -C \"$BITCOIN_ROOT\" remote -v"
       echo "  cmake --version && clang++ --version && python3 --version"
       echo ""
       echo "LIVE VERIFICATION ON YOUR MACHINE:"
@@ -431,7 +441,7 @@ run_drill() {
       echo "🔨 DRILL 2: Configure CMake & Compile Bitcoin Core From Source"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  cd /Users/mac/bitcoin"
+      echo "  cd \"$BITCOIN_ROOT\""
       echo "  cmake -B build -DBUILD_TESTING=ON"
       echo "  cmake --build build --target bitcoind bitcoin-cli test_bitcoin -j4"
       echo ""
@@ -449,17 +459,17 @@ run_drill() {
       echo "============================================================"
       ensure_daemon
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  export PATH=\"/Users/mac/bitcoin/build/bin:\$PATH\""
+      echo "  export PATH=\"$BITCOIN_ROOT/build/bin:\$PATH\""
       echo "  bitcoind -regtest -daemon"
       echo "  bitcoin-cli -regtest getblockchaininfo"
-      echo "  tail -n 10 \"/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log\""
+      echo "  tail -n 10 \"$HOME/Library/Application Support/Bitcoin/regtest/debug.log\""
       echo "  # To stop cleanly: bitcoin-cli -regtest stop"
       echo ""
       echo "LIVE REGTEST DAEMON CHECK:"
       $CLI getblockchaininfo | grep -E '"chain"|"blocks"|"headers"|"bestblockhash"'
       echo ""
       echo "LAST 5 LINES OF LIVE REGTEST debug.log:"
-      tail -n 5 "/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log" || true
+      tail -n 5 "$HOME/Library/Application Support/Bitcoin/regtest/debug.log" 2>/dev/null || tail -n 5 "$HOME/.bitcoin/regtest/debug.log" 2>/dev/null || true
       echo ""
       echo "👉 Next: Run './lab.sh drill 4' to recreate all lab.sh wallets & blocks from scratch."
       ;;
@@ -487,11 +497,11 @@ run_drill() {
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
       echo "  # 1. Run a C++ Boost Unit Test Suite (< 1 second):"
-      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=merkle_tests"
-      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=bip32_tests"
+      echo "  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=merkle_tests"
+      echo "  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=bip32_tests"
       echo ""
       echo "  # 2. Run a Python Functional Test:"
-      echo "  python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=/Users/mac/bitcoin/build/test/config.ini"
+      echo "  python3 $LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=$BITCOIN_ROOT/build/test/config.ini"
       echo ""
       echo "LIVE C++ UNIT TEST EXECUTION (merkle_tests & bip32_tests):"
       "$BITCOIN_ROOT/build/bin/test_bitcoin" --run_test=merkle_tests
@@ -504,9 +514,9 @@ run_drill() {
       echo "🔨 DRILL 6: Finding Errors with git grep, Editing C++ & Recompiling"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  git -C /Users/mac/bitcoin grep -n \"bad-txns-vin-empty\" src/"
-      echo "  git -C /Users/mac/bitcoin grep -n \"CheckTransaction(\" src/"
-      echo "  cmake --build /Users/mac/bitcoin/build --target test_bitcoin -j4"
+      echo "  git -C \"$BITCOIN_ROOT\" grep -n \"bad-txns-vin-empty\" src/"
+      echo "  git -C \"$BITCOIN_ROOT\" grep -n \"CheckTransaction(\" src/"
+      echo "  cmake --build $BITCOIN_ROOT/build --target test_bitcoin -j4"
       echo ""
       echo "LIVE git grep SEARCH IN $BITCOIN_ROOT/src/:"
       git -C "$BITCOIN_ROOT" grep -n "bad-txns-vin-empty" src/
@@ -519,11 +529,11 @@ run_drill() {
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
       echo "  # When Online (fetch any PR by number):"
-      echo "  git -C /Users/mac/bitcoin fetch origin pull/35320/head:pr-35320"
+      echo "  git -C \"$BITCOIN_ROOT\" fetch origin pull/35320/head:pr-35320"
       echo ""
       echo "  # When Offline (inspect merged PRs in local git history):"
-      echo "  MERGE=\$(git -C /Users/mac/bitcoin log master --merges --grep=\"bitcoin/bitcoin#35320:\" -n 1 --format=\"%H\")"
-      echo "  git -C /Users/mac/bitcoin diff \"\${MERGE}^1...\${MERGE}^2\""
+      echo "  MERGE=\$(git -C \"$BITCOIN_ROOT\" log master --merges --grep=\"bitcoin/bitcoin#35320:\" -n 1 --format=\"%H\")"
+      echo "  git -C \"$BITCOIN_ROOT\" diff \"\${MERGE}^1...\${MERGE}^2\""
       echo ""
       echo "LIVE INSPECTION OF PR #35320 IN YOUR LOCAL REPO:"
       MERGE=$(git -C "$BITCOIN_ROOT" log master --merges --grep="bitcoin/bitcoin#35320:" -n 1 --format="%H")
@@ -556,7 +566,7 @@ Tested ACK <40-char-commit-hash>
   - Mutation test: commented out the new check in `<file_path>`, recompiled, and confirmed the test fails as expected.
 ------------------------------------------------------------
 INNER_EOF
-      echo "📘 Full manual: BITCOIN_FROM_SOURCE_MASTERY.md"
+      echo "Full manual: BUILDING_BITCOIN_CORE_FROM_SOURCE.md"
       ;;
     *)
       echo "Usage: ./lab.sh drill [1..8]"
@@ -578,10 +588,11 @@ run_polar() {
   echo "  2. Query Polar's backend1 bitcoind (mapped to host port 18446):"
   echo "     bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass getblockchaininfo"
   echo ""
-  echo "  3. Query Alice (LND) using your native /Users/mac/bin/lncli:"
-  echo "     /Users/mac/bin/lncli --network=regtest --rpcserver=localhost:10001 \\"
-  echo "       --tlscertpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
-  echo "       --macaroonpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
+  LNCLI="$(command -v lncli || echo "$HOME/bin/lncli")"
+  echo "  3. Query Alice (LND) using your native lncli ($LNCLI):"
+  echo "     $LNCLI --network=regtest --rpcserver=localhost:10001 \\"
+  echo "       --tlscertpath=$HOME/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
+  echo "       --macaroonpath=$HOME/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
   echo ""
   echo "  4. Or run lncli directly inside the Alice & Dave Docker containers:"
   echo "     docker exec polar-n1-alice lncli --network=regtest getinfo"
@@ -591,6 +602,10 @@ run_polar() {
 
 m1_health_snapshot() {
   PHASE="${1:-SNAPSHOT}"
+  # Health snapshot needs macOS tools (vm_stat, sysctl vm.*). Skip quietly elsewhere.
+  if [ "$(uname -s)" != "Darwin" ]; then
+    return 0
+  fi
   python3 - "$PHASE" << 'PYEOF'
 import subprocess, sys, re
 
@@ -636,6 +651,10 @@ PYEOF
 }
 
 show_full_m1_health() {
+  if [ "$(uname -s)" != "Darwin" ]; then
+    echo "The full health report needs macOS (vm_stat, sysctl vm.*). Nothing to show on $(uname -s)."
+    return 0
+  fi
   m1_health_snapshot "FULL DIAGNOSTIC"
   SWAP_LINE=$(sysctl -n vm.swapusage)
   echo ""
@@ -668,9 +687,17 @@ rest_mac() {
   echo "🛑 Putting Bitcoin & Polar background services to rest to free 100% of M1 RAM..."
   $CLI stop >/dev/null 2>&1 && echo "  ✅ Stopped native bitcoind -regtest daemon." || echo "  ℹ️ Native bitcoind -regtest was already stopped."
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    docker compose -f /Users/mac/.polar/networks/1/docker-compose.yml stop >/dev/null 2>&1 || true
-    docker compose -f /Users/mac/.polar/networks/2/docker-compose.yml stop >/dev/null 2>&1 || true
-    echo "  ✅ Stopped any active Polar Docker containers."
+    STOPPED=0
+    for compose in "$HOME"/.polar/networks/*/docker-compose.yml; do
+      [ -f "$compose" ] || continue
+      docker compose -f "$compose" stop >/dev/null 2>&1 || true
+      STOPPED=1
+    done
+    if [ "$STOPPED" = "1" ]; then
+      echo "  ✅ Stopped any active Polar Docker containers."
+    else
+      echo "  ℹ️ No Polar networks found under ~/.polar/networks."
+    fi
   fi
   sleep 1
   m1_health_snapshot "AFTER REST / RAM FREED"
@@ -725,6 +752,16 @@ case "${1:-help}" in
     BOOK_ID="${2:-index}"
     CHAPTER="${3:-}"
     case "$BOOK_ID" in
+      mb|pb|cli|ln|mastering-bitcoin|programming-bitcoin|learning-bitcoin-cli|mastering-lightning)
+        if [ ! -d "$REF_DIR/books" ]; then
+          echo "No local book library at $REF_DIR/books."
+          echo "Clone the books into \$HOME/bitcoin-references/books, or set BITCOIN_REFERENCES."
+          echo "See LICENSES.md for the book list and licences."
+          exit 1
+        fi
+        ;;
+    esac
+    case "$BOOK_ID" in
       index|list|"")
         cat "$LAB_DIR/offline-library/OFFLINE_INDEX.md"
         ;;
@@ -749,8 +786,13 @@ case "${1:-help}" in
           ls "$REF_DIR/books/mastering-bitcoin/"ch*.adoc
           echo "👉 Run: ./lab.sh book mb ch04  (or any ch01..ch12)"
         else
-          head -n 120 "$REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc"
-          echo "--- (Read full chapter: less $REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc) ---"
+          FILE=$(ls "$REF_DIR/books/mastering-bitcoin/${CHAPTER}"*.adoc 2>/dev/null | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "Chapter '$CHAPTER' not found. Try: ./lab.sh book mb"
+            exit 1
+          fi
+          head -n 120 "$FILE"
+          echo "--- (Read full chapter: less $FILE) ---"
         fi
         ;;
       pb|programming-bitcoin)

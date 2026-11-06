@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#34628`
+# Audit: bitcoin/bitcoin#34628 `p2p: Replace per-peer transaction rate-limiting with global rate limits`
 
 - **PR Title:** Merge bitcoin/bitcoin#34628: p2p: Replace per-peer transaction rate-limiting with global rate limits
 - **Concentric Risk Ring:** **🟠 Ring 1 — VALIDATION & MEMPOOL POLICY (Pinning / DoS / Censorship Risk)**
 - **Merge Commit:** `b33a7fcd7bd896da7175a28802bac9ca53fa238d`
 - **Audited PR Tip Commit:** `349c72ee00a06581aa8cddaced6377c49a81d511`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 
