@@ -24,13 +24,13 @@ func TestAllBitcoinNetworksGraduationLadder(t *testing.T) {
 func TestGenerateLaptopMainnetConfigM1Safety(t *testing.T) {
 	cfg := GenerateLaptopMainnetConfig()
 	if !strings.Contains(cfg, "prune=5500") {
-		t.Fatalf("expected M1 MacBook Air config to include prune=5500 for 68 GB free SSD")
+		t.Fatalf("expected small machine config to include prune=5500")
 	}
 	if !strings.Contains(cfg, "dbcache=1024") || !strings.Contains(cfg, "par=4") {
-		t.Fatalf("expected M1 MacBook Air config to include dbcache=1024 and par=4")
+		t.Fatalf("expected small machine config to include dbcache=1024 and par=4")
 	}
 	if !strings.Contains(cfg, "walletrbf=1") {
-		t.Fatalf("expected walletrbf=1 for fee minimization and instant bumpfee acceleration")
+		t.Fatalf("expected walletrbf=1 so fees can be bumped later")
 	}
 }
 
