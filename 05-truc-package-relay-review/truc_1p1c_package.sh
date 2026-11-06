@@ -3,7 +3,7 @@ set -euo pipefail
 
 BITCOIN_CLI="${BITCOIN_CLI:-bitcoin-cli -regtest}"
 WALLET="kisumu_miner"
-$BITCOIN_CLI loadwallet "$WALLET" 2>/dev/null || true
+$BITCOIN_CLI loadwallet "$WALLET" > /dev/null 2>&1 || true
 
 UTXO_INFO=$($BITCOIN_CLI -rpcwallet="$WALLET" listunspent | python3 -c "import sys,json; u=[x for x in json.load(sys.stdin) if x['amount']>=5.0][0]; print(f\"{u['txid']} {u['vout']} {u['amount']}\")")
 read -r UTXO_TXID UTXO_VOUT UTXO_AMT <<< "$UTXO_INFO"
