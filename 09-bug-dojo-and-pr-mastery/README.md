@@ -105,7 +105,9 @@ including empty seeds that derive brute forcible keys. Reject
 `./lab.sh dojo check 2`.
 
 Upstream reference: `CExtKey::SetSeed` in `src/key.cpp`
-(`bitcoin/bitcoin#35320`).
+(`bitcoin/bitcoin#35320`). Note: upstream uses `Assert`, a debug
+abort, while this mission returns a Go error. Same bound, different
+idiom.
 
 ### Step 4: Fix Mission 3 (sigop adjusted vsize)
 
@@ -138,7 +140,7 @@ which pubkey failed instead of crashing or silently dropping data.
 Then run `./lab.sh dojo check 5`.
 
 Upstream reference: `descriptorprocesspsbt` in
-`src/wallet/rpc/spend.cpp` (`bitcoin/bitcoin#33014`).
+`src/rpc/rawtransaction.cpp` (`bitcoin/bitcoin#33014`).
 
 ### Step 7: Confirm everything passes
 
@@ -214,8 +216,10 @@ audit issue if one exists.
 * `src/consensus/tx_check.cpp` (`CheckTransaction`): the consensus
   shield for Missions 1.
 * `src/key.cpp` (`CExtKey::SetSeed`), `src/policy/policy.cpp`
-  (`GetVirtualTransactionSize`), `src/wallet/rpc/spend.cpp`
+  (`GetVirtualTransactionSize`), `src/rpc/rawtransaction.cpp`
   (`descriptorprocesspsbt`): Missions 2, 3, 5.
 * `src/policy/rbf.cpp` (`PaysForRBF`): Mission 4.
 * BIP32 (HD wallets), BIP125 (RBF): the standards behind Missions 2
   and 4.
+* https://bitcoincore.org/en/2018/09/20/notice/: full disclosure of
+  CVE-2018-17144 (timeline, affected versions, root cause).

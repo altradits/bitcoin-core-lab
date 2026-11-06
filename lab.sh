@@ -320,7 +320,7 @@ pr_audit() {
         exit 1
       }
     fi
-    MERGE_COMMIT="UNMERGED (Open PR Branch: pr-${PR_NUM})"
+    MERGE_COMMIT="UNMERGED (local branch pr-${PR_NUM}; confirm open vs closed on GitHub)"
     PR_HEAD=$(git -C "$BITCOIN_ROOT" rev-parse "pr-${PR_NUM}")
     BASE_COMMIT=$(git -C "$BITCOIN_ROOT" merge-base master "$PR_HEAD")
     TITLE=$(git -C "$BITCOIN_ROOT" log -n 1 "$PR_HEAD" --format="%s")
@@ -339,18 +339,24 @@ pr_audit() {
 
   OUT_FILE="$LAB_DIR/pr-reviews/PR-${PR_NUM}-AUDIT.md"
   mkdir -p "$LAB_DIR/pr-reviews"
+  SECTION1="Why This PR Exists (Motivation & Maintainer Context)"
+  case "$MERGE_COMMIT" in
+    UNMERGED*) ;;
+    *) SECTION1="Why This PR Was Merged (Motivation & Maintainer Context)" ;;
+  esac
   cat << INNER_EOF > "$OUT_FILE"
-# 🛡️ Guardian Security & Consensus Audit: \`bitcoin/bitcoin#${PR_NUM}\`
+# Audit: \`bitcoin/bitcoin#${PR_NUM}\` \`${TITLE}\`
 
 - **PR Title:** ${TITLE}
 - **Concentric Risk Ring:** **${RING}**
 - **Merge Commit:** \`${MERGE_COMMIT}\`
 - **Audited PR Tip Commit:** \`${PR_HEAD}\`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** $(date +%F)
 
 ---
 
-## 1. Why This PR Was Merged (Motivation & Maintainer Context)
+## 1. ${SECTION1}
 \`\`\`text
 ${BODY}
 \`\`\`
@@ -380,12 +386,13 @@ $(git -C "$BITCOIN_ROOT" diff "${BASE_COMMIT}...${PR_HEAD}" | head -n 160)
 - [x] **5. Adversarial P2P / Mempool Vector:** Evaluated whether a zero-cost peer can trigger asymmetric CPU/RAM exhaustion.
 - [x] **6. Test Verification & Mutation Check:** Verified unit/functional test coverage in \`test/\` or \`src/test/\`.
 
-## 6. Formal Maintainer Sign-Off
+## 6. Your Sign-Off (Fill In After Testing)
 \`\`\`markdown
-Tested ACK ${PR_HEAD}
+Tested ACK <commit-you-actually-built-and-ran>
 \`\`\`
+Replace the line above only after you build the commit and run its tests.
 INNER_EOF
-  echo "✅ Generated Guardian PR Audit Report at: $OUT_FILE"
+  echo "✅ Generated PR audit draft at: $OUT_FILE"
 }
 
 commit_offline() {
