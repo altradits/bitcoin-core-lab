@@ -170,8 +170,8 @@ for i, u in enumerate(utxos, 1):
       echo "In 2010, someone created 184 Billion BTC out of thin air (CVE-2010-5139)"
       echo "because Satoshi forgot to check if a transaction output was negative!"
       echo ""
-      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 57-70):"
-      sed -n '57,70p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
+      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 59-72):"
+      sed -n '59,72p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
       echo ""
       echo "Running Mission 1 verification right now:"
       run_dojo check 1
@@ -581,10 +581,11 @@ run_polar() {
   echo "  2. Query Polar's backend1 bitcoind (mapped to host port 18446):"
   echo "     bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass getblockchaininfo"
   echo ""
-  echo "  3. Query Alice (LND) using your native /Users/mac/bin/lncli:"
-  echo "     /Users/mac/bin/lncli --network=regtest --rpcserver=localhost:10001 \\"
-  echo "       --tlscertpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
-  echo "       --macaroonpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
+  LNCLI="$(command -v lncli || echo "$HOME/bin/lncli")"
+  echo "  3. Query Alice (LND) using your native lncli ($LNCLI):"
+  echo "     $LNCLI --network=regtest --rpcserver=localhost:10001 \\"
+  echo "       --tlscertpath=$HOME/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
+  echo "       --macaroonpath=$HOME/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
   echo ""
   echo "  4. Or run lncli directly inside the Alice & Dave Docker containers:"
   echo "     docker exec polar-n1-alice lncli --network=regtest getinfo"
@@ -594,6 +595,10 @@ run_polar() {
 
 m1_health_snapshot() {
   PHASE="${1:-SNAPSHOT}"
+  # Health snapshot needs macOS tools (vm_stat, sysctl vm.*). Skip quietly elsewhere.
+  if [ "$(uname -s)" != "Darwin" ]; then
+    return 0
+  fi
   python3 - "$PHASE" << 'PYEOF'
 import subprocess, sys, re
 
@@ -639,6 +644,10 @@ PYEOF
 }
 
 show_full_m1_health() {
+  if [ "$(uname -s)" != "Darwin" ]; then
+    echo "The full health report needs macOS (vm_stat, sysctl vm.*). Nothing to show on $(uname -s)."
+    return 0
+  fi
   m1_health_snapshot "FULL DIAGNOSTIC"
   SWAP_LINE=$(sysctl -n vm.swapusage)
   echo ""
@@ -671,9 +680,17 @@ rest_mac() {
   echo "🛑 Putting Bitcoin & Polar background services to rest to free 100% of M1 RAM..."
   $CLI stop >/dev/null 2>&1 && echo "  ✅ Stopped native bitcoind -regtest daemon." || echo "  ℹ️ Native bitcoind -regtest was already stopped."
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    docker compose -f /Users/mac/.polar/networks/1/docker-compose.yml stop >/dev/null 2>&1 || true
-    docker compose -f /Users/mac/.polar/networks/2/docker-compose.yml stop >/dev/null 2>&1 || true
-    echo "  ✅ Stopped any active Polar Docker containers."
+    STOPPED=0
+    for compose in "$HOME"/.polar/networks/*/docker-compose.yml; do
+      [ -f "$compose" ] || continue
+      docker compose -f "$compose" stop >/dev/null 2>&1 || true
+      STOPPED=1
+    done
+    if [ "$STOPPED" = "1" ]; then
+      echo "  ✅ Stopped any active Polar Docker containers."
+    else
+      echo "  ℹ️ No Polar networks found under ~/.polar/networks."
+    fi
   fi
   sleep 1
   m1_health_snapshot "AFTER REST / RAM FREED"

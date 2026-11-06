@@ -36,16 +36,18 @@ type Transaction struct {
 //
 // SELF-CONTAINED LESSON:
 // Why did CVE-2010-5139 happen?
-//   An attacker created two outputs of 92,233,720,368.54 BTC (each > MAX_MONEY, near INT64_MAX).
-//   When summed naively (total += out.Value), 64-bit signed integer addition overflowed into
-//   a NEGATIVE number, bypassing total <= MAX_MONEY!
-//   Fix: You MUST check 0 <= out.Value <= MAX_MONEY on EACH output BEFORE adding it to total,
-//   AND check 0 <= total <= MAX_MONEY after every addition!
+//
+//	An attacker created two outputs of 92,233,720,368.54 BTC (each > MAX_MONEY, near INT64_MAX).
+//	When summed naively (total += out.Value), 64-bit signed integer addition overflowed into
+//	a NEGATIVE number, bypassing total <= MAX_MONEY!
+//	Fix: You MUST check 0 <= out.Value <= MAX_MONEY on EACH output BEFORE adding it to total,
+//	AND check 0 <= total <= MAX_MONEY after every addition!
 //
 // Why did CVE-2018-17144 happen?
-//   A transaction listed the exact same OutPoint{Txid, Vout} twice in tx.Vin.
-//   Fix: Track seen OutPoints in a map[OutPoint]bool and return "bad-txns-inputs-duplicate"
-//   if any input OutPoint appears more than once.
+//
+//	A transaction listed the exact same OutPoint{Txid, Vout} twice in tx.Vin.
+//	Fix: Track seen OutPoints in a map[OutPoint]bool and return "bad-txns-inputs-duplicate"
+//	if any input OutPoint appears more than once.
 func CheckTransactionConsensus(tx Transaction) error {
 	if len(tx.Vin) == 0 {
 		return errors.New("bad-txns-vin-empty")
@@ -114,9 +116,9 @@ func DeriveBIP32MasterKey(seed []byte) (masterKey [32]byte, chainCode [32]byte, 
 //   - However, an attacker could craft a tiny 100-byte transaction containing 50 `OP_CHECKSIG`
 //     operations (expensive CPU verification!).
 //   - To prevent CPU DoS in the mempool, Bitcoin Core computes:
-//       sigop_weight = sigop_cost * BYTES_PER_SIGOP (where BYTES_PER_SIGOP = 20)
-//       effective_weight = max(tx_weight, sigop_weight)
-//       vsize_adjusted = ceil(effective_weight / 4) = (effective_weight + 3) / 4
+//     sigop_weight = sigop_cost * BYTES_PER_SIGOP (where BYTES_PER_SIGOP = 20)
+//     effective_weight = max(tx_weight, sigop_weight)
+//     vsize_adjusted = ceil(effective_weight / 4) = (effective_weight + 3) / 4
 func ComputeMempoolVsizes(txWeight int64, sigOpCost int64) (vsizeBIP141 int64, vsizeAdjusted int64) {
 	vsizeBIP141 = (txWeight + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR
 	sigOpWeight := sigOpCost * BYTES_PER_SIGOP
@@ -135,13 +137,13 @@ func ComputeMempoolVsizes(txWeight int64, sigOpCost int64) (vsizeBIP141 int64, v
 //
 // SELF-CONTAINED LESSON:
 // To replace an unconfirmed transaction in the mempool, a replacement transaction must pass:
-//   1. Feerate Strictly Higher (PaysMoreThanConflicts):
-//      replacementFee * originalVsize > originalFee * replacementVsize
-//      (Using cross-multiplication avoids floating-point rounding bugs!)
-//   2. Absolute Fee >= Original Fee (Rule #3):
-//      replacementFee >= originalFee
-//   3. Incremental Relay Bandwidth Fee (Rule #4):
-//      (replacementFee - originalFee) >= replacementVsize * incrementalRelayFeePerVB
+//  1. Feerate Strictly Higher (PaysMoreThanConflicts):
+//     replacementFee * originalVsize > originalFee * replacementVsize
+//     (Using cross-multiplication avoids floating-point rounding bugs!)
+//  2. Absolute Fee >= Original Fee (Rule #3):
+//     replacementFee >= originalFee
+//  3. Incremental Relay Bandwidth Fee (Rule #4):
+//     (replacementFee - originalFee) >= replacementVsize * incrementalRelayFeePerVB
 func ValidateBIP125Replacement(originalFee, originalVsize, replacementFee, replacementVsize, incrementalRelayFeePerVB int64) error {
 	// Check 1: Strictly higher feerate (cross-multiplied integer comparison, zero floats!)
 	if replacementFee*originalVsize <= originalFee*replacementVsize {
