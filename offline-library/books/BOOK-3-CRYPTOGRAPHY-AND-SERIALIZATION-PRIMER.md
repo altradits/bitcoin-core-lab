@@ -1,7 +1,7 @@
 # Book 3: Cryptography, Elliptic Curves & Wire Serialization (From Memory)
 
 > **Purpose of This Offline Book:**
-> Covers the mathematical and byte-level foundations required for Stages `01`, `02`, `05`, `06`, `07`, and `08` (and chapters 1–7 of _Programming Bitcoin_ in `/Users/mac/bitcoin-references/books/programming-bitcoin/`). Read the equations, close the file, and complete the **Blind Recall Drills**.
+> Covers the mathematical and byte-level foundations required for Stages `01`, `02`, `05`, `06`, `07`, and `08` (and chapters 1–7 of _Programming Bitcoin_ in `$BITCOIN_REFERENCES/books/programming-bitcoin/`). Read the equations, close the file, and complete the **Blind Recall Drills**.
 
 ---
 

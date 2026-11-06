@@ -1,6 +1,6 @@
 # Bitcoin Core Maintainer Review Playbook (8 Downloaded Merged PR Journeys)
 
-Every file in this folder (`PR-<NUM>-JOURNEY.md` and `raw/pr-<NUM>.json`) is a **real, merged `bitcoin/bitcoin` Pull Request** downloaded with its full commit history (fetched into `/Users/mac/bitcoin` as `pr-<NUM>`), inline code comments, author improvements, and final `ACK`s.
+Every file in this folder (`PR-<NUM>-JOURNEY.md` and `raw/pr-<NUM>.json`) is a **real, merged `bitcoin/bitcoin` Pull Request** downloaded with its full commit history (fetched into `$BITCOIN_ROOT` as `pr-<NUM>`), inline code comments, author improvements, and final `ACK`s.
 
 Use `./lab.sh journeys` or `./lab.sh journeys <PR_NUMBER>` to inspect any of these offline on your Mac.
 
@@ -8,7 +8,7 @@ Use `./lab.sh journeys` or `./lab.sh journeys <PR_NUMBER>` to inspect any of the
 
 ## 1. The 8 Downloaded Merged PR Journeys
 
-| Merged PR | Title & Author | Local Branch in `/Users/mac/bitcoin` | Study Dossier | How Reviewer Comments Improved the PR Before Merge |
+| Merged PR | Title & Author | Local Branch in `$BITCOIN_ROOT` | Study Dossier | How Reviewer Comments Improved the PR Before Merge |
 | :--- | :--- | :--- | :--- | :--- |
 | **[#36447](https://github.com/bitcoin/bitcoin/pull/36447)** | `test: Misc fixes for pending validation events races` (`@maflcko`) | `pr-36447` (`fa466dea80`) | [PR-36447-JOURNEY.md](./PR-36447-JOURNEY.md) | `@ismaelsadeeq` suggested moving the event queue drain into `mineBlock()` so all callers get synchronization automatically; `@sedited` caught another unsynchronized `txindex.Stop()` call at the bottom of `txindex_tests.cpp`. `@maflcko` adopted both fixes! |
 | **[#36439](https://github.com/bitcoin/bitcoin/pull/36439)** | `test: poll more frequently in sync helpers and RPC connection wait` (`@ViniciusCestarii`) | `pr-36439` (`8898f832d9`) | [PR-36439-JOURNEY.md](./PR-36439-JOURNEY.md) | `@maflcko` asked for benchmark plots comparing `-j1` vs `2*nproc` saturation, suggested forcing named keyword arguments (`def sync_blocks(self, nodes=None, *, wait=0.05, timeout=60):`), and suggested using a deadline timer (`time.monotonic()`). |

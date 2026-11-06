@@ -9,7 +9,7 @@ This guide explains why Bitcoin exists, which consensus checks in the C++ code p
 
 ## Chapter I: Why Bitcoin Exists (The Genesis Message)
 
-Open [`/Users/mac/bitcoin/src/kernel/chainparams.cpp`](file:///Users/mac/bitcoin/src/kernel/chainparams.cpp#L67-L78) at line 75:
+Open [`$BITCOIN_ROOT/src/kernel/chainparams.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp#L67-L78) at line 75:
 
 ```cpp
 static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
@@ -30,7 +30,7 @@ Run `./lab.sh genesis` at any time to inspect the Genesis Block and the 61-line 
 
 ## Chapter II: The 61-Line Consensus Shield (`src/consensus/tx_check.cpp`)
 
-If you want to understand why Bitcoin Core reviewers are the most conservative engineers on Earth, read all 61 lines of [`/Users/mac/bitcoin/src/consensus/tx_check.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_check.cpp#L11-L60). Inside this single function (`CheckTransaction`) live the scars of **two catastrophic inflation bugs** that could have destroyed Bitcoin:
+If you want to understand why Bitcoin Core reviewers are the most conservative engineers on Earth, read all 61 lines of [`$BITCOIN_ROOT/src/consensus/tx_check.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_check.cpp#L11-L60). Inside this single function (`CheckTransaction`) live the scars of **two catastrophic inflation bugs** that could have destroyed Bitcoin:
 
 ### 1. The 2010 Value Overflow Bug (`CVE-2010-5139` — Block 74,638)
 - **What Happened:** On August 15, 2010, someone broadcasted a transaction containing two outputs of `92,233,720,368.54 BTC` each (`184.46 billion BTC` total). In Satoshi's original code, `nValueOut` was summed in a signed 64-bit integer (`int64_t`), which overflowed past `INT64_MAX` (`9,223,372,036,854,775,807` satoshis) and wrapped around to a **negative number**! Because the total output sum appeared negative, the fee check (`nValueIn >= nValueOut`) passed!
@@ -70,16 +70,16 @@ If you want to understand why Bitcoin Core reviewers are the most conservative e
 
 To understand the entire history of `bitcoin/bitcoin`, map every major upgrade to the exact vulnerability or limitation in Satoshi's v0.1 code that it solved:
 
-| Era / BIP | Protocol Upgrade | What Problem in Satoshi's v0.1 Did It Solve? | Where It Lives in `/Users/mac/bitcoin` |
+| Era / BIP | Protocol Upgrade | What Problem in Satoshi's v0.1 Did It Solve? | Where It Lives in `$BITCOIN_ROOT` |
 | :--- | :--- | :--- | :--- |
-| **BIP16 (2012)** | **Pay-to-Script-Hash (`P2SH`)** | Moved complex multisig scripts from the sender's `CTxOut` to the spender's input so senders only pay for a 20-byte hash. | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP66 (2015)** | **Strict DER Signatures** | OpenSSL allowed platform-dependent lax ECDSA parsing (different OS architectures could disagree on signature validity -> chain split risk). Now Bitcoin Core uses `libsecp256k1`. | [`src/secp256k1/`](file:///Users/mac/bitcoin/src/secp256k1) |
-| **BIP65 / BIP68 / BIP112 (2015–16)** | **CLTV & CSV Timelocks** | Satoshi's original `nLockTime` could not lock a specific UTXO in Script; `OP_CLTV` and `OP_CSV` enabled trustless Lightning payment channels & HTLCs. | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp), [`src/consensus/tx_verify.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_verify.cpp) |
-| **BIP141 / BIP143 (2017)** | **Segregated Witness (SegWit)** | Fixed **1) Third-party `txid` malleability** (which broke unconfirmed Lightning funding txs) and **2) $O(N^2)$ quadratic signature hashing** DoS. | [`src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp), [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP174 / BIP380 (2018–21)** | **PSBT & Output Descriptors** | Replaced fragile "bag-of-keys" legacy wallets with deterministic, checksummed `wpkh()`/`tr()` descriptors and airgapped hardware signing. | [`src/script/descriptor.cpp`](file:///Users/mac/bitcoin/src/script/descriptor.cpp), [`src/psbt.h`](file:///Users/mac/bitcoin/src/psbt.h) |
-| **BIP340 / 341 / 342 (2021)** | **Schnorr, Taproot & Tapscript** | Replaced ECDSA with provably non-malleable, linear 64-byte Schnorr signatures and hid complex smart contracts inside a single 32-byte tweaked public key (`P2TR`). | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP324 (2023–24)** | **v2 Encrypted P2P Transport** | Satoshi's v1 P2P messages were sent in plaintext TCP, allowing ISP/state eavesdropping and MitM tampering. | [`src/bip324.cpp`](file:///Users/mac/bitcoin/src/bip324.cpp) |
-| **BIP431 (2024–25)** | **TRUC (`v3`) & 1P1C Package Relay** | Prevented mempool descendant pinning against Lightning commitment transactions and enabled `0-fee` parent + child atomic fee bumping. | [`src/policy/truc_policy.cpp`](file:///Users/mac/bitcoin/src/policy/truc_policy.cpp) |
+| **BIP16 (2012)** | **Pay-to-Script-Hash (`P2SH`)** | Moved complex multisig scripts from the sender's `CTxOut` to the spender's input so senders only pay for a 20-byte hash. | [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp) |
+| **BIP66 (2015)** | **Strict DER Signatures** | OpenSSL allowed platform-dependent lax ECDSA parsing (different OS architectures could disagree on signature validity -> chain split risk). Now Bitcoin Core uses `libsecp256k1`. | [`src/secp256k1/`](https://github.com/bitcoin/bitcoin/blob/master/src/secp256k1) |
+| **BIP65 / BIP68 / BIP112 (2015–16)** | **CLTV & CSV Timelocks** | Satoshi's original `nLockTime` could not lock a specific UTXO in Script; `OP_CLTV` and `OP_CSV` enabled trustless Lightning payment channels & HTLCs. | [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp), [`src/consensus/tx_verify.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_verify.cpp) |
+| **BIP141 / BIP143 (2017)** | **Segregated Witness (SegWit)** | Fixed **1) Third-party `txid` malleability** (which broke unconfirmed Lightning funding txs) and **2) $O(N^2)$ quadratic signature hashing** DoS. | [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp), [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp) |
+| **BIP174 / BIP380 (2018–21)** | **PSBT & Output Descriptors** | Replaced fragile "bag-of-keys" legacy wallets with deterministic, checksummed `wpkh()`/`tr()` descriptors and airgapped hardware signing. | [`src/script/descriptor.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/descriptor.cpp), [`src/psbt.h`](https://github.com/bitcoin/bitcoin/blob/master/src/psbt.h) |
+| **BIP340 / 341 / 342 (2021)** | **Schnorr, Taproot & Tapscript** | Replaced ECDSA with provably non-malleable, linear 64-byte Schnorr signatures and hid complex smart contracts inside a single 32-byte tweaked public key (`P2TR`). | [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp) |
+| **BIP324 (2023–24)** | **v2 Encrypted P2P Transport** | Satoshi's v1 P2P messages were sent in plaintext TCP, allowing ISP/state eavesdropping and MitM tampering. | [`src/bip324.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/bip324.cpp) |
+| **BIP431 (2024–25)** | **TRUC (`v3`) & 1P1C Package Relay** | Prevented mempool descendant pinning against Lightning commitment transactions and enabled `0-fee` parent + child atomic fee bumping. | [`src/policy/truc_policy.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/policy/truc_policy.cpp) |
 
 ---
 
@@ -124,7 +124,7 @@ A test that passes when the code is broken is useless.
 
 ## 🛠️ Practice Auditing Real PRs Offline Right Now
 
-Run our automated PR Security Auditor on any PR stored in `/Users/mac/bitcoin`:
+Run our automated PR Security Auditor on any PR stored in `$BITCOIN_ROOT`:
 
 ```bash
 # 1. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield (CVE-2010-5139 & CVE-2018-17144)

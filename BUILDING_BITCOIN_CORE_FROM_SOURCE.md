@@ -6,7 +6,7 @@
 
 ## How to practice by repetition (`./lab.sh drill <1..8>`)
 
-Run each drill interactively from `/Users/mac/bitcoin-core-lab`:
+Run each drill interactively from `$BITCOIN_ROOT-core-lab`:
 ```bash
 ./lab.sh drill 1   # Drill 1: Clone, Git Remotes, Directory Map & Build Dependencies
 ./lab.sh drill 2   # Drill 2: CMake Configure & C++ Compilation (bitcoind, bitcoin-cli, test_bitcoin)
@@ -27,8 +27,8 @@ When you set up a fresh machine to work on Bitcoin Core, you need the source rep
 ### 1.1 The Exact Commands to Download & Set Up Git Remotes
 ```bash
 # 1. Clone the official upstream Bitcoin Core repository
-git clone https://github.com/bitcoin/bitcoin.git /Users/mac/bitcoin
-cd /Users/mac/bitcoin
+git clone https://github.com/bitcoin/bitcoin.git $BITCOIN_ROOT
+cd $BITCOIN_ROOT
 
 # 2. Verify your git remotes (origin points to bitcoin/bitcoin, or your fork)
 git remote -v
@@ -50,14 +50,14 @@ pkg-config --version
 python3 --version
 ```
 
-### 1.3 Navigating the `/Users/mac/bitcoin` Directory Map
+### 1.3 Navigating the `$BITCOIN_ROOT` Directory Map
 Memorize these 6 folders—they are where 99% of your open-source work happens:
-- [`src/consensus/`](file:///Users/mac/bitcoin/src/consensus): Pure consensus rules (`tx_check.cpp`, `tx_verify.cpp`, `merkle.cpp`, `amount.h`).
-- [`src/script/`](file:///Users/mac/bitcoin/src/script): The Bitcoin Script Virtual Machine (`interpreter.cpp`), Descriptors (`descriptor.cpp`), and Miniscript (`miniscript.cpp`).
-- [`src/policy/`](file:///Users/mac/bitcoin/src/policy): Mempool admission rules (`rbf.cpp`, `truc_policy.cpp`, `packages.cpp`, `policy.cpp`).
-- [`src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp) & [`src/txmempool.cpp`](file:///Users/mac/bitcoin/src/txmempool.cpp): Block/transaction validation (`AcceptToMemoryPool`, `ConnectBlock`).
-- [`src/wallet/`](file:///Users/mac/bitcoin/src/wallet): SQLite descriptor wallet, coin selection (`coinselection.cpp`), and fee estimation.
-- [`src/test/`](file:///Users/mac/bitcoin/src/test) & [`test/functional/`](file:///Users/mac/bitcoin/test/functional): C++ Boost unit tests and Python P2P functional tests.
+- [`src/consensus/`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus): Pure consensus rules (`tx_check.cpp`, `tx_verify.cpp`, `merkle.cpp`, `amount.h`).
+- [`src/script/`](https://github.com/bitcoin/bitcoin/blob/master/src/script): The Bitcoin Script Virtual Machine (`interpreter.cpp`), Descriptors (`descriptor.cpp`), and Miniscript (`miniscript.cpp`).
+- [`src/policy/`](https://github.com/bitcoin/bitcoin/blob/master/src/policy): Mempool admission rules (`rbf.cpp`, `truc_policy.cpp`, `packages.cpp`, `policy.cpp`).
+- [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp) & [`src/txmempool.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/txmempool.cpp): Block/transaction validation (`AcceptToMemoryPool`, `ConnectBlock`).
+- [`src/wallet/`](https://github.com/bitcoin/bitcoin/blob/master/src/wallet): SQLite descriptor wallet, coin selection (`coinselection.cpp`), and fee estimation.
+- [`src/test/`](https://github.com/bitcoin/bitcoin/blob/master/src/test) & [`test/functional/`](https://github.com/bitcoin/bitcoin/blob/master/test/functional): C++ Boost unit tests and Python P2P functional tests.
 
 ---
 
@@ -67,7 +67,7 @@ Starting in Bitcoin Core v29.0, the project switched from legacy Autotools (`./a
 
 ### 2.1 Step-by-Step Build Commands (Memorize These!)
 ```bash
-cd /Users/mac/bitcoin
+cd $BITCOIN_ROOT
 
 # Step 1: Configure the build directory ('build/') with C++ unit tests enabled
 cmake -B build -DBUILD_TESTING=ON
@@ -79,17 +79,17 @@ cmake --build build -j$(sysctl -n hw.ncpu)
 cmake --build build --target bitcoind bitcoin-cli test_bitcoin -j4
 ```
 
-### 2.2 The Compiled Binaries Inside `/Users/mac/bitcoin/build/bin/`
-After compiling, inspect `/Users/mac/bitcoin/build/bin/`:
+### 2.2 The Compiled Binaries Inside `$BITCOIN_ROOT/build/bin/`
+After compiling, inspect `$BITCOIN_ROOT/build/bin/`:
 1. **`bitcoind`**: The full Bitcoin node daemon (validates blocks, runs P2P, serves RPC).
 2. **`bitcoin-cli`**: The command-line RPC client that sends JSON commands to `bitcoind`.
 3. **`test_bitcoin`**: The compiled C++ Boost unit test runner.
 4. **`bitcoin-tx`**: Standalone tool for creating/modifying raw hex transactions without a node.
 5. **`bitcoin-wallet`**: Offline tool for inspecting wallet databases.
 
-To use these binaries from any terminal without typing `/Users/mac/bitcoin/build/bin/` every time, add them to your `PATH` (this is line 7 of `lab.sh`!):
+To use these binaries from any terminal without typing `$BITCOIN_ROOT/build/bin/` every time, add them to your `PATH` (this is line 7 of `lab.sh`!):
 ```bash
-export PATH="/Users/mac/bitcoin/build/bin:$PATH"
+export PATH="$BITCOIN_ROOT/build/bin:$PATH"
 which bitcoind bitcoin-cli
 ```
 
@@ -103,9 +103,9 @@ Why does Bitcoin Core have **3 testing networks**?
 - **`regtest` (Regression Test Mode)**: Your private local blockchain on your laptop where you can mine blocks in **1 millisecond** (`generatetoaddress`) with zero difficulty.
 
 ### 3.1 How `bitcoin.conf` & RPC Authentication Work
-On macOS, `bitcoind` reads `/Users/mac/Library/Application Support/Bitcoin/bitcoin.conf` (on Linux: `~/.bitcoin/bitcoin.conf`).
+On macOS, `bitcoind` reads `~/Library/Application Support/Bitcoin/bitcoin.conf` (on Linux: `~/.bitcoin/bitcoin.conf`).
 When `bitcoind -regtest -daemon` starts:
-- It creates a data folder at `/Users/mac/Library/Application Support/Bitcoin/regtest/`.
+- It creates a data folder at `~/Library/Application Support/Bitcoin/regtest/`.
 - If `rpcuser` and `rpcpassword` are set in `bitcoin.conf`, `bitcoin-cli` authenticates using those credentials. Otherwise, `bitcoind` generates a temporary session file called `.cookie` inside `regtest/.cookie`.
 
 ### 3.2 The 5 Essential Daemon Lifecycle Commands
@@ -121,7 +121,7 @@ bitcoin-cli -regtest getblockchaininfo
 bitcoin-cli -regtest getnetworkinfo
 
 # 4. View the live node debug log (crucial when debugging errors!)
-tail -n 25 "/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log"
+tail -n 25 "~/Library/Application Support/Bitcoin/regtest/debug.log"
 
 # 5. Gracefully stop the node (if you ever want to restart cleanly)
 # bitcoin-cli -regtest stop
@@ -166,23 +166,23 @@ bitcoin-cli -regtest -rpcwallet=kisumu_miner getbalance
 Whenever you build a feature, fix a bug, or review someone else's PR in `bitcoin/bitcoin`, you must prove it works using Bitcoin Core's **two automated test frameworks**:
 
 ### 5.1 Engine 1: Fast C++ Boost Unit Tests (`test_bitcoin`)
-Unit tests live in `/Users/mac/bitcoin/src/test/*_tests.cpp`. Each file starts with `BOOST_FIXTURE_TEST_SUITE(suite_name, ...)`.
+Unit tests live in `$BITCOIN_ROOT/src/test/*_tests.cpp`. Each file starts with `BOOST_FIXTURE_TEST_SUITE(suite_name, ...)`.
 ```bash
 # Run a single C++ unit test file by its suite name (runs in < 1 second!):
-/Users/mac/bitcoin/build/bin/test_bitcoin --run_test=merkle_tests
-/Users/mac/bitcoin/build/bin/test_bitcoin --run_test=bip32_tests
-/Users/mac/bitcoin/build/bin/test_bitcoin --run_test=txvalidation_tests
+$BITCOIN_ROOT/build/bin/test_bitcoin --run_test=merkle_tests
+$BITCOIN_ROOT/build/bin/test_bitcoin --run_test=bip32_tests
+$BITCOIN_ROOT/build/bin/test_bitcoin --run_test=txvalidation_tests
 ```
 
 ### 5.2 Engine 2: Python P2P Functional Tests (`test_runner.py`)
-Functional tests live in `/Users/mac/bitcoin/test/functional/*.py`. They spin up multiple real `bitcoind -regtest` nodes and test P2P relay, mempool policy, RPCs, and wallet behavior.
+Functional tests live in `$BITCOIN_ROOT/test/functional/*.py`. They spin up multiple real `bitcoind -regtest` nodes and test P2P relay, mempool policy, RPCs, and wallet behavior.
 ```bash
 # Run a specific upstream functional test:
-python3 /Users/mac/bitcoin/build/test/functional/test_runner.py feature_rbf.py
+python3 $BITCOIN_ROOT/build/test/functional/test_runner.py feature_rbf.py
 
 # Or run your own custom functional test in Stage 04 directly:
-python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_test.py \
-  --configfile=/Users/mac/bitcoin/build/test/config.ini
+python3 ./04-functional-test-framework/kisumu_pos_rbf_test.py \
+  --configfile=$BITCOIN_ROOT/build/test/config.ini
 ```
 
 ---
@@ -193,7 +193,7 @@ When a user reports a bug or test failure in Bitcoin Core, how do you find the e
 
 ### 6.1 The 4-Step Bug-Hunting Workflow
 ```bash
-cd /Users/mac/bitcoin
+cd $BITCOIN_ROOT
 
 # Step 1: Search for the exact RPC error string or function name using 'git grep -n'
 git grep -n "bad-txns-vin-empty" src/
@@ -217,7 +217,7 @@ To become a known contributor in `bitcoin/bitcoin`, **reviewing and testing othe
 
 ### 7.1 Checking Out Any PR (Online or Offline)
 ```bash
-cd /Users/mac/bitcoin
+cd $BITCOIN_ROOT
 
 # A. WHEN ONLINE: Fetch any open PR directly from GitHub by its number (e.g., PR #35320):
 # git fetch origin pull/35320/head:pr-35320

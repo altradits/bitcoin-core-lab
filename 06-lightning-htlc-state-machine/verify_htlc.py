@@ -8,7 +8,7 @@ import shlex
 import subprocess
 import sys
 
-BITCOIN_ROOT = os.environ.get("BITCOIN_ROOT", "/Users/mac/bitcoin")
+BITCOIN_ROOT = os.environ.get("BITCOIN_ROOT", os.path.expanduser("~/bitcoin"))
 # Full CLI command override, same convention as the stage shell scripts,
 # e.g. BITCOIN_CLI="bitcoin-cli -regtest -datadir=/tmp/x -rpcport=28332".
 BITCOIN_CLI = os.environ.get("BITCOIN_CLI")

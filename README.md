@@ -87,4 +87,5 @@ report it. One line commit messages, no signing key needed.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE). Outside sources (books, whitepaper,
+specs) are linked, not copied. See [LICENSES.md](./LICENSES.md).

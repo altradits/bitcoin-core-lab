@@ -3,7 +3,7 @@
 - **Author:** `@glozow`
 - **Merged At:** `2025-10-17T14:16:13Z`
 - **Final Merged Head Commit:** `3d222825642bfb052ce40cbc1c69318a0d8835bf`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-33630` (`git -C /Users/mac/bitcoin show pr-33630`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-33630` (`git -C $BITCOIN_ROOT show pr-33630`)
 - **Core Lesson for Reviewers:** How @janb84 and @instagibbs used GitHub ```suggestion blocks to refine ambiguous RPC helptext in `submitpackage`, which @glozow incorporated before merge.
 
 ---
