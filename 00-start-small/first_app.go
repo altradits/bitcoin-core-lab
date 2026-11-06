@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -32,7 +33,7 @@ func askBitcoin(args ...string) string {
 
 func main() {
 	fmt.Println("====================================================")
-	fmt.Println("  MY FIRST BITCOIN APP — TALKING TO LIVE BITCOIND")
+	fmt.Println("  MY FIRST BITCOIN APP - TALKING TO LIVE BITCOIND")
 	fmt.Println("====================================================")
 
 	// ------------------------------------------------------------------------
@@ -57,15 +58,20 @@ func main() {
 	newAddress := askBitcoin("-rpcwallet=kisumu_merchant", "getnewaddress", myProjectLabel, "bech32")
 	fmt.Printf("[3] New Bitcoin Address    : %s (label: %s)\n", newAddress, myProjectLabel)
 
-	// Step 4: Send real regtest Bitcoin to our new address
+	// Step 4: Send regtest coins to our new address
 	txid := askBitcoin("-rpcwallet=kisumu_miner", "sendtoaddress", newAddress, amountBTC)
+	if strings.HasPrefix(txid, "Error:") {
+		fmt.Printf("[4] Send failed: %s\n", txid)
+		fmt.Println("The miner wallet needs mature coins. Run ./lab.sh step 1 first, then retry.")
+		os.Exit(1)
+	}
 	fmt.Printf("[4] Sent %s BTC! TXID    : %s\n", amountBTC, txid)
 
 	// Step 5: Check the waiting room (Mempool) before mining
 	unconfirmed := askBitcoin("-rpcwallet=kisumu_merchant", "getunconfirmedbalance")
 	fmt.Printf("[5] Waiting in Mempool     : %s BTC (unconfirmed)\n", unconfirmed)
 
-	// Step 6: Mine 1 block so our transaction is permanently etched into the blockchain
+	// Step 6: Mine 1 block so our transaction confirms
 	minerAddr := askBitcoin("-rpcwallet=kisumu_miner", "getnewaddress")
 	askBitcoin("generatetoaddress", "1", minerAddr)
 	newHeight := askBitcoin("getblockcount")
