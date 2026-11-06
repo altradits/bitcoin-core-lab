@@ -1,0 +1,26 @@
+name: Content correction
+description: A technical claim, number, or quote in the lab is wrong
+title: "[content] "
+labels: ["content", "accuracy"]
+body:
+  - type: input
+    id: file
+    attributes:
+      label: File and line or section
+      description: Example 03-rbf-and-cpfp/README.md, Step 2
+      placeholder: "03-rbf-and-cpfp/README.md, Step 2"
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What the lab says now (quote it)
+    validations:
+      required: true
+  - type: textarea
+    id: right
+    attributes:
+      label: What it should say, and why
+      description: Cite the primary source (BIP, source file, RPC help)
+    validations:
+      required: true

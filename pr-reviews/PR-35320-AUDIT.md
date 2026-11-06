@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#35320`
+# Audit: bitcoin/bitcoin#35320 `key: validate BIP32 seed length in CExtKey::SetSeed`
 
 - **PR Title:** Merge bitcoin/bitcoin#35320: key: validate BIP32 seed length in CExtKey::SetSeed
 - **Concentric Risk Ring:** **🟢 Ring 3 — Wallet / RPC / Build / Tests**
 - **Merge Commit:** `26b730cdbf2c77c12f684fd50bd376212b725394`
 - **Audited PR Tip Commit:** `2cf9d79d84cb485e31e2d78a5744c1e4dc5f5f44`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 
@@ -74,3 +75,11 @@ index cc03df1cd9..7b2df88f07 100644
 ```markdown
 Tested ACK 2cf9d79d84cb485e31e2d78a5744c1e4dc5f5f44
 ```
+
+## Accuracy note (2026-11-06)
+
+Upstream enforces the bound with `Assert` (a programming invariant
+that aborts debug builds), not a runtime error. The Bug Dojo mission
+models the same bound as a returned Go error, which fits Go
+conventions. All other details (commit, diff, ACKs) verified against
+github.com.

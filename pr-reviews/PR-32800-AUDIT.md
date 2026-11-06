@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#32800`
+# Audit: bitcoin/bitcoin#32800 `rpc: Distinguish between vsize and sigop adjusted mempool vsize`
 
 - **PR Title:** Merge bitcoin/bitcoin#32800: rpc: Distinguish between vsize and sigop adjusted mempool vsize
 - **Concentric Risk Ring:** **🟢 Ring 3 — Wallet / RPC / Build / Tests**
 - **Merge Commit:** `6b059d9dbdbd4d5b6f52993f93bf291181bf3900`
 - **Audited PR Tip Commit:** `29b124416e4293aafda0097808c01f5a2cb8627c`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 
@@ -248,3 +249,11 @@ index 5893b1cc75..b3e3749ef7 100755
 ```markdown
 Tested ACK 29b124416e4293aafda0097808c01f5a2cb8627c
 ```
+
+## Accuracy note (2026-11-06)
+
+The quoted PR description says the change "adds supporting
+documentation `doc/policy/feerates-and-vsize.md`", but the merged
+file list above has no such file. The doc was dropped before merge.
+All other details (commits, files, ACKs) verified against
+github.com.

@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#35694`
+# Audit: bitcoin/bitcoin#35694 `clusterlin: minor SFL optimizations`
 
 - **PR Title:** Merge bitcoin/bitcoin#35694: clusterlin: minor SFL optimizations
 - **Concentric Risk Ring:** **🟠 Ring 1 — VALIDATION & MEMPOOL POLICY (Pinning / DoS / Censorship Risk)**
 - **Merge Commit:** `22a03ca69443deb66b98deb37d8e84a33968ac10`
 - **Audited PR Tip Commit:** `efb4eae33861d3f316d77788f5c83b58dad94a0a`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 
