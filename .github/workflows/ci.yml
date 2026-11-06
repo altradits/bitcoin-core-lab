@@ -1,0 +1,62 @@
+# CI runs every check that needs no live node: Go unit tests for all
+# modules, Python syntax, shell syntax, and gofmt. Node stages
+# (./lab.sh check NN) run locally; see START_HERE.md.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.22"
+          cache: false
+      - name: gofmt (no diffs allowed)
+        run: |
+          test -z "$(gofmt -l 00-start-small 07-psbt-descriptors-and-miniscript 08-builder-starter-kit 09-bug-dojo-and-pr-mastery 10-protocol-primitives-from-scratch 11-from-regtest-to-live-mainnet 12-lightning-readiness-and-bitcoind-bridge offline-library/books)"
+      - name: go vet all modules
+        run: |
+          for m in 07-psbt-descriptors-and-miniscript 08-builder-starter-kit 09-bug-dojo-and-pr-mastery 10-protocol-primitives-from-scratch 11-from-regtest-to-live-mainnet 12-lightning-readiness-and-bitcoind-bridge offline-library/books; do
+            go -C "$m" vet ./...
+          done
+      - name: go test all modules
+        run: |
+          for m in 07-psbt-descriptors-and-miniscript 08-builder-starter-kit 09-bug-dojo-and-pr-mastery 10-protocol-primitives-from-scratch 11-from-regtest-to-live-mainnet 12-lightning-readiness-and-bitcoind-bridge offline-library/books; do
+            go -C "$m" test ./...
+          done
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: python syntax (node scripts compile without a node)
+        run: |
+          python3 -m py_compile \
+            04-functional-test-framework/kisumu_pos_rbf_test.py \
+            06-lightning-htlc-state-machine/verify_htlc.py
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: shell syntax
+        run: |
+          bash -n lab.sh
+          bash -n 01-node-foundations/verify_coinbase_maturity.sh
+          bash -n 02-raw-tx-and-mempool/raw_tx_mempool.sh
+          bash -n 03-rbf-and-cpfp/rbf_and_cpfp.sh
+          bash -n 05-truc-package-relay-review/truc_1p1c_package.sh
+          test -x lab.sh
+          test -x 01-node-foundations/verify_coinbase_maturity.sh
+          test -x 02-raw-tx-and-mempool/raw_tx_mempool.sh
+          test -x 03-rbf-and-cpfp/rbf_and_cpfp.sh
+          test -x 05-truc-package-relay-review/truc_1p1c_package.sh
+          test -x 04-functional-test-framework/kisumu_pos_rbf_test.py
+          test -x 06-lightning-htlc-state-machine/verify_htlc.py

@@ -3,7 +3,7 @@
 - **Author:** `@maflcko`
 - **Merged At:** `2026-10-07T12:56:49Z`
 - **Final Merged Head Commit:** `fa466dea808dedfc281cdff842cbefafae574d8a`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-36447` (`git -C /Users/mac/bitcoin show pr-36447`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-36447` (`git -C $BITCOIN_ROOT show pr-36447`)
 - **Core Lesson for Reviewers:** How reviewers (@sedited, @ismaelsadeeq) spotted additional unsynchronized places in the same file (`txindex_tests.cpp`) and suggested moving the event drain into `mineBlock()`, directly improving the PR before merge.
 
 ---

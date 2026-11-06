@@ -40,6 +40,15 @@ func TestGenesisBlockHeaderProofOfWork(t *testing.T) {
 	}
 }
 
+func TestTaggedHashBIP340Vector(t *testing.T) {
+	// Independent vector: SHA256(SHA256("BIP0340/challenge") x2 || "hello").
+	got := TaggedHash("BIP0340/challenge", []byte("hello"))
+	want := "a97ff4dc59e2e158c00a7d9cf1e7d60fb090ecf5f728b6d17be7cbbb0fc572dd"
+	if hex.EncodeToString(got[:]) != want {
+		t.Fatalf("TaggedHash mismatch: got %x, want %s", got, want)
+	}
+}
+
 func TestCompactSizeCanonicalSerialization(t *testing.T) {
 	values := []uint64{0, 1, 252, 253, 65535, 65536, 4294967296}
 	for _, v := range values {

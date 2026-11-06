@@ -1,6 +1,6 @@
 # Bitcoin Core Maintainer Review Playbook (8 Downloaded Merged PR Journeys)
 
-Every file in this folder (`PR-<NUM>-JOURNEY.md` and `raw/pr-<NUM>.json`) is a **real, merged `bitcoin/bitcoin` Pull Request** downloaded with its full commit history (fetched into `/Users/mac/bitcoin` as `pr-<NUM>`), inline code comments, author improvements, and final `ACK`s.
+Every file in this folder (`PR-<NUM>-JOURNEY.md` and `raw/pr-<NUM>.json`) is a **real, merged `bitcoin/bitcoin` Pull Request** downloaded with its full commit history (fetched into `$BITCOIN_ROOT` as `pr-<NUM>`), inline code comments, author improvements, and final `ACK`s.
 
 Use `./lab.sh journeys` or `./lab.sh journeys <PR_NUMBER>` to inspect any of these offline on your Mac.
 
@@ -8,16 +8,16 @@ Use `./lab.sh journeys` or `./lab.sh journeys <PR_NUMBER>` to inspect any of the
 
 ## 1. The 8 Downloaded Merged PR Journeys
 
-| Merged PR | Title & Author | Local Branch in `/Users/mac/bitcoin` | Study Dossier | How Reviewer Comments Improved the PR Before Merge |
+| Merged PR | Title & Author | Local Branch in `$BITCOIN_ROOT` | Study Dossier | How Reviewer Comments Improved the PR Before Merge |
 | :--- | :--- | :--- | :--- | :--- |
-| **[#36447](https://github.com/bitcoin/bitcoin/pull/36447)** | `test: Misc fixes for pending validation events races` (`@maflcko`) | `pr-36447` (`fa466dea80`) | [PR-36447-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-36447-JOURNEY.md) | `@ismaelsadeeq` suggested moving the event queue drain into `mineBlock()` so all callers get synchronization automatically; `@sedited` caught another unsynchronized `txindex.Stop()` call at the bottom of `txindex_tests.cpp`. `@maflcko` adopted both fixes! |
-| **[#36439](https://github.com/bitcoin/bitcoin/pull/36439)** | `test: poll more frequently in sync helpers and RPC connection wait` (`@ViniciusCestarii`) | `pr-36439` (`8898f832d9`) | [PR-36439-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-36439-JOURNEY.md) | `@maflcko` asked for benchmark plots comparing `-j1` vs `2*nproc` saturation, suggested forcing named keyword arguments (`def sync_blocks(self, nodes=None, *, wait=0.05, timeout=60):`), and suggested using a deadline timer (`time.monotonic()`). |
-| **[#35724](https://github.com/bitcoin/bitcoin/pull/35724)** | `cmpctblock: Improve logging of cmpctblock message reconstruction statistics` (`@davidgumberg`) | `pr-35724` (`4f5ce816db`) | [PR-35724-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-35724-JOURNEY.md) | `@w0xlt` caught two real bugs: (1) removing a counter decrement falsely assumed a candidate came from `extrapool` rather than the `mempool` scan, and (2) `if (ShouldTraceLog(...)) { LogDebug(...); }` had mismatched log levels. `@0xB10C` ran the PR on live Signet and shared real log output. |
-| **[#32313](https://github.com/bitcoin/bitcoin/pull/32313)** | `coins: fix cachedCoinsUsage accounting in CCoinsViewCache` (`@l0rinc`) | `pr-32313` (`b9f9d9c7a6`) | [PR-32313-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-32313-JOURNEY.md) | `@andrewtoth` pointed out on `src/coins.cpp:204` that subtracting `cachedCoinsUsage` on a newly created entry was subtracting zero, prompting `@l0rinc` to replace it with an explanatory `assert`. `@maflcko` kept unrelated sanitizer changes out of the PR. |
-| **[#33624](https://github.com/bitcoin/bitcoin/pull/33624)** | `test: P2SH sig ops are only counted with SCRIPT_VERIFY_P2SH` (`@brunoerg`) | `pr-33624` (`3a10d700bc`) | [PR-33624-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-33624-JOURNEY.md) | `@instagibbs` improved both the comment accuracy and added `/*flags=*/0` inline parameter documentation. `@l0rinc` and `@janb84` verified the test by temporarily mutating `src/consensus/tx_verify.cpp` (`if (1 == 1)`) to prove the new assertion fails when consensus code is broken. |
-| **[#33630](https://github.com/bitcoin/bitcoin/pull/33630)** | `doc: correct topology requirements in submitpackage helptext` (`@glozow`) | `pr-33630` (`3d22282564`) | [PR-33630-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-33630-JOURNEY.md) | `@janb84` and `@instagibbs` pointed out an ambiguity in `"Not all parents need to be present"` and proposed concrete `suggestion` blocks clarifying `(some, all, or none of)` unconfirmed parents, which `@glozow` adopted. |
-| **[#36469](https://github.com/bitcoin/bitcoin/pull/36469)** | `refactor: deduplicate block validation state catcher` (`@enirox001`) | `pr-36469` (`c9cccf6d68`) | [PR-36469-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-36469-JOURNEY.md) | Demonstrates how clean C++ refactoring PRs progress from `Concept ACK` to ultra-concise `ACK c9cccf6d68c682e533876b4450f5ad7044a79f10` (`dedup is clean.`). |
-| **[#36545](https://github.com/bitcoin/bitcoin/pull/36545)** | `test: Fix intermittent issue in p2p_initial_headers_sync.py` (`@maflcko`) | `pr-36545` (`fad7637529`) | [PR-36545-JOURNEY.md](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/PR-36545-JOURNEY.md) | Merged on 2026-10-19 (same author & category as open PR `#36553`). Shows how `@Crypt-iQ` and `@l0rinc` write natural, human `tACK` and `lightly tested ACK` comments on P2P test fixes. |
+| **[#36447](https://github.com/bitcoin/bitcoin/pull/36447)** | `test: Misc fixes for pending validation events races` (`@maflcko`) | `pr-36447` (`fa466dea80`) | [PR-36447-JOURNEY.md](./PR-36447-JOURNEY.md) | `@ismaelsadeeq` suggested moving the event queue drain into `mineBlock()` so all callers get synchronization automatically; `@sedited` caught another unsynchronized `txindex.Stop()` call at the bottom of `txindex_tests.cpp`. `@maflcko` adopted both fixes! |
+| **[#36439](https://github.com/bitcoin/bitcoin/pull/36439)** | `test: poll more frequently in sync helpers and RPC connection wait` (`@ViniciusCestarii`) | `pr-36439` (`8898f832d9`) | [PR-36439-JOURNEY.md](./PR-36439-JOURNEY.md) | `@maflcko` asked for benchmark plots comparing `-j1` vs `2*nproc` saturation, suggested forcing named keyword arguments (`def sync_blocks(self, nodes=None, *, wait=0.05, timeout=60):`), and suggested using a deadline timer (`time.monotonic()`). |
+| **[#35724](https://github.com/bitcoin/bitcoin/pull/35724)** | `cmpctblock: Improve logging of cmpctblock message reconstruction statistics` (`@davidgumberg`) | `pr-35724` (`4f5ce816db`) | [PR-35724-JOURNEY.md](./PR-35724-JOURNEY.md) | `@w0xlt` caught two real bugs: (1) removing a counter decrement falsely assumed a candidate came from `extrapool` rather than the `mempool` scan, and (2) `if (ShouldTraceLog(...)) { LogDebug(...); }` had mismatched log levels. `@0xB10C` ran the PR on live Signet and shared real log output. |
+| **[#32313](https://github.com/bitcoin/bitcoin/pull/32313)** | `coins: fix cachedCoinsUsage accounting in CCoinsViewCache` (`@l0rinc`) | `pr-32313` (`24d861da78`) | [PR-32313-JOURNEY.md](./PR-32313-JOURNEY.md) | `@andrewtoth` pointed out on `src/coins.cpp:204` that subtracting `cachedCoinsUsage` on a newly created entry was subtracting zero. `@l0rinc` offered an explanatory `assert`; `@andrewtoth` pushed back that the existing comment sufficed. `@maflcko` kept unrelated sanitizer changes out of the PR. |
+| **[#33624](https://github.com/bitcoin/bitcoin/pull/33624)** | `test: P2SH sig ops are only counted with SCRIPT_VERIFY_P2SH` (`@brunoerg`) | `pr-33624` (`3a10d700bc`) | [PR-33624-JOURNEY.md](./PR-33624-JOURNEY.md) | `@instagibbs` improved both the comment accuracy and added `/*flags=*/0` inline parameter documentation. `@l0rinc` verified the test by flipping the flag check to `if (true)` and watching the new assertion fail; `@janb84` confirmed the same against the `1 == 1` mutant in a tested ACK. |
+| **[#33630](https://github.com/bitcoin/bitcoin/pull/33630)** | `doc: correct topology requirements in submitpackage helptext` (`@glozow`) | `pr-33630` (`3d22282564`) | [PR-33630-JOURNEY.md](./PR-33630-JOURNEY.md) | `@janb84` and `@instagibbs` pointed out an ambiguity in `"Not all parents need to be present"` and proposed concrete `suggestion` blocks clarifying `(some, all, or none of)` unconfirmed parents, which `@glozow` adopted. |
+| **[#36469](https://github.com/bitcoin/bitcoin/pull/36469)** | `refactor: deduplicate block validation state catcher` (`@enirox001`) | `pr-36469` (`c9cccf6d68`) | [PR-36469-JOURNEY.md](./PR-36469-JOURNEY.md) | Demonstrates how clean C++ refactoring PRs progress from `Concept ACK` to ultra-concise `ACK c9cccf6d68c682e533876b4450f5ad7044a79f10` (`dedup is clean.`). |
+| **[#36545](https://github.com/bitcoin/bitcoin/pull/36545)** | `test: Fix intermittent issue in p2p_initial_headers_sync.py` (`@maflcko`) | `pr-36545` (`fad7637529`) | [PR-36545-JOURNEY.md](./PR-36545-JOURNEY.md) | Merged on 2026-10-19 (same author and category as `#36553`, also merged). Shows how `@Crypt-iQ` and `@l0rinc` write short `tACK` and `lightly tested ACK` comments on P2P test fixes. |
 
 ---
 
@@ -54,8 +54,8 @@ When reviewing a test PR, temporarily break the C++ implementation (`git diff`) 
 > **`@l0rinc` on PR #33624:**
 > *"Verified with:*
 > ```patch
-> - if ((flags & SCRIPT_VERIFY_P2SH) && txin.scriptPubKey.IsPayToScriptHash())
-> + if ((1 == 1) && txin.scriptPubKey.IsPayToScriptHash())
+> -    if (flags & SCRIPT_VERIFY_P2SH) {
+> +    if (true) {
 > ```
 > *"*
 >
@@ -115,15 +115,31 @@ Look at how short real `ACK` comments are once the code is ready:
 
 ---
 
-## 3. How to Apply These Patterns to Our 3 Open Unmerged PRs (`#36553`, `#36555`, `#36550`)
+## 3. How to Apply These Patterns (Updated 2026-11-06)
 
-1. **On Open PR `#36553` (`test: Add missing sync_mempools in wallet_conflicts.py` by `@maflcko`):**
-   - Look at **Pattern 4** (`@l0rinc` / `@janb84`) and **Pattern 7** (`@l0rinc` on `#36545`):
-   - You can reproduce the failure that `@maflcko` put in the PR description (adding `time.sleep(0.1)` in `src/net_processing.cpp`), or simply post a short, genuine 2-line human review in the exact style of `@l0rinc` / `@StephenChi-hi`.
-2. **On Open PR `#36555` (`rpc: return error when invalidateblock fails` by `@ja7ad`):**
-   - Look at **Pattern 1 & Pattern 2** (`@sedited` / `@ismaelsadeeq`):
-   - Ask a polite inline question on `src/rpc/blockchain.cpp:1791`:
-     *"Since `Chainstate::InvalidateBlock` in `src/validation.cpp:3536` now sets `state.Error("Cannot invalidate genesis block")`, do we still need this early check in `src/rpc/blockchain.cpp:1791`? Removing the early check here would avoid duplicating the error string and let `InvalidateBlock` handle it in one place."*
-3. **On Open PR `#36550` (`crypto: cleanse CSHA512 state in its destructor` by `@fametrano`):**
-   - Look at **Pattern 1** (`@sedited` checking callers across the codebase):
-   - Point out `src/random.cpp:518-520` (`RNGState::MixExtract`), where `hasher.Reset()` is currently called with the comment `// Best effort cleanup of internal state` right before `CSHA512 hasher` goes out of scope. With `~CSHA512()` now calling `memory_cleanse` on both `s` and `buf`, that incomplete `hasher.Reset()` in `src/random.cpp:519` is finally properly cleansed (and `hasher.Reset()` there is no longer needed).
+Only `#36555` below is still open. The other two already resolved;
+study them with the same patterns but do not post new reviews there.
+
+1. **Merged PR `#36553` (`test: Add missing sync_mempools in wallet_conflicts.py` by `@maflcko`):**
+   - Look at **Pattern 4** (`@l0rinc` / `@janb84`) and **Pattern 7** (`@l0rinc` on `#36545`).
+   - As an exercise, check out the parent of the merge, run
+     `wallet_conflicts.py` in a loop until it flakes, then apply the
+     fix and confirm the flake is gone. Write your finding in the
+     2-line style of `@l0rinc` / `@StephenChi-hi` (in your notes,
+     not on the merged PR).
+2. **Open PR `#36555` (`rpc: return error when invalidateblock fails` by `@ja7ad`):**
+   - Look at **Pattern 1 and Pattern 2** (`@sedited` / `@ismaelsadeeq`).
+   - Review the current head (`4aeb6a8f`). Open questions a student
+     can genuinely check: is the `CMakeLists.txt` hunk (adding
+     `src/pubkey.cpp` to `core_interface`) needed for the new unit
+     test or a leftover? Does every caller of the RPC handle the new
+     error instead of `null`? Run `rpc_invalidateblock.py` on the
+     branch and report Tested ACK or the failure.
+3. **Closed PR `#36550` (`crypto: cleanse CSHA512 state in its destructor` by `@fametrano`):**
+   - Look at **Pattern 1** (`@sedited` checking callers across the codebase).
+   - As an exercise, read `src/random.cpp:518-520`
+     (`RNGState::MixExtract`), where `hasher.Reset()` runs under the
+     comment `// Best effort cleanup of internal state` before the
+     hasher goes out of scope. Decide whether the proposed
+     `~CSHA512()` destructor (cleansing both `s` and `buf`) would
+     make that `Reset()` redundant, and write down your reasoning.

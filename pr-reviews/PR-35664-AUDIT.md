@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#35664`
+# Audit: bitcoin/bitcoin#35664 `test: add CLTV and CHECK(MULTI)SIGVERIFY failure-path vectors to script_tests.json`
 
 - **PR Title:** Merge bitcoin/bitcoin#35664: test: add CLTV and CHECK(MULTI)SIGVERIFY failure-path vectors to script_tests.json
 - **Concentric Risk Ring:** **🟢 Ring 3 — Wallet / RPC / Build / Tests**
 - **Merge Commit:** `774d11c58f221294950f05ac4d249e19583e4b7b`
 - **Audited PR Tip Commit:** `c4068cf37b6674417c77ce1f295b51dd49a57e81`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 

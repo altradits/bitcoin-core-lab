@@ -1,7 +1,7 @@
 # Book 5: Lightning Network BOLTs, Off-Chain State & LND Architecture (From Memory)
 
 > **Purpose of This Offline Book:**
-> Covers the protocol mechanics required for Stage `12` (`12-lightning-readiness-and-bitcoind-bridge/`), `./lab.sh polar`, and all chapters of _Mastering the Lightning Network_ (`/Users/mac/bitcoin-references/books/mastering-lightning/`).
+> Covers the protocol mechanics required for Stage `12` (`12-lightning-readiness-and-bitcoind-bridge/`), `./lab.sh polar`, and all chapters of _Mastering the Lightning Network_ (`$BITCOIN_REFERENCES/books/mastering-lightning/`).
 
 ---
 
