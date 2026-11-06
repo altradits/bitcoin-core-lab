@@ -1,4 +1,4 @@
-# 🗓️ 30-Day Offline Bitcoin Core & Lightning Mastery Curriculum
+# 30 day offline study plan for Bitcoin Core and Lightning
 
 Every challenge below uses **100% local files on this laptop** (`/Users/mac/bitcoin`, `/Users/mac/bitcoin-references/bips`, `/Users/mac/bitcoin-references/bolts`, and `/Users/mac/bitcoin-core-lab`).
 

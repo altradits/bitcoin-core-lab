@@ -10,7 +10,8 @@ CLI="bitcoin-cli -regtest"
 ensure_daemon() {
   if ! $CLI getblockchaininfo >/dev/null 2>&1; then
     echo "⚡ Starting bitcoind -regtest daemon..."
-    bitcoind -regtest -daemon
+    # fallbackfee lets wallet sends work on a fresh regtest chain with no fee history.
+    bitcoind -regtest -daemon -fallbackfee=0.00001
     sleep 2
   fi
   for w in kisumu_miner kisumu_merchant sovereign_cold_signer; do
@@ -87,20 +88,22 @@ run_baby_step() {
   case "$STEP" in
     1)
       echo "============================================================"
-      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 1 Block"
+      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 101 Blocks"
       echo "============================================================"
       GEN_HASH=$($CLI getblockhash 0)
       BEFORE_H=$($CLI getblockcount)
       MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
-      $CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
+      # 101 blocks: 1 new coin plus 100 confirmations so later steps can spend it.
+      # The 100 block wait is called coinbase maturity. Stage 01 verifies it.
+      $CLI generatetoaddress 101 "$MINER_ADDR" >/dev/null
       AFTER_H=$($CLI getblockcount)
       echo "1. Block #0 (Genesis Hash) : $GEN_HASH"
       echo "2. Height Before Mining    : $BEFORE_H"
-      echo "3. Height After Mining 1   : $AFTER_H"
+      echo "3. Height After Mining 101 : $AFTER_H"
       echo ""
       echo "💡 WHAT JUST HAPPENED:"
       echo "   A blockchain is just a stack of numbered boxes (blocks)."
-      echo "   You just told your live Bitcoin node to mine 1 new block on top of Block #$BEFORE_H!"
+      echo "   You just told your live Bitcoin node to mine 101 new blocks on top of Block #$BEFORE_H!"
       echo ""
       echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
       echo "   Run this command yourself in your terminal:"
@@ -150,7 +153,7 @@ for i, u in enumerate(utxos, 1):
       ;;
     4)
       echo "============================================================"
-      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First 60-Line Bitcoin App"
+      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First Bitcoin App"
       echo "============================================================"
       go -C "$LAB_DIR/00-start-small" run first_app.go
       echo ""
@@ -167,8 +170,8 @@ for i, u in enumerate(utxos, 1):
       echo "In 2010, someone created 184 Billion BTC out of thin air (CVE-2010-5139)"
       echo "because Satoshi forgot to check if a transaction output was negative!"
       echo ""
-      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 18-33):"
-      sed -n '18,34p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
+      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 59-72):"
+      sed -n '59,72p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
       echo ""
       echo "Running Mission 1 verification right now:"
       run_dojo check 1
@@ -187,7 +190,7 @@ practice_stage() {
   STAGE="${1:-01}"
   case "$STAGE" in
     00|0)
-      echo "=== Stage 00: Start Small — Your First 60-Line Bitcoin App ==="
+      echo "=== Stage 00: Start Small - Your First Bitcoin App ==="
       go -C "$LAB_DIR/00-start-small" run first_app.go
       ;;
     01|1)
@@ -556,7 +559,7 @@ Tested ACK <40-char-commit-hash>
   - Mutation test: commented out the new check in `<file_path>`, recompiled, and confirmed the test fails as expected.
 ------------------------------------------------------------
 INNER_EOF
-      echo "📘 Full manual: BITCOIN_FROM_SOURCE_MASTERY.md"
+      echo "Full manual: BUILDING_BITCOIN_CORE_FROM_SOURCE.md"
       ;;
     *)
       echo "Usage: ./lab.sh drill [1..8]"
@@ -578,10 +581,11 @@ run_polar() {
   echo "  2. Query Polar's backend1 bitcoind (mapped to host port 18446):"
   echo "     bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass getblockchaininfo"
   echo ""
-  echo "  3. Query Alice (LND) using your native /Users/mac/bin/lncli:"
-  echo "     /Users/mac/bin/lncli --network=regtest --rpcserver=localhost:10001 \\"
-  echo "       --tlscertpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
-  echo "       --macaroonpath=/Users/mac/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
+  LNCLI="$(command -v lncli || echo "$HOME/bin/lncli")"
+  echo "  3. Query Alice (LND) using your native lncli ($LNCLI):"
+  echo "     $LNCLI --network=regtest --rpcserver=localhost:10001 \\"
+  echo "       --tlscertpath=$HOME/.polar/networks/1/volumes/lnd/alice/tls.cert \\"
+  echo "       --macaroonpath=$HOME/.polar/networks/1/volumes/lnd/alice/data/chain/bitcoin/regtest/admin.macaroon getinfo"
   echo ""
   echo "  4. Or run lncli directly inside the Alice & Dave Docker containers:"
   echo "     docker exec polar-n1-alice lncli --network=regtest getinfo"
@@ -591,6 +595,10 @@ run_polar() {
 
 m1_health_snapshot() {
   PHASE="${1:-SNAPSHOT}"
+  # Health snapshot needs macOS tools (vm_stat, sysctl vm.*). Skip quietly elsewhere.
+  if [ "$(uname -s)" != "Darwin" ]; then
+    return 0
+  fi
   python3 - "$PHASE" << 'PYEOF'
 import subprocess, sys, re
 
@@ -636,6 +644,10 @@ PYEOF
 }
 
 show_full_m1_health() {
+  if [ "$(uname -s)" != "Darwin" ]; then
+    echo "The full health report needs macOS (vm_stat, sysctl vm.*). Nothing to show on $(uname -s)."
+    return 0
+  fi
   m1_health_snapshot "FULL DIAGNOSTIC"
   SWAP_LINE=$(sysctl -n vm.swapusage)
   echo ""
@@ -668,9 +680,17 @@ rest_mac() {
   echo "🛑 Putting Bitcoin & Polar background services to rest to free 100% of M1 RAM..."
   $CLI stop >/dev/null 2>&1 && echo "  ✅ Stopped native bitcoind -regtest daemon." || echo "  ℹ️ Native bitcoind -regtest was already stopped."
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    docker compose -f /Users/mac/.polar/networks/1/docker-compose.yml stop >/dev/null 2>&1 || true
-    docker compose -f /Users/mac/.polar/networks/2/docker-compose.yml stop >/dev/null 2>&1 || true
-    echo "  ✅ Stopped any active Polar Docker containers."
+    STOPPED=0
+    for compose in "$HOME"/.polar/networks/*/docker-compose.yml; do
+      [ -f "$compose" ] || continue
+      docker compose -f "$compose" stop >/dev/null 2>&1 || true
+      STOPPED=1
+    done
+    if [ "$STOPPED" = "1" ]; then
+      echo "  ✅ Stopped any active Polar Docker containers."
+    else
+      echo "  ℹ️ No Polar networks found under ~/.polar/networks."
+    fi
   fi
   sleep 1
   m1_health_snapshot "AFTER REST / RAM FREED"
