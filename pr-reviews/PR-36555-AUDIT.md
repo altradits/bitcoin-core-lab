@@ -1,5 +1,10 @@
 # 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#36555`
 
+> **Study notes, auto-generated (lab.sh pr-audit).** The diff and metadata below were collected by a
+> script; the risk ring was assigned automatically and may be wrong. Sections 5–6 are blank for you
+> to complete after your own review. See [`README.md`](./README.md) for known issues.
+> **Correction (checked 2026-11-15 with `gh`):** still **open**. It changes an RPC error path, not consensus. It has **3** commits; the long commit list below came from an outdated base.
+
 - **PR Title:** validation: report InvalidateBlock failures
 - **Concentric Risk Ring:** **🔴 Ring 0 — CRITICAL CONSENSUS & CRYPTOGRAPHY (Chain-Split / Inflation Risk)**
 - **Merge Commit:** `UNMERGED (Open PR Branch: pr-36555)`
@@ -2376,15 +2381,20 @@ index bce9c6038b..f01b1a5daf 100644
 
 ---
 
-## 5. The 6-Point Satoshi Guardian Audit Checklist
-- [x] **1. Ring & Consensus Boundary:** Classified as `🔴 Ring 0 — CRITICAL CONSENSUS & CRYPTOGRAPHY (Chain-Split / Inflation Risk)`. Verified whether consensus determinism is affected.
-- [x] **2. Invariant Preservation:** Checked that supply (`MAX_MONEY`), UTXO conservation, and cryptographic validation rules remain intact.
-- [x] **3. Integer & Memory Bounds:** Inspected diff for signed/unsigned overflow, underflow, or unbounded vector allocations.
-- [x] **4. Lock Ordering & Thread Safety:** Checked mutex acquisitions (`cs_main`, `mempool.cs`) and `AssertLockHeld` annotations.
-- [x] **5. Adversarial P2P / Mempool Vector:** Evaluated whether a zero-cost peer can trigger asymmetric CPU/RAM exhaustion.
-- [x] **6. Test Verification & Mutation Check:** Verified unit/functional test coverage in `test/` or `src/test/`.
+## 5. Review checklist (YOURS to tick — nothing below was checked for you)
+- [ ] **1. Risk area:** Which subsystem and invariant does this PR touch? Is any consensus behaviour affected? (Decide yourself; the ring label above was assigned by a script.)
+- [ ] **2. Invariants:** Which invariants must hold (supply, UTXO conservation, policy limits, determinism)? How did you check them?
+- [ ] **3. Bounds:** Integer overflow/underflow, unbounded containers or loops reachable by a peer or RPC caller?
+- [ ] **4. Locking:** Which mutexes are taken; do the annotations (`EXCLUSIVE_LOCKS_REQUIRED`, `GUARDED_BY`) still hold?
+- [ ] **5. Adversarial input:** Can an untrusted peer or caller make the node do expensive work?
+- [ ] **6. Tests:** Do the PR's tests fail without the change (mutation)? What did you run, on which commit?
 
-## 6. Formal Maintainer Sign-Off
-```markdown
-Tested ACK 77d45171d56faba149e2ae365e4ff69699b28c67
-```
+## 6. Your conclusion (fill in from YOUR OWN testing; never post text you did not write)
+- Commit I reviewed: `________`
+- What I built and ran (exact commands): ________
+- What I tested manually beyond the PR's tests: ________
+- Questions / concerns for the author: ________
+- My conclusion (Concept/Approach/Code review, or none yet): ________
+
+> Bitcoin Core's `doc/AI_POLICY.md` (master) and `CONTRIBUTING.md` expect review comments to be your
+> own work. This file is study material, not a comment to paste.

@@ -101,3 +101,12 @@ func ProcessPSBTPartialSignatures(existing []PartialSig, newSig PartialSig) ([]P
 	// BUG: Blindly appends without validating existing or new DER signature length (9..73) and Valid flag!
 	return append(existing, newSig), nil
 }
+
+// Mission 6 (broken): an off-by-one that a boundary test must catch. Do not "fix" this by reading
+// the solution: write mission6_test.go so that it FAILS here and PASSES on the solution.
+func CheckCoinbaseScriptSigLength(scriptSigLen int) error {
+	if scriptSigLen < 2 || scriptSigLen >= 100 {
+		return errors.New("bad-cb-length")
+	}
+	return nil
+}

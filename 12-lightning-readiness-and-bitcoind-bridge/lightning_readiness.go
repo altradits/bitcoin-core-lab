@@ -1,3 +1,5 @@
+// Stage 12 — YOUR WORKING FILE. `./lab.sh blank 12` copies this skeleton to ../lightning_readiness.go.
+// Write the two TODO bodies, then `./lab.sh check 12`. Reference: ../solutions/ (spoiler).
 package main
 
 import (
@@ -89,42 +91,31 @@ type ChannelState struct {
 	IsRevoked       bool
 }
 
+// UpdateChannelBalance moves payToBobSats from Alice to Bob and returns the NEXT state.
+// Spec (YOU implement):
+//   - payToBobSats <= 0                          -> error
+//   - Alice cannot pay more than she has          -> error (outbound liquidity)
+//   - prev must satisfy Alice+Bob == Capacity     -> otherwise error (conservation invariant)
+//   - on success: prev is marked revoked and stores oldStateRevocationSecret (Alice hands Bob the
+//     secret for the OLD state, BOLT 2 revoke_and_ack), and the new state has StateNum+1, same
+//     capacity, updated balances, IsRevoked=false.
+//   - on any error: prev must be left UNCHANGED.
 func UpdateChannelBalance(prev *ChannelState, payToBobSats int64, oldStateRevocationSecret [32]byte) (*ChannelState, error) {
-	if payToBobSats <= 0 {
-		return nil, errors.New("payment amount must be positive satoshis")
-	}
-	if prev.AliceSats < payToBobSats {
-		return nil, errors.New("insufficient local channel balance (outbound liquidity)")
-	}
-	if prev.AliceSats+prev.BobSats != prev.CapacitySats {
-		return nil, errors.New("channel conservation invariant violated")
-	}
-
-	prev.RevokedPreimage = oldStateRevocationSecret
-	prev.IsRevoked = true
-
-	next := &ChannelState{
-		StateNum:     prev.StateNum + 1,
-		CapacitySats: prev.CapacitySats,
-		AliceSats:    prev.AliceSats - payToBobSats,
-		BobSats:      prev.BobSats + payToBobSats,
-		IsRevoked:    false,
-	}
-	return next, nil
+	// TODO
+	return nil, errors.New("TODO")
 }
 
+// EvaluateBroadcastedCommitment: Alice broadcast `state` at broadcastHeight; it is now currentBlockHeight.
+// Alice's to_local output is CSV-locked for toSelfDelayCSV blocks (BOLT 3 to_local); Bob's to_remote is not.
+// Spec (YOU implement), with age = currentBlockHeight - broadcastHeight:
+//   - revoked state and age <  delay -> Bob sweeps EVERYTHING via the revocation key: (0, Capacity, "JUSTICE_PENALTY_APPLIED...")
+//   - revoked state and age >= delay -> Bob was too late: (Alice, Bob, "BREACH_MISSED...")
+//   - current state and age <  delay -> only Bob can claim yet: (0, Bob, "TIMELOCK_ACTIVE...")
+//   - current state and age >= delay -> (Alice, Bob, "FORCE_CLOSE_MATURED...")
+// The outcome string must START with the uppercase tag shown.
 func EvaluateBroadcastedCommitment(state *ChannelState, currentBlockHeight int, broadcastHeight int, toSelfDelayCSV int) (alicePayout int64, bobPayout int64, outcome string) {
-	if state.IsRevoked {
-		if currentBlockHeight-broadcastHeight < toSelfDelayCSV {
-			return 0, state.CapacitySats, "JUSTICE_PENALTY_APPLIED: Alice broadcasted revoked state; Bob swept 100% of channel via revocation key before OP_CSV expired!"
-		}
-		return state.AliceSats, state.BobSats, "BREACH_MISSED: Bob was offline longer than to_self_delay blocks!"
-	}
-	if currentBlockHeight-broadcastHeight < toSelfDelayCSV {
-		return 0, state.BobSats, fmt.Sprintf("TIMELOCK_ACTIVE: Bob's %d sats are spendable immediately; Alice's %d sats are locked by OP_CSV for %d more blocks.",
-			state.BobSats, state.AliceSats, toSelfDelayCSV-(currentBlockHeight-broadcastHeight))
-	}
-	return state.AliceSats, state.BobSats, "FORCE_CLOSE_MATURED: OP_CSV timelock expired; both Alice and Bob have swept their exact channel balances on-chain."
+	// TODO
+	return 0, 0, "TODO"
 }
 
 // PolarNetworkSummary holds the parsed topology of Stanley's local ~/.polar/networks/networks.json

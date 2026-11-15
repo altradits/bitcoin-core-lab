@@ -9,7 +9,7 @@ If Satoshi Nakamoto sat beside his son to pass down the guardianship of `bitcoin
 
 ## Chapter I: Why Bitcoin Exists (The Genesis Message)
 
-Open [`/Users/mac/bitcoin/src/kernel/chainparams.cpp`](file:///Users/mac/bitcoin/src/kernel/chainparams.cpp#L67-L78) at line 75:
+Open `src/kernel/chainparams.cpp` and find `CreateGenesisBlock` (around line 70 on master `e75b76b12c`):
 
 ```cpp
 static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
@@ -24,17 +24,17 @@ Satoshi embedded that headline into Block `0` (`000000000019d6689c085ae165831e93
 1. **Cryptographic Proof of No Pre-Mine:** It proved mathematically that no blocks could have been mined before January 3, 2009.
 2. **The Moral & Monetary Anchor:** In fiat systems, when banks fail, central banks print money out of thin air and bail them out at the expense of every saver. In Bitcoin, **rules replace rulers**. Nobody—not miners, not billionaires, not core developers—can print a single satoshi beyond `21,000,000 BTC` (`2,100,000,000,000,000` satoshis).
 
-Run `./lab.sh genesis` at any time to inspect the Genesis Block and the 61-line Consensus Shield on your machine.
+Run `./lab.sh genesis` at any time to inspect the Genesis Block and the 60-line Consensus Shield on your machine.
 
 ---
 
-## Chapter II: The 61-Line Consensus Shield (`src/consensus/tx_check.cpp`)
+## Chapter II: The 60-Line Consensus Shield (`src/consensus/tx_check.cpp`)
 
-If you want to understand why Bitcoin Core reviewers are the most conservative engineers on Earth, read all 61 lines of [`/Users/mac/bitcoin/src/consensus/tx_check.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_check.cpp#L11-L60). Inside this single function (`CheckTransaction`) live the scars of **two catastrophic inflation bugs** that could have destroyed Bitcoin:
+If you want to understand why Bitcoin Core reviewers are the most conservative engineers on Earth, read all 60 lines of `src/consensus/tx_check.cpp`. Inside this single function (`CheckTransaction`) live the scars of **two catastrophic inflation bugs** that could have destroyed Bitcoin:
 
 ### 1. The 2010 Value Overflow Bug (`CVE-2010-5139` — Block 74,638)
-- **What Happened:** On August 15, 2010, someone broadcasted a transaction containing two outputs of `92,233,720,368.54 BTC` each (`184.46 billion BTC` total). In Satoshi's original code, `nValueOut` was summed in a signed 64-bit integer (`int64_t`), which overflowed past `INT64_MAX` (`9,223,372,036,854,775,807` satoshis) and wrapped around to a **negative number**! Because the total output sum appeared negative, the fee check (`nValueIn >= nValueOut`) passed!
-- **How Satoshi Fixed It (`src/consensus/tx_check.cpp`, lines 23–34):**
+- **What Happened:** On August 15, 2010, block 74,638 included a transaction with two outputs of `92,233,720,368.54 BTC` each (`184.46 billion BTC` total). In Satoshi's original code, `nValueOut` was summed in a signed 64-bit integer (`int64_t`), which overflowed past `INT64_MAX` (`9,223,372,036,854,775,807` satoshis) and wrapped around to a **negative number**! Because the total output sum appeared negative, the fee check (`nValueIn >= nValueOut`) passed!
+- **Where the check lives today (`src/consensus/tx_check.cpp`, lines 23–34 on master `e75b76b12c`; the original fix shipped in v0.3.10):**
   ```cpp
   // Check for negative or overflow output values (see CVE-2010-5139)
   CAmount nValueOut = 0;
@@ -53,7 +53,7 @@ If you want to understand why Bitcoin Core reviewers are the most conservative e
 
 ### 2. The 2018 Duplicate-Input Inflation Bug (`CVE-2018-17144`)
 - **What Happened:** To speed up block validation in Bitcoin Core 0.15, a PR removed a "redundant" duplicate-input check during UTXO spending, assuming it had already been checked earlier. An attacker mining a block could include a transaction whose `vin` array listed the **same `COutPoint(txid, vout)` twice** (`vin[0] == vin[1]`), spending a 10 BTC UTXO twice to create 20 BTC!
-- **How It Was Fixed (`src/consensus/tx_check.cpp`, lines 36–45):**
+- **Where the check lives today (`src/consensus/tx_check.cpp`, lines 36–45 on master `e75b76b12c`):**
   ```cpp
   // Check for duplicate inputs (see CVE-2018-17144)
   std::set<COutPoint> vInOutPoints;
@@ -72,14 +72,14 @@ To understand the entire history of `bitcoin/bitcoin`, map every major upgrade t
 
 | Era / BIP | Protocol Upgrade | What Problem in Satoshi's v0.1 Did It Solve? | Where It Lives in `/Users/mac/bitcoin` |
 | :--- | :--- | :--- | :--- |
-| **BIP16 (2012)** | **Pay-to-Script-Hash (`P2SH`)** | Moved complex multisig scripts from the sender's `CTxOut` to the spender's input so senders only pay for a 20-byte hash. | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP66 (2015)** | **Strict DER Signatures** | OpenSSL allowed platform-dependent lax ECDSA parsing (different OS architectures could disagree on signature validity -> chain split risk). Now Bitcoin Core uses `libsecp256k1`. | [`src/secp256k1/`](file:///Users/mac/bitcoin/src/secp256k1) |
-| **BIP65 / BIP68 / BIP112 (2015–16)** | **CLTV & CSV Timelocks** | Satoshi's original `nLockTime` could not lock a specific UTXO in Script; `OP_CLTV` and `OP_CSV` enabled trustless Lightning payment channels & HTLCs. | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp), [`src/consensus/tx_verify.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_verify.cpp) |
-| **BIP141 / BIP143 (2017)** | **Segregated Witness (SegWit)** | Fixed **1) Third-party `txid` malleability** (which broke unconfirmed Lightning funding txs) and **2) $O(N^2)$ quadratic signature hashing** DoS. | [`src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp), [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP174 / BIP380 (2018–21)** | **PSBT & Output Descriptors** | Replaced fragile "bag-of-keys" legacy wallets with deterministic, checksummed `wpkh()`/`tr()` descriptors and airgapped hardware signing. | [`src/script/descriptor.cpp`](file:///Users/mac/bitcoin/src/script/descriptor.cpp), [`src/psbt.h`](file:///Users/mac/bitcoin/src/psbt.h) |
-| **BIP340 / 341 / 342 (2021)** | **Schnorr, Taproot & Tapscript** | Replaced ECDSA with provably non-malleable, linear 64-byte Schnorr signatures and hid complex smart contracts inside a single 32-byte tweaked public key (`P2TR`). | [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **BIP324 (2023–24)** | **v2 Encrypted P2P Transport** | Satoshi's v1 P2P messages were sent in plaintext TCP, allowing ISP/state eavesdropping and MitM tampering. | [`src/bip324.cpp`](file:///Users/mac/bitcoin/src/bip324.cpp) |
-| **BIP431 (2024–25)** | **TRUC (`v3`) & 1P1C Package Relay** | Prevented mempool descendant pinning against Lightning commitment transactions and enabled `0-fee` parent + child atomic fee bumping. | [`src/policy/truc_policy.cpp`](file:///Users/mac/bitcoin/src/policy/truc_policy.cpp) |
+| **BIP16 (2012)** | **Pay-to-Script-Hash (`P2SH`)** | Moved complex multisig scripts from the sender's `CTxOut` to the spender's input so senders only pay for a 20-byte hash. | `src/script/interpreter.cpp` |
+| **BIP66 (2015)** | **Strict DER Signatures** | OpenSSL allowed platform-dependent lax ECDSA parsing (different OS architectures could disagree on signature validity -> chain split risk). Now Bitcoin Core uses `libsecp256k1`. | `src/secp256k1` |
+| **BIP65 / BIP68 / BIP112 (2015–16)** | **CLTV & CSV Timelocks** | Satoshi's original `nLockTime` could not lock a specific UTXO in Script; `OP_CLTV` and `OP_CSV` enabled trustless Lightning payment channels & HTLCs. | `src/script/interpreter.cpp`, `src/consensus/tx_verify.cpp` |
+| **BIP141 / BIP143 (2017)** | **Segregated Witness (SegWit)** | Fixed **1) Third-party `txid` malleability** (which broke unconfirmed Lightning funding txs) and **2) $O(N^2)$ quadratic signature hashing** DoS. | `src/validation.cpp`, `src/script/interpreter.cpp` |
+| **BIP174 / BIP380 (2018–21)** | **PSBT & Output Descriptors** | Replaced fragile "bag-of-keys" legacy wallets with deterministic, checksummed `wpkh()`/`tr()` descriptors and airgapped hardware signing. | `src/script/descriptor.cpp`, `src/psbt.h` |
+| **BIP340 / 341 / 342 (2021)** | **Schnorr, Taproot & Tapscript** | Replaced ECDSA with provably non-malleable, linear 64-byte Schnorr signatures and hid complex smart contracts inside a single 32-byte tweaked public key (`P2TR`). | `src/script/interpreter.cpp` |
+| **BIP324 (2023–24)** | **v2 Encrypted P2P Transport** | Satoshi's v1 P2P messages were sent in plaintext TCP, allowing ISP/state eavesdropping and MitM tampering. | `src/bip324.cpp` |
+| **BIP431 (2024–25)** | **TRUC (`v3`) & 1P1C Package Relay** | Prevented mempool descendant pinning against Lightning commitment transactions and enabled `0-fee` parent + child atomic fee bumping. | `src/policy/truc_policy.cpp` |
 
 ---
 
@@ -117,22 +117,20 @@ Ask yourself: *"If I have 0 BTC and 100 Tor IP addresses, how can I abuse this n
 A test that passes when the code is broken is useless.
 1. Checkout the PR.
 2. Delete or invert the core `if (...)` condition introduced by the PR.
-3. Recompile (`cmake --build build -j4`) and run the test (`test_runner.py` or `ctest`).
+3. Rebuild only the affected target, at a `-j` safe for 8 GB, and run the relevant test.
 4. Verify that the test **fails**, then restore the code and verify it **passes**.
 
 ---
 
-## 🛠️ Practice Auditing Real PRs Offline Right Now
+## Practice: audit merged PRs yourself (offline)
 
-Run our automated PR Security Auditor on any PR stored in `/Users/mac/bitcoin`:
+Answer the six questions above **in your own journal first** (`my-work/reviews/<PR>.md`)
+for each of these merged PRs (all present in local `master` at `e75b76b12c`):
+#35320 (BIP32 seed length), #34628 (global tx relay rate limits), #35664 (script test
+vectors), #33014 (`descriptorprocesspsbt` invalid signatures).
 
-```bash
-# 1. Inspect Satoshi's Genesis Block & the 61-Line Consensus Shield (CVE-2010-5139 & CVE-2018-17144)
-./lab.sh genesis
+- <details><summary>Hint 1</summary>Find the merge commit by its subject (`Merge bitcoin/bitcoin#<N>:`), then diff its parents (Drill 7 in [BITCOIN_FROM_SOURCE_MASTERY.md](./BITCOIN_FROM_SOURCE_MASTERY.md)).</details>
+- Only **after** you have written yours, compare with `./lab.sh pr-audit <N>` and the audits in [`pr-reviews/`](./pr-reviews/). Note where they disagree with you, and decide who is right by reading the code.
+- `./lab.sh genesis` prints the genesis block and `CheckTransaction`. Try to write down from memory what you expect to see before you run it.
 
-# 2. Run a full 6-Point Guardian Security Audit on any upstream PR offline:
-./lab.sh pr-audit 35320   # Ring 3/Crypto: BIP32 seed length validation in CExtKey::SetSeed
-./lab.sh pr-audit 34628   # Ring 2/P2P: Replace per-peer tx rate-limiting with global rate limits
-./lab.sh pr-audit 35664   # Ring 0/Consensus Script: CLTV & CHECKSIGVERIFY failure-path vectors
-./lab.sh pr-audit 33014   # Ring 3/PSBT: Fix bug in descriptorprocesspsbt on invalid signatures
-```
+Competencies: C-REVIEW-1, C-REVIEW-3, C-CONS-3, C-TEST-3 ([CURRICULUM.md](./CURRICULUM.md)).

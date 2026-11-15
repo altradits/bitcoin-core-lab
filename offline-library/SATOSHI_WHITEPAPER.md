@@ -26,9 +26,9 @@ The problem of course is the payee can't verify that one of the owners did not d
 We need a way for the payee to know that the previous owners did not sign any earlier transactions. For our purposes, the earliest transaction is the one that counts, so we don't care about later attempts to double-spend. The only way to confirm the absence of a transaction is to be aware of all transactions. In the mint based model, the mint was aware of all transactions and decided which arrived first. To accomplish this without a trusted party, transactions must be publicly announced, and we need a system for participants to agree on a single history of the order in which they were received. The payee needs proof that at the time of each transaction, the majority of nodes agreed it was the first received.
 
 > **Bitcoin Core C++ Mapping:**
-> - `CTransaction`, `CTxIn`, `CTxOut`, `COutPoint` -> [`/Users/mac/bitcoin/src/primitives/transaction.h`](file:///Users/mac/bitcoin/src/primitives/transaction.h)
-> - Signature & Script evaluation -> [`/Users/mac/bitcoin/src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp)
-> - UTXO database (`CCoinsViewCache`) -> [`/Users/mac/bitcoin/src/coins.h`](file:///Users/mac/bitcoin/src/coins.h)
+> - `CTransaction`, `CTxIn`, `CTxOut`, `COutPoint` -> [`src/primitives/transaction.h`](https://github.com/bitcoin/bitcoin/blob/master/src/primitives/transaction.h)
+> - Signature & Script evaluation -> [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp)
+> - UTXO database (`CCoinsViewCache`) -> [`src/coins.h`](https://github.com/bitcoin/bitcoin/blob/master/src/coins.h)
 
 ---
 
@@ -36,7 +36,7 @@ We need a way for the payee to know that the previous owners did not sign any ea
 The solution we propose begins with a timestamp server. A timestamp server works by taking a hash of a block of items to be timestamped and widely publishing the hash, such as in a newspaper or Usenet post. The timestamp proves that the data must have existed at the time, obviously, in order to get into the hash. Each timestamp includes the previous timestamp in its hash, forming a chain, with each additional timestamp reinforcing the ones before it.
 
 > **Bitcoin Core C++ Mapping:**
-> - `CBlockHeader` (`nVersion`, `hashPrevBlock`, `hashMerkleRoot`, `nTime`, `nBits`, `nNonce`) -> [`/Users/mac/bitcoin/src/primitives/block.h`](file:///Users/mac/bitcoin/src/primitives/block.h)
+> - `CBlockHeader` (`nVersion`, `hashPrevBlock`, `hashMerkleRoot`, `nTime`, `nBits`, `nNonce`) -> [`src/primitives/block.h`](https://github.com/bitcoin/bitcoin/blob/master/src/primitives/block.h)
 
 ---
 
@@ -50,7 +50,7 @@ Proof-of-work also solves the problem of determining representation in majority 
 To compensate for increasing hardware speed and varying interest in running nodes over time, the proof-of-work difficulty is determined by a moving average targeting an average number of blocks per hour. If they're generated too fast, the difficulty increases.
 
 > **Bitcoin Core C++ Mapping:**
-> - `CheckProofOfWork` & `GetNextWorkRequired` (2016-block difficulty adjustment) -> [`/Users/mac/bitcoin/src/pow.cpp`](file:///Users/mac/bitcoin/src/pow.cpp)
+> - `CheckProofOfWork` & `GetNextWorkRequired` (2016-block difficulty adjustment) -> [`src/pow.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/pow.cpp)
 
 ---
 
@@ -66,8 +66,8 @@ The steps to run the network are as follows:
 Nodes always consider the longest chain (`most cumulative proof-of-work`) to be the correct one and will keep working on extending it.
 
 > **Bitcoin Core C++ Mapping:**
-> - P2P message handling (`inv`, `getdata`, `tx`, `block`, `headers`, `cmpctblock`) -> [`/Users/mac/bitcoin/src/net_processing.cpp`](file:///Users/mac/bitcoin/src/net_processing.cpp)
-> - Chain validation & `ActivateBestChain` -> [`/Users/mac/bitcoin/src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp)
+> - P2P message handling (`inv`, `getdata`, `tx`, `block`, `headers`, `cmpctblock`) -> [`src/net_processing.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/net_processing.cpp)
+> - Chain validation & `ActivateBestChain` -> [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp)
 
 ---
 
@@ -77,9 +77,9 @@ By convention, the first transaction in a block is a special transaction that st
 The incentive can also be funded with transaction fees. If the output value of a transaction is less than its input value, the difference is a transaction fee that is added to the incentive value of the block containing the transaction. Once a predetermined number of coins have entered circulation (`21,000,000 BTC`), the incentive can transition entirely to transaction fees and be completely inflation free.
 
 > **Bitcoin Core C++ Mapping:**
-> - `GetBlockSubsidy` -> [`/Users/mac/bitcoin/src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp)
-> - `COINBASE_MATURITY = 100` -> [`/Users/mac/bitcoin/src/consensus/consensus.h`](file:///Users/mac/bitcoin/src/consensus/consensus.h)
-> - `txfee_aux = nValueIn - value_out` -> [`/Users/mac/bitcoin/src/consensus/tx_verify.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_verify.cpp)
+> - `GetBlockSubsidy` -> [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp)
+> - `COINBASE_MATURITY = 100` -> [`src/consensus/consensus.h`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/consensus.h)
+> - `txfee_aux = nValueIn - value_out` -> [`src/consensus/tx_verify.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_verify.cpp)
 
 ---
 
@@ -87,7 +87,7 @@ The incentive can also be funded with transaction fees. If the output value of a
 Once the latest transaction in a coin is buried under enough blocks, the spent transactions before it can be discarded to save disk space. To facilitate this without breaking the block's hash, transactions are hashed in a Merkle Tree, with only the root included in the block's hash.
 
 > **Bitcoin Core C++ Mapping:**
-> - `ComputeMerkleRoot` & `BlockMerkleRoot` -> [`/Users/mac/bitcoin/src/consensus/merkle.cpp`](file:///Users/mac/bitcoin/src/consensus/merkle.cpp)
+> - `ComputeMerkleRoot` & `BlockMerkleRoot` -> [`src/consensus/merkle.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/merkle.cpp)
 
 ---
 

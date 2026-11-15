@@ -1,90 +1,120 @@
-# Hour 05: Upstream PR Review — BIP431 TRUC (`v3`) Policy & 1P1C Zero-Fee Parent Package Relay
+# Stage 05: TRUC (v3) Transactions, Package Relay, Ephemeral Dust — and Your First Concept Review
 
-## Objective
-Review and empirically verify Bitcoin Core's **BIP431 Topologically Restricted Until Confirmation (TRUC / `version=3`)** policy (`src/policy/truc_policy.cpp`) and **1-Parent-1-Child (`1P1C`) Package Mempool Acceptance** (`submitpackage` in `src/validation.cpp`), which solve fee-guessing and pinning attacks for Lightning Network commitment transactions.
+> Source checked: `v29.0` (`f490f5562d`) for the regtest behaviour; `master` (`e75b76b12c`) for
+> current code. PR numbers below were verified as merge commits on `master` with
+> `git log --merges --grep`.
 
----
-
-## 1. Upstream Code Review (`src/policy/truc_policy.cpp`)
-
-### Problem Statement: Why Lightning Needed TRUC (`v3`) + `1P1C`
-When two Lightning peers sign a commitment transaction today, the commitment transaction might not be broadcast for months. Pre-selecting a valid on-chain feerate at signing time is impossible:
-- If the pre-signed feerate is **too low** (`0 sat/vB`, below node `minrelaytxfee`), individual `sendrawtransaction` calls fail with `min relay fee not met`, preventing a CPFP child from ever being attached.
-- If the commitment transaction uses legacy `v2` CPFP, a counterparty can attach a large, low-feerate child to **pin** the commitment transaction up to the `101 kvB` descendant limit (`DEFAULT_DESCENDANT_SIZE_LIMIT_KVB`).
-
-### BIP431 Topological Bounds (`src/policy/truc_policy.h` & `src/policy/truc_policy.cpp`)
-```cpp
-static constexpr decltype(CTransaction::version) TRUC_VERSION{3};
-static constexpr int64_t TRUC_ANCESTOR_LIMIT{2};
-static constexpr int64_t TRUC_DESCENDANT_LIMIT{2};
-static constexpr int64_t TRUC_MAX_VSIZE{10000};
-static constexpr int64_t TRUC_CHILD_MAX_VSIZE{1000};
-```
-In `PackageTRUCChecks` (`src/policy/truc_policy.cpp`):
-1. **Strict 1-Parent-1-Child Topology (`TRUC_ANCESTOR_LIMIT == 2`, `TRUC_DESCENDANT_LIMIT == 2`):** A `version=3` transaction can have at most 1 unconfirmed ancestor or 1 unconfirmed descendant.
-2. **Bounded Child Size (`TRUC_CHILD_MAX_VSIZE = 1000 vB`):** Prevents descendant size pinning so any sibling eviction costs at most `1,000 vB` of fee-bump bandwidth.
-3. **Version Inheritance:** A `version=3` parent can **only** be spent by a `version=3` child while unconfirmed (`non-version=3 tx ... cannot spend from version=3 tx`).
+**No-Shortcuts Rule.** You hand-edit the version bytes, build every parent and child, and submit
+every package yourself. The old demo is the spoiler in
+[`solutions/truc_1p1c_package.sh`](./solutions/truc_1p1c_package.sh). Journal:
+`my-work/05-truc-package-relay-review/journal.md`.
 
 ---
 
-## 2. Empirical Reproduction & Boundary Tests on Regtest
+## Objectives
 
-### Test 1: Upstream Functional Suite (`mempool_truc.py`)
-```bash
-python3 build/test/functional/test_runner.py mempool_truc.py
-```
-```text
-TEST            | STATUS    | DURATION
-mempool_truc.py | ✓ Passed  | 6 s
-```
+| ID | You can... |
+|----|------------|
+| C-MEMPOOL-3 | explain and use package validation (`submitpackage`), 1P1C relay, TRUC rules (BIP431), sibling eviction, and ephemeral dust |
+| C-REVIEW-2 | write a Concept/Approach review of a policy PR from its motivation, discussion and trade-offs — in your own words |
+| C-LN-4 | explain pinning and why Lightning needed TRUC, package relay and ephemeral anchors |
 
-### Test 2: Standalone Zero-Fee `version=3` Parent (`sendrawtransaction`)
-Constructed a `0-fee` `version=3` transaction (`c49c7ca3120c45298104dd8b666a60c6224bb2aa3d7b53bbeda6294c266cc38a`, `110 vB`, input `= 21.99985000 BTC`, output `= 21.99985000 BTC`) and attempted standalone broadcast:
-```text
-error code: -26
-error message:
-min relay fee not met, 0 < 110
-```
+## Prerequisites
+Stage 03 (RBF/CPFP arithmetic) and Stage 04 (you can read `mempool_truc.py`). Estimated time: 10 hours.
 
-### Test 3: `submitpackage` Version Inheritance Violation (`v3` Parent + `v2` Child)
-Submitting the `0-fee` `version=3` parent alongside a `version=2` child (`23879355...`) via `submitpackage`:
-```json
-{
-  "package_msg": "TRUC-violation, non-version=3 tx 23879355a8a97ef66a5d0e6061644653c567cb57afaee017da6fc950342b3a8d (wtxid=5506907fb5bda62b30789ef86654f233a61e581d1cb72b63ac5952881d10c396) cannot spend from version=3 tx c49c7ca3120c45298104dd8b666a60c6224bb2aa3d7b53bbeda6294c266cc38a (wtxid=15dcc51f32da6025e23af6524f8508f963190a7c2f26f557bf5a2e428eaf360b)"
-}
-```
+---
 
-### Test 4: Valid 1P1C Atomic Package Acceptance (`0-fee v3 Parent` + `10,000 sat v3 Child`)
-Patching the child transaction to `version=3` (`6452fff7e1e66f86928129867d78dc134bf41560e2cd0137e0fa2f6b723117b8`, paying `0.00010000 BTC` / `10,000 sats`) and submitting both via `submitpackage`:
-```json
-{
-  "package_msg": "success",
-  "tx-results": {
-    "15dcc51f32da6025e23af6524f8508f963190a7c2f26f557bf5a2e428eaf360b": {
-      "txid": "c49c7ca3120c45298104dd8b666a60c6224bb2aa3d7b53bbeda6294c266cc38a",
-      "vsize": 110,
-      "fees": {
-        "base": 0.00000000,
-        "effective-feerate": 0.00045454,
-        "effective-includes": [
-          "15dcc51f32da6025e23af6524f8508f963190a7c2f26f557bf5a2e428eaf360b",
-          "ea34b16c4013605a0163e9cd6350741ed0daf3e19f36bf3d916163447c16bf37"
-        ]
-      }
-    },
-    "ea34b16c4013605a0163e9cd6350741ed0daf3e19f36bf3d916163447c16bf37": {
-      "txid": "6452fff7e1e66f86928129867d78dc134bf41560e2cd0137e0fa2f6b723117b8",
-      "vsize": 110,
-      "fees": {
-        "base": 0.00010000,
-        "effective-feerate": 0.00045454,
-        "effective-includes": [
-          "15dcc51f32da6025e23af6524f8508f963190a7c2f26f557bf5a2e428eaf360b",
-          "ea34b16c4013605a0163e9cd6350741ed0daf3e19f36bf3d916163447c16bf37"
-        ]
-      }
-    }
-  }
-}
-```
-Notice how `MemPoolAccept::AcceptPackage` evaluates both `wtxid`s as a single `220 vB` chunk with `"effective-feerate": 0.00045454 BTC/kvB` (`45.45 sat/vB`), allowing the **`0.00000000` base-fee parent** to enter the mempool atomically alongside its child.
+## Theory
+
+### 1. The problem: pre-signed transactions and pinning
+A Lightning commitment transaction is signed by both parties when the channel state changes —
+maybe months before it is broadcast. Nobody knows the right feerate then. Two failure modes:
+1. **Too low to enter any mempool.** A 0-fee or 1 sat/vB commitment is rejected (`min relay fee
+   not met`, `mempool min fee not met`), so the CPFP child never gets a chance: the child's
+   parent is not in the mempool.
+2. **Pinning.** The counterparty attaches a huge, low-feerate child. Replacing the commitment now
+   requires paying for that whole child (rule 3), or the descendant limit blocks your own CPFP.
+
+### 2. Package validation (`doc/policy/packages.md`, `src/policy/packages.{h,cpp}`)
+`submitpackage` evaluates a **child-with-parents** package together. Limits: `MAX_PACKAGE_COUNT`
+= 25, `MAX_PACKAGE_WEIGHT` = 404,000. Parents below the minimum feerate can be accepted if the
+package feerate pays for them (*package CPFP*). On the P2P side, PR #28970 added **opportunistic
+1P1C relay**: when a node receives a low-fee orphan child whose parent it rejected for low fee,
+it tries the pair as a package (`p2p_opportunistic_1p1c.py`). Package RBF for clusters of size 2:
+PR #28984.
+
+### 3. TRUC — Topologically Restricted Until Confirmation (BIP431; PR #28948, #29873)
+A transaction with `nVersion = 3` opts in to (`src/policy/truc_policy.h`):
+
+| Constant | Value | Meaning |
+|----------|-------|---------|
+| `TRUC_ANCESTOR_LIMIT` | 2 | itself + at most 1 unconfirmed parent |
+| `TRUC_DESCENDANT_LIMIT` | 2 | itself + at most 1 unconfirmed child |
+| `TRUC_MAX_VSIZE` | 10,000 vB | any TRUC tx |
+| `TRUC_CHILD_MAX_VSIZE` | 1,000 vB | a TRUC tx with an unconfirmed parent |
+
+Also: an unconfirmed TRUC tx can only be spent by TRUC, and a TRUC tx can only spend unconfirmed
+TRUC outputs (version inheritance). TRUC txs are always replaceable. Since only one child can
+exist, a new child may **replace its sibling** (sibling eviction) if it pays rules 3/4. With the
+child capped at 1,000 vB, the most an attacker can pin is ~1,000 vB of fee — bounded and known.
+`TX_MAX_STANDARD_VERSION` became 3 in PR #29496.
+
+### 4. Ephemeral dust (PR #30239, `src/policy/ephemeral_policy.{h,cpp}`)
+A transaction may have **one** dust output (`MAX_DUST_OUTPUTS_PER_TX` = 1) only if the tx itself
+pays **0 fee** and the dust is spent by a child in the same package. This gives Lightning a
+keyless "anchor" anyone can use for CPFP, without leaving dust in the UTXO set. Test:
+`mempool_ephemeral_dust.py`.
+
+### 5. Concept vs approach review (C-REVIEW-2)
+- **Concept ACK/NACK:** is the *problem* real and worth solving in Core?
+- **Approach ACK/NACK:** is *this design* the right way (vs alternatives: package RBF only,
+  cluster mempool first, CPFP carve-out extensions)?
+- Then code review and testing (Stage 19). You may only write what you yourself believe and
+  checked. Never post text you did not write (`doc/AI_POLICY.md` on master).
+
+---
+
+## Exercises
+
+| # | Worksheet | Checker |
+|---|-----------|---------|
+| 1 | [Zero-fee TRUC parent: alone, wrong child, right child](./exercises/01-zero-fee-truc-package.md) | `./check_truc.sh` |
+| 2 | [Sibling eviction](./exercises/02-sibling-eviction.md) | `./check_truc.sh` |
+| 3 | [Ephemeral dust anchor](./exercises/03-ephemeral-dust.md) | `./check_truc.sh` |
+| 4 | [Concept/approach review of PR #28948 (private notes)](./exercises/04-concept-review.md) | `./check_review_notes.sh` |
+
+Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
+`my-work/05-truc-package-relay-review/answers.env`.
+
+---
+
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Why can a 0-fee commitment transaction never be CPFP'd without package validation?
+2. State the four TRUC numeric limits and what each one prevents.
+3. What does "sibling eviction" let a TRUC child do, and why is it only safe with TRUC?
+4. Which 4 bytes do you change to turn a v2 transaction into a v3 one, and what do they become?
+5. When is a dust output standard, and what happens to it if the child is never broadcast?
+6. Opportunistic 1P1C relay: what triggers it on a receiving node?
+7. Difference between Concept ACK and Approach ACK, with a TRUC example of each.
+8. What does pinning cost an attacker under TRUC compared with plain v2 + CPFP carve-out?
+
+---
+
+## Review lens
+- Files: `src/policy/truc_policy.{h,cpp}`, `src/policy/packages.{h,cpp}`,
+  `src/policy/ephemeral_policy.{h,cpp}`, `src/validation.cpp` (`AcceptPackage`,
+  `AcceptMultipleTransactions`, `PackageMempoolChecks`), `src/node/txdownloadman_impl.cpp` and
+  `src/txorphanage.cpp` (1P1C on master), `doc/policy/packages.md`.
+- Tests: `mempool_truc.py`, `rpc_packages.py`, `mempool_package_rbf.py`,
+  `mempool_ephemeral_dust.py`, `p2p_opportunistic_1p1c.py`, `p2p_1p1c_network.py`,
+  `src/test/txpackage_tests.cpp`.
+- Invariants: no package lets a tx in that would not be mined profitably; work per package is
+  bounded; TRUC rules hold for every tx after reorgs (see PR #33504 on master, which stops
+  enforcing TRUC checks for txs re-added on reorg); orphan handling cannot be used to exhaust memory.
+- Questions: Can an attacker now pin at lower cost? Does relay match what miners would mine
+  (incentive compatibility)? Does the doc in `doc/policy/` change in the same PR?
+
+## Proof-of-work output
+Your private concept/approach review notes in `my-work/05-truc-package-relay-review/`. When you
+next see an open policy PR, write your own review from scratch in the same shape, test it, and
+only then decide whether to post (Stage 19).

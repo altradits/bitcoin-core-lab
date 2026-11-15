@@ -1,0 +1,24 @@
+# REFERENCE bitcoin.conf (spoiler) for a dedicated regtest datadir, e.g. $HOME/regtest-lab/bitcoin.conf
+# Open only after ../check_conf.sh passes on your own file, or after 3 honest attempts.
+
+# Pick the network here (top section) so no -regtest flag is needed.
+regtest=1
+
+[regtest]
+# Accept RPC commands (bitcoind already defaults to 1; bitcoin-qt does not).
+server=1
+# No rpcuser/rpcpassword: bitcoind writes a random .cookie in the datadir and bitcoin-cli reads it.
+# Network-only options (port, rpcport, bind, rpcbind, addnode, connect, wallet, walletdir) must live here.
+rpcport=18443
+# P2P port for regtest; we do not listen because this lab uses a single node.
+port=18444
+# Do not accept inbound P2P connections.
+listen=0
+# Wallet fee when there is no estimate: 0.00001 BTC/kvB = 1 sat/vB (1 kvB = 1000 vB, 1 BTC = 1e8 sat).
+fallbackfee=0.00001
+# Index every transaction so getrawtransaction finds confirmed txs by txid alone.
+txindex=1
+# UTXO cache in MiB; small because the M1 has 8 GB of RAM.
+dbcache=300
+# Maximum mempool memory in MB.
+maxmempool=100

@@ -1,0 +1,46 @@
+// Copyright (c) 2026 Stanley Chege Thuita (practice file, not for upstream)
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+//
+// Stage 13, Exercise 4. Copy to /Users/mac/bitcoin/src/test/compactsize_boundary_tests.cpp
+// and replace every TODO with code YOU write. Do not copy from solutions/.
+
+// TODO(includes): which headers declare GetSizeOfCompactSize / WriteCompactSize /
+//   ReadCompactSize / MAX_SIZE, DataStream, and the test fixtures? Core sorts
+//   project includes first (<...> with repo paths), then standard headers, then Boost.
+
+#include <boost/test/unit_test.hpp>
+
+// TODO(suite): open the suite. The name must match the file name. Choose the
+//   smallest fixture from src/test/util/setup_common.h that is enough.
+
+namespace {
+// TODO(data): the boundary values to test. You need, at least:
+//   0, the largest 1-byte value, the smallest 3-byte value,
+//   the largest 3-byte value, the smallest 5-byte value,
+//   the largest 5-byte value, the smallest 9-byte value, UINT64_MAX.
+//   Pair each value with its expected encoded size.
+
+// TODO(predicate): a function that takes `const std::ios_base::failure&` and
+//   returns true if what() contains "size too large". (Do not use a helper from
+//   test/util. It lives in different headers on 29.x and master.)
+} // namespace
+
+// TODO(case 1): size_boundaries
+//   For every (value, expected_size) pair: GetSizeOfCompactSize(value) == expected_size.
+//   Bonus: one static_assert proving the function is constexpr.
+
+// TODO(case 2): written_length_matches_size
+//   For every value: fresh DataStream, WriteCompactSize, check stream size equals
+//   GetSizeOfCompactSize(value). If expected_size > 1, check the first byte is the
+//   correct marker (0xfd / 0xfe / 0xff).
+
+// TODO(case 3): round_trip_without_range_check
+//   For every value: write it, then ReadCompactSize with range_check=false must
+//   return the same value AND leave the stream empty.
+
+// TODO(case 4): range_check_limits
+//   MAX_SIZE round-trips with the default range check.
+//   MAX_SIZE + 1 throws std::ios_base::failure, checked with your predicate.
+
+// TODO(suite end)
