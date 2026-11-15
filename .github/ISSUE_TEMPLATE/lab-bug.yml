@@ -1,0 +1,43 @@
+name: Lab bug
+description: A stage step, script, or check fails on your machine
+title: "[lab bug] "
+labels: ["scripts"]
+body:
+  - type: input
+    id: stage
+    attributes:
+      label: Stage and step
+      description: Example 02, Step 3 (decode the transaction)
+      placeholder: "02, Step 3"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command you ran
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output or error text
+      description: Paste everything, not just the last line
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: ./lab.sh doctor output
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and versions
+      description: Example macOS 15, bitcoind v29.0, go 1.22
+      placeholder: "macOS 15, bitcoind v29.0, go 1.22"
+    validations:
+      required: true

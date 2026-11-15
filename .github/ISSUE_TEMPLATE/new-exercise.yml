@@ -1,0 +1,33 @@
+name: New exercise
+description: Propose a new drill, challenge, or stage for the lab
+title: "[exercise] "
+labels: ["content"]
+body:
+  - type: input
+    id: stage
+    attributes:
+      label: Target stage (or new stage number)
+      placeholder: "08"
+    validations:
+      required: true
+  - type: textarea
+    id: exercise
+    attributes:
+      label: The exercise in 3 to 6 steps
+      description: Commands plus what the student should observe
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done condition
+      description: How the student proves it works
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Primary sources
+      description: BIP, BOLT, or source files the exercise teaches
+    validations:
+      required: true
