@@ -29,14 +29,34 @@ The route to it is in [CURRICULUM.md](./CURRICULUM.md).
 ## Part 2: The three developer routes
 
 ### A. Btrust Builders (training program, Africa)
-From btrust.tech/builders and /builders/apply:
+Btrust describes Builders on **two live sites that disagree**. Both were checked on 2026-11-15.
+Ask Btrust which one applies before you rely on either.
+
+**btrust.tech/builders and /builders/apply (the older page):**
 - "a comprehensive engineering program designed to train experienced software developers in Africa".
 - Criteria: "3+ years of experience as a software developer in a production environment"; "an active GitHub/GitLab account"; "Demonstrate your ability to engage with the technical content"; "a minimum of 20 hours per week"; "willingness to learn and grow".
-- The application includes a **code challenge**.
-- Applications are "open all year round", and you hear back "within two weeks".
-- Participants are paid during a "training period". The length of that period is **not stated**.
-- **Fit for you:** this is the realistic first application while you work through
-  Gates 1–2. Before applying, check honestly that you meet the 3+ years of production experience.
+- "you will be required to complete a code challenge".
+- "Our applications are open all year round", and you hear back "within two weeks".
+- "you get paid a small remuneration during the training period". The amount and length are **not stated**.
+
+**builders.btrust.tech/apply (the newer pathways site):**
+- Entry: "at least one year of production software development experience", an active GitHub or GitLab
+  account, and "the ability to work through difficult technical concepts". No Bitcoin background needed.
+  "All Pathways are free."
+- Learning pathways, each with a self-paced mode that is "always open" (materials, Discord, office hours)
+  and live cohorts whose applications "open before each cohort":
+  Mastering Bitcoin (8 weeks; cohorts start March and June), Learn Bitcoin from the Command Line
+  (March, June), Rust for Bitcoiners (May, October), Language Clubs (May, October).
+- **BOSS** ("Start Your Career in ₿OSS"), run with Chaincode Labs: a one-month challenge starting in
+  January; entry is by "passing the preliminary challenge". Top performers get two more months with
+  Chaincode; the others move into a Builders pathway. bosschallenge.xyz shows only a waitlist, no date.
+- **Open Source Fellowship**: ten weeks from August with a "monthly stipend" (amount not stated).
+  You cannot apply; it invites "strong contributors from live Pathways".
+- Selection reviews your GitHub or GitLab activity and aims to answer "within two weeks".
+
+**Fit for you:** a self-paced pathway and the BOSS waitlist cost nothing and can start now, alongside
+Gates 1–2. Before applying to anything with an experience bar, check honestly which bar you meet
+(one year or three) and where you can show it.
 
 ### B. Btrust Starter Grant (six months, full-time)
 From btrust.homerun.co/starter-grants. The page showed "**Applications closed**" on 2026-11-09.
@@ -105,7 +125,7 @@ advising anyone in your community.
 |---|---|
 | Starter Grant needs "at least one merged code-based PR" | **Wrong.** The page says **at least five**. |
 | Starter Grant needs "1 peer/contributor reference" | **Wrong.** The page says **at least two**. |
-| "Btrust Builders: experienced engineers transitioning" | Partly true. The page specifies Africa, 3+ years production experience, 20 h/week and a code challenge. |
+| "Btrust Builders: experienced engineers transitioning" | Partly true. btrust.tech/builders specifies Africa, 3+ years production experience, 20 h/week and a code challenge; on 2026-11-15 builders.btrust.tech/apply asked for one year instead (see Part 2A). |
 | Upstream projects enforce `doc/AI_POLICY.md` | **True for `bitcoin/bitcoin` master** (not the 29.x checkout). Not checked for lnd/LDK/BDK. |
 | BitDevs: "at least one co-organizer must be a technical developer" | Close. The page says "including a Bitcoin developer". |
 | BitDevs: Chatham House Rule is a Btrust rule | **UNVERIFIED.** Not stated on the Btrust page. |
@@ -118,7 +138,8 @@ advising anyone in your community.
 ## Sources checked (date 2026-11-09)
 
 - https://www.btrust.tech/grants
-- https://www.btrust.tech/builders and https://www.btrust.tech/builders/apply
+- https://www.btrust.tech/builders and https://www.btrust.tech/builders/apply (re-checked 2026-11-15)
+- https://builders.btrust.tech/apply and https://bosschallenge.xyz (checked 2026-11-15)
 - https://btrust.homerun.co/starter-grants
 - https://btrust.homerun.co/open-source-cohort
 - https://www.btrust.tech/bitdevs
