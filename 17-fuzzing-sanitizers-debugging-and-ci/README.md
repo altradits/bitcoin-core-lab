@@ -185,13 +185,13 @@ All worksheets are in [`exercises/`](./exercises/). Do them in order.
 
 | # | Worksheet | Time | IDs | Checker |
 |---|-----------|------|-----|---------|
-| 17.1 | [Fuzz target anatomy](./exercises/17.1-fuzz-anatomy.md) | 1.5 h | C-FUZZ-1, C-FUZZ-2 | self-check in solutions |
+| 17.1 | [Fuzz target anatomy](./exercises/17.1-fuzz-anatomy.md) | 1.5 h | C-FUZZ-1, C-FUZZ-2 | `python3 tools/check_facts.py` (facts) |
 | 17.2 | [Engine-less fuzz build + corpus replay on 8 GB](./exercises/17.2-fuzz-build-and-corpus.md) | 2.5 h (+build) | C-FUZZ-1, C-FUZZ-3 | — |
 | 17.3 | [Write a NEW target: `taproot_merkle`](./exercises/17.3-new-fuzz-target.md) + [skeleton](./exercises/taproot_merkle_skeleton.cpp) | 3 h | C-FUZZ-2, C-FUZZ-3 | `check_fuzz_target.py` |
-| 17.4 | [Sanitizers](./exercises/17.4-sanitizers.md) | 2 h (+build) | C-DEBUG-2 | — |
-| 17.5 | [lldb on bitcoind and test_bitcoin](./exercises/17.5-lldb.md) | 2 h | C-DEBUG-1 | — |
+| 17.4 | [Sanitizers](./exercises/17.4-sanitizers.md) | 2 h (+build) | C-DEBUG-2 | `check_sanitizer_build.py` + `python3 tools/check_facts.py` |
+| 17.5 | [lldb on bitcoind and test_bitcoin](./exercises/17.5-lldb.md) | 2 h | C-DEBUG-1 | `python3 tools/check_facts.py` (facts) |
 | 17.6 | [git bisect drill](./exercises/17.6-git-bisect.md) | 1.5 h | C-GIT-5 | `check_bisect.py` |
-| 17.7 | [Lint, clang-tidy, CI reproduction, bench](./exercises/17.7-lint-ci-bench.md) | 2.5 h | C-DEBUG-3, C-TEST-4, C-BUILD-4 | — |
+| 17.7 | [Lint, clang-tidy, CI reproduction, bench](./exercises/17.7-lint-ci-bench.md) | 2.5 h | C-DEBUG-3, C-TEST-4, C-BUILD-4 | `python3 tools/check_facts.py` (facts) |
 
 ---
 
@@ -201,10 +201,12 @@ All worksheets are in [`exercises/`](./exercises/). Do them in order.
 ./lab.sh check 17
 ```
 
-Runs: python3 check_fuzz_target.py, python3 check_bisect.py. Each prints PASS/FAIL with a reason, never the answer. Both take an optional path: your fuzz worktree (default `~/bitcoin-fuzz`) and your Bitcoin Core checkout (default `~/bitcoin`).
+Runs: python3 check_fuzz_target.py, python3 check_bisect.py, python3 check_sanitizer_build.py, python3 ../tools/check_facts.py . (facts of 17.1, 17.4, 17.5, 17.7). Each prints PASS/FAIL with a reason, never the answer. Both take an optional path: your fuzz worktree (default `~/bitcoin-fuzz`) and your Bitcoin Core checkout (default `~/bitcoin`).
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz-answers.md`](./solutions/quiz-answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_17=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 
 1. What does `FUZZ_TARGET(foo)` expand to, and how does the `fuzz` binary know which target to run?
 2. Why can you not do coverage-guided fuzzing with Apple's clang, and what *can* you do on macOS?

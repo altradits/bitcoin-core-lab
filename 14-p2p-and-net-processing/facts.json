@@ -1,0 +1,44 @@
+{
+ "14.2": {
+  "worksheet": "exercises/02_read_net_vs_net_processing.md",
+  "keys": {
+   "F14_DISCOURAGE_MUTEX": {
+    "q": "q4: the mutex that guards `m_should_discourage`",
+    "accept": [
+     "707ba8608c56893dec33"
+    ]
+   },
+   "F14_EVICT_FUNCTION": {
+    "q": "q5: the function that picks the inbound peer to evict",
+    "accept": [
+     "fd7455f7879b88930025"
+    ]
+   },
+   "F14_NEW_BUCKET_FN": {
+    "q": "q7: the method that computes the new-table bucket",
+    "accept": [
+     "306bfed388f96f58e5a3"
+    ]
+   },
+   "F14_TRIED_BUCKET_FN": {
+    "q": "q7: the method that computes the tried-table bucket",
+    "accept": [
+     "139e17c636e2eb8ee3a2"
+    ]
+   },
+   "F14_MAX_LOCATOR_SZ": {
+    "q": "q9: the value of `MAX_LOCATOR_SZ`",
+    "accept": [
+     "fc9b16411db1465cedbe"
+    ]
+   },
+   "F14_INBOUND_INV_SECONDS": {
+    "q": "q6: the average inbound inventory broadcast interval, in seconds",
+    "accept": [
+     "0708252a8c647f4f358e",
+     "cde1ce20b7b18e54610f"
+    ]
+   }
+  }
+ }
+}

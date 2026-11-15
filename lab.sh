@@ -115,15 +115,15 @@ stage_checkers() {  # prints the checker commands for a stage, one per line (rel
     08) printf '%s\n' GO ;;
     09) printf '%s\n' GO ./check_mission6.sh ;;
     10) printf '%s\n' GO ;;
-    11) printf '%s\n' GO ./check_confs.sh ./check_wallet_drill.sh ;;
-    12) printf '%s\n' GO ./check_lnd_conf.sh ./check_polar_journal.sh ;;
-    13) printf '%s\n' ./check_13.sh ;;
-    14) printf '%s\n' ./check_14.sh ;;
-    15) printf '%s\n' ./check_15.sh ;;
-    16) printf '%s\n' "python3 test_tagged_hash.py" ;;
-    17) printf '%s\n' "python3 check_fuzz_target.py" "python3 check_bisect.py" ;;
-    18) printf '%s\n' "python3 test_linearize.py" ./check_18.sh ;;
-    19) printf '%s\n' ./check_gauntlet.sh ;;  # check_commit_hygiene.sh needs <repo> <range>: run it yourself
+    11) printf '%s\n' GO ./check_confs.sh ./check_wallet_drill.sh ./check_signet.sh ;;
+    12) printf '%s\n' GO ./check_lnd_conf.sh ./check_polar_journal.sh ./check_force_close.sh ;;
+    13) printf '%s\n' ./check_13.sh "python3 ../tools/check_facts.py ." ;;
+    14) printf '%s\n' ./check_14.sh "python3 ../tools/check_facts.py ." ;;
+    15) printf '%s\n' ./check_15.sh "python3 ../tools/check_facts.py ." ;;
+    16) printf '%s\n' "python3 test_tagged_hash.py" "python3 ../tools/check_facts.py ." ;;
+    17) printf '%s\n' "python3 check_fuzz_target.py" "python3 check_bisect.py" "python3 check_sanitizer_build.py" "python3 ../tools/check_facts.py ." ;;
+    18) printf '%s\n' "python3 test_linearize.py" ./check_18.sh "python3 ../tools/check_facts.py ." ;;
+    19) printf '%s\n' ./check_gauntlet.sh "python3 check_practicum.py" ;;  # check_commit_hygiene.sh needs <repo> <range>: run it yourself
   esac
 }
 
@@ -156,7 +156,11 @@ stage_check() {
     fi
   done < <(stage_checkers "$1")
   echo ""
-  [ "$fails" -eq 0 ] && echo "✅ Stage $1: every checker passed." || echo "❌ Stage $1: $fails checker(s) failed. Read the FAIL lines above."
+  if [ "$fails" -eq 0 ]; then
+    mkdir -p "$LAB_DIR/my-work/$(basename "$d")"
+    [ -f "$LAB_DIR/my-work/$(basename "$d")/.passed" ] || date +%F > "$LAB_DIR/my-work/$(basename "$d")/.passed"
+  fi
+  [ "$fails" -eq 0 ] && echo "✅ Stage $1: every checker passed. (Recorded for ./lab.sh progress)" || echo "❌ Stage $1: $fails checker(s) failed. Read the FAIL lines above."
   [ "$fails" -eq 0 ]
 }
 
@@ -179,6 +183,24 @@ lab_selftest() {  # for maintainers: checks the lab itself, never touches your w
   local fails=0 tmp; tmp="$(mktemp -d)"
   echo ">>> shell syntax"; for f in "$LAB_DIR"/lab.sh "$LAB_DIR"/*/check_*.sh "$LAB_DIR"/*/solutions/*.sh; do bash -n "$f" || { echo "syntax: $f"; fails=$((fails+1)); }; done
   echo ">>> python compile"; for f in "$LAB_DIR"/*/*.py "$LAB_DIR"/*/exercises/*.py "$LAB_DIR"/*/solutions/*.py; do [ -f "$f" ] && { python3 -m py_compile "$f" 2>/dev/null || { echo "py_compile: $f"; fails=$((fails+1)); }; }; done
+  echo ">>> facts.json: every key is asked in its worksheet; empty answers fail"
+  python3 - "$LAB_DIR" <<'PYEOF' || fails=$((fails+1))
+import glob, json, os, subprocess, sys
+lab = sys.argv[1]; bad = 0
+for f in glob.glob(os.path.join(lab, "*", "facts.json")):
+    stage = os.path.dirname(f)
+    for wid, sheet in json.load(open(f)).items():
+        text = open(os.path.join(stage, sheet["worksheet"])).read()
+        for key in sheet["keys"]:
+            if f"`{key}`" not in text:
+                print(f"  {os.path.basename(stage)} {wid}: {key} not in {sheet['worksheet']}"); bad += 1
+    p = subprocess.run([sys.executable, os.path.join(lab, "tools", "check_facts.py"), stage],
+                       env={**os.environ, "ANSWERS": os.devnull}, capture_output=True, text=True)
+    if p.returncode == 0:
+        print(f"  {os.path.basename(stage)}: empty answers passed"); bad += 1
+print("  ok" if not bad else f"  {bad} problem(s)")
+sys.exit(1 if bad else 0)
+PYEOF
   echo ">>> Go stages: skeleton must FAIL, solution must PASS"
   for n in 07 08 10 11 12; do
     local d; d="$(stage_dir $n)"; rm -rf "$tmp/s"; cp -R "$d" "$tmp/s"
@@ -742,6 +764,9 @@ case "${1:-help}" in
   doctor)
     doctor_check
     ;;
+  progress|gates)
+    python3 "$LAB_DIR/tools/progress.py"
+    ;;
   bip)
     read_bip "${2:-1}"
     ;;
@@ -933,6 +958,7 @@ PYEOF
     echo ""
     echo "🩺 Setup:"
     echo "  ./lab.sh doctor                  Check installed tools and versions (git, go, python, bitcoind)"
+    echo "  ./lab.sh progress                Where you stand against the three mastery gates (CURRICULUM.md)"
     echo ""
     echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
     echo "  ./lab.sh step [1..5]             Show one micro-step of the Stage 00 worksheet (you type every command)"

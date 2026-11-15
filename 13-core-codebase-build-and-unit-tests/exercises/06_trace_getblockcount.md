@@ -50,3 +50,20 @@ server only knows about URL paths and hands the JSON body to the RPC layer.
 </details>
 
 Self-check: `solutions/rpc_trace_getblockcount.md`.
+
+## Checkable facts
+
+After you have answered the questions above in your journal, put these short answers in
+`my-work/13-core-codebase-build-and-unit-tests/answers.env` (one `KEY=value` per line) and run
+`python3 tools/check_facts.py 13-core-codebase-build-and-unit-tests 13.6` from the lab root (or `./lab.sh check 13`).
+Answers are for master `e75b76b12c` and 29.x `f490f5562d`. The checker says which ones are wrong, never the right value.
+Your explanations (the "why" questions) are not machine-checked: compare them with `solutions/` afterwards.
+
+| Key | Question |
+|---|---|
+| `F13_RPC_TYPE_MASTER` | step 1: the type name of RPC method objects on master |
+| `F13_RPC_TYPE_29` | 29.x part: the same type name on 29.x |
+| `F13_REGISTER_ALL` | step 2: the function that registers all core RPCs |
+| `F13_HTTP_HANDLER` | step 3: the function in `src/httprpc.cpp` that handles a JSON-RPC HTTP request |
+| `F13_CHAINMAN_HELPER` | step 5: the helper the lambda uses to get a `ChainstateManager&` |
+| `F13_EMPTY_HEIGHT` | step 7: the value `CChain::Height()` returns for an empty chain |

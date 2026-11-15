@@ -44,7 +44,7 @@ From `../../BTRUST_AND_BITDEVS_PLAYBOOK.md`: the Socratic format means a short i
 open questions to the room. (Chatham House and no-recording are common BitDevs practice. As a *Btrust* rule they are `UNVERIFIED`, so agree on them with your co-organizers.)
 
 1. Choose a PR you reviewed in the Gauntlet or live (ideally one you posted on).
-2. Fill in `templates/seminar-prep.md`: a 2-minute intro, background, **3+ open questions**
+2. Copy `templates/seminar-prep.md` to `my-work/19-review-and-contribution-practicum/comms/seminar-<date>-prep.md` and fill it in: a 2-minute intro, background, **3+ open questions**
    (not yes/no), the one thing you're still unsure about, and an optional regtest demo.
 3. Rehearse the intro aloud with a timer. If it goes over 2 minutes, cut it.
 4. Publish the reading list entry 1–2 weeks before the meetup.
@@ -53,3 +53,8 @@ open questions to the room. (Chatham House and no-recording are common BitDevs p
 
 **Done when:** one reproduction write-up, one post draft (posted or not), and one seminar prep
 plus retro exist.
+
+**Checker:** `python3 check_practicum.py comms`. It checks the files exist and are really filled in: no
+`____` blanks, a full 40-character commit hash and an `n / m` failure rate in the reproduction, real log
+lines, at least 150 words in the post draft, three or more open questions in the seminar prep, and a retro.
+It cannot judge quality; the issue thread, the forum and your BitDevs group do that.

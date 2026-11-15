@@ -1,0 +1,43 @@
+{
+ "18.1": {
+  "worksheet": "exercises/18.1-policy-docs.md",
+  "keys": {
+   "F18_REMOVED_RULES": {
+    "q": "q1: the rule numbers marked \"(Removed)\" on master, comma-separated",
+    "accept": [
+     "0d7d3575f27ddcf35b87"
+    ]
+   },
+   "F18_LIMITS_DOC_ON_MASTER": {
+    "q": "q2: does `doc/policy/mempool-limits.md` exist on master (yes/no)",
+    "accept": [
+     "6b95730b76527f9c5aac"
+    ]
+   },
+   "F18_CLUSTER_LIMIT": {
+    "q": "q6: `DEFAULT_CLUSTER_LIMIT` on master",
+    "accept": [
+     "b882473eda5d86a6271f"
+    ]
+   },
+   "F18_CLUSTER_SIZE_KVB": {
+    "q": "q6: `DEFAULT_CLUSTER_SIZE_LIMIT_KVB` on master",
+    "accept": [
+     "4bb2c633bc0ecce252c0"
+    ]
+   },
+   "F18_INCREMENTAL_MASTER": {
+    "q": "q6: `DEFAULT_INCREMENTAL_RELAY_FEE` on master (sat/kvB)",
+    "accept": [
+     "cdcfe1e818f04ce7738d"
+    ]
+   },
+   "F18_INCREMENTAL_29": {
+    "q": "q6: `DEFAULT_INCREMENTAL_RELAY_FEE` on 29.x (sat/kvB)",
+    "accept": [
+     "a75704aa876a38285978"
+    ]
+   }
+  }
+ }
+}

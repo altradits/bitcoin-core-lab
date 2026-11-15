@@ -1,6 +1,12 @@
 # Stage 12 Worksheet 3: Find the Bitcoin Core in a force-close
 
-**Output:** journal. **Checker:** self-check against the questions below.
+**Output:** journal and five answers. **Checker:** `./check_force_close.sh`. It inspects the transactions
+on Polar's backend `bitcoind` (set `POLAR_CLI` if your network's RPC port or credentials differ; Polar shows
+them under the node's *Connect* tab).
+
+Put in `my-work/12-lightning-readiness-and-bitcoind-bridge/answers.env`: `COMMITMENT_TXID`,
+`COMMITMENT_VERSION`, `IS_TRUC` (yes/no), `CSV_DELAY` (from `lncli pendingchannels`) and `SWEEP_TXID`
+(the transaction that spends your `to_local` output once the delay has passed).
 
 1. In Polar, open a new channel, make one payment, then **force-close** it from the payer side.
 2. Find the commitment transaction on the backend `bitcoind`. Decode it. Label every output:

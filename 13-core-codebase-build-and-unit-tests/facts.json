@@ -1,0 +1,105 @@
+{
+ "13.5": {
+  "worksheet": "exercises/05_devnotes_serialization_drill.md",
+  "keys": {
+   "F13_DISCONNECTTIP_LOCKS": {
+    "q": "Part A q2: the two locks in `DisconnectTip`'s annotation, comma-separated, exactly as written",
+    "accept": [
+     "0b9a12d24fc16d651b26",
+     "7fe1a3a65c0c73713cb8"
+    ]
+   },
+   "F13_DISCOURAGE_MUTEX": {
+    "q": "Part A q3: the mutex that guards `m_should_discourage`",
+    "accept": [
+     "bf8b4e8331a241c8c7ab"
+    ]
+   },
+   "F13_GETMUTEX_RETURNS": {
+    "q": "Part A q4: the mutex `ChainstateManager::GetMutex()` returns",
+    "accept": [
+     "1ae2e85f1eab61f8c982",
+     "3b49fecafb0d1ff6cb5e"
+    ]
+   },
+   "F13_OUTPOINT_HEX": {
+    "q": "Part D q2: the serialized outpoint (all-zero hash, n = 1) in hex, no spaces",
+    "accept": [
+     "9d4f3448ec5eecf8c74b"
+    ]
+   },
+   "F13_OUTPOINT_BYTES": {
+    "q": "Part D q2: its size in bytes",
+    "accept": [
+     "3c0d45aedb3f8e5e7064"
+    ]
+   },
+   "F13_HEADER_BYTES": {
+    "q": "Part D q3: total serialized size of `CBlockHeader` in bytes",
+    "accept": [
+     "9105dee08723a66844dc"
+    ]
+   },
+   "F13_CS_253": {
+    "q": "Part D q4: CompactSize of 253 in hex",
+    "accept": [
+     "2f41613dfbd0b6b077cc"
+    ]
+   },
+   "F13_CS_65536": {
+    "q": "Part D q4: CompactSize of 65536 in hex",
+    "accept": [
+     "52ce391110358895fde5"
+    ]
+   },
+   "F13_CS_REJECT_MSG": {
+    "q": "Part D q4: the exception message `ReadCompactSize` throws for 33554433",
+    "accept": [
+     "53531755307a637e0945",
+     "c2299fb1132637f69118"
+    ]
+   }
+  }
+ },
+ "13.6": {
+  "worksheet": "exercises/06_trace_getblockcount.md",
+  "keys": {
+   "F13_RPC_TYPE_MASTER": {
+    "q": "step 1: the type name of RPC method objects on master",
+    "accept": [
+     "9252bbc79940f328fb09"
+    ]
+   },
+   "F13_RPC_TYPE_29": {
+    "q": "29.x part: the same type name on 29.x",
+    "accept": [
+     "483fcba66bdf93644632"
+    ]
+   },
+   "F13_REGISTER_ALL": {
+    "q": "step 2: the function that registers all core RPCs",
+    "accept": [
+     "d5468d0fbcb7bf6b7b89"
+    ]
+   },
+   "F13_HTTP_HANDLER": {
+    "q": "step 3: the function in `src/httprpc.cpp` that handles a JSON-RPC HTTP request",
+    "accept": [
+     "d5f7f64641b82025f08c"
+    ]
+   },
+   "F13_CHAINMAN_HELPER": {
+    "q": "step 5: the helper the lambda uses to get a `ChainstateManager&`",
+    "accept": [
+     "035247db2476f83504b4"
+    ]
+   },
+   "F13_EMPTY_HEIGHT": {
+    "q": "step 7: the value `CChain::Height()` returns for an empty chain",
+    "accept": [
+     "5fa92d42ec95b5ae1c77"
+    ]
+   }
+  }
+ }
+}

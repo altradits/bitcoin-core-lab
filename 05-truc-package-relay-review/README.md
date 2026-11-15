@@ -98,6 +98,8 @@ Runs: ./check_truc.sh, ./check_review_notes.sh. Each prints PASS/FAIL with a rea
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_05=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why can a 0-fee commitment transaction never be CPFP'd without package validation?
 2. State the four TRUC numeric limits and what each one prevents.
 3. What does "sibling eviction" let a TRUC child do, and why is it only safe with TRUC?

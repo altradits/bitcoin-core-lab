@@ -72,11 +72,13 @@ BOLT 3 (tx formats) → BOLT 2 (channel lifecycle) → BOLT 5 (on-chain handling
 | 1 | Go: write `UpdateChannelBalance` and `EvaluateBroadcastedCommitment` from their specs in `lightning_readiness.go` | `./lab.sh check 12` |
 | 2 | [Write `lnd.conf` and the `bitcoind` ZMQ settings yourself](./exercises/01-write-lnd-conf.md) | `./check_lnd_conf.sh` |
 | 3 | [Channel lifecycle in Polar, by `lncli` only](./exercises/02-polar-channel-lifecycle.md) | journal + `./check_polar_journal.sh` |
-| 4 | [Find the Bitcoin Core in a force-close](./exercises/03-force-close-on-chain.md) | journal (self-check) |
+| 4 | [Find the Bitcoin Core in a force-close](./exercises/03-force-close-on-chain.md) | `./check_force_close.sh` (reads Polar's backend bitcoind) |
 
 ---
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_12=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. What exactly does "revoking" a state hand over, and to whom?
 2. Why must `to_local` be CSV-delayed but `to_remote` need not be?
 3. Your peer broadcasts a revoked state while you are offline for longer than `to_self_delay`. What happens?

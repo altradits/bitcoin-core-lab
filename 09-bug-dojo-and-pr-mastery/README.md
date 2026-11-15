@@ -127,6 +127,8 @@ Runs: go vet + go test on `dojo_missions.go`, then ./check_mission6.sh. Each pri
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_09=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why must each output be range-checked *before* it is added to the running total?
 2. Why was the duplicate-input check ever skipped, and what was the 2018 consequence?
 3. What is the BIP32 seed length range in bytes?

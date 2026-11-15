@@ -96,6 +96,8 @@ Runs: ./check_htlc_script.sh, ./check_htlc_spends.sh, ./check_bolt3.sh. Each pri
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_06=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Write the byte values of `OP_IF`, `OP_ELSE`, `OP_ENDIF`, `OP_SHA256`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_CHECKSEQUENCEVERIFY`, `OP_DROP`.
 2. How is the number 10 pushed in a script? And 144?
 3. Why must the refund tx have `version >= 2`?

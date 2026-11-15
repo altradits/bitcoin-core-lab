@@ -91,6 +91,8 @@ Check your outcome:
 The checker inspects your node's state and your saved files. It never prints the commands. The full reference walkthrough is in [`solutions/psbt_flow_reference.md`](./solutions/psbt_flow_reference.md).
 
 ## Self-check quiz (answers: [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_07=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why does the descriptor checksum charset put hex digits and `()[],'/*` in the first group of 32?
 2. What is the numeric value of `0h`? Of `2147483647h`? Why is `2147483648` (unhardened) invalid in a path?
 3. Why must the unsigned tx inside a PSBT have empty scriptSigs, and why is it serialized without witness?

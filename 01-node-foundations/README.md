@@ -108,6 +108,8 @@ Runs: ./check_conf.sh, ./check_node_procedure.sh, ./check_coinbase.sh. Each prin
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_01=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Name four options that must go in the `[regtest]` section, and what happens if one is in the top section.
 2. What does the `.cookie` file contain, and when does it exist?
 3. Regtest block 300: what is its subsidy in satoshis, and why?

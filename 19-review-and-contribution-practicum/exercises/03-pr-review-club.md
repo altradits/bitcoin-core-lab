@@ -30,9 +30,9 @@ Do this for **3 past meetings**, one each from tests, wallet, and p2p. Pick them
    <details><summary>Hint 1</summary>The PR's commit and push history on GitHub has dates.</details>
    <details><summary>Hint 2</summary>The meeting log often states the hash being discussed. You may search the log for that hash only.</details>
 3. Follow the review method (exercise 1) as far as your time allows.
-4. Answer **every** question in `my-work/19-review-and-contribution-practicum/review-club/<PR>-answers.md`, in your own words,
-   with `file:line` references where needed.
-5. Now read the meeting log. For each question, note: what did participants say that you
+4. Answer **every** question in `my-work/19-review-and-contribution-practicum/review-club/<PR>-answers.md` under a
+   heading `## My answers`, in your own words, with `file:line` references where needed.
+5. Now read the meeting log. Under a heading `## After reading the log`, note for each question: what did participants say that you
    missed? Where were you more precise? Did the host correct someone, and why?
 6. Write a short list of what to study next.
 
@@ -54,3 +54,7 @@ Credit the original host and link the page.
 
 **Done when:** 3 past-meeting answer files exist with the post-log comparison filled in, and
 you have attended at least 2 live meetings.
+
+**Checker:** `python3 check_practicum.py club`. It checks that three answer files have both sections filled
+in and that tracker section 6 lists at least two live meetings (a `bitcoincore.reviews/<N>` link with
+Attended = yes). It cannot judge your answers; the meeting log does that.

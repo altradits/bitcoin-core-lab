@@ -251,10 +251,12 @@ Worksheet: [`exercises/16.6-secp256k1-musig.md`](./exercises/16.6-secp256k1-musi
 ./lab.sh check 16
 ```
 
-Runs: python3 test_tagged_hash.py. Each prints PASS/FAIL with a reason, never the answer. The Taproot spends are checked separately, with the two txids you broadcast: `python3 test_taproot_spends.py <keypath_txid> <scriptpath_txid>`.
+Runs: python3 test_tagged_hash.py, python3 ../tools/check_facts.py . (the "Checkable facts" of 16.1, 16.2, 16.5, 16.6). Each prints PASS/FAIL with a reason, never the answer. The Taproot spends are checked separately, with the two txids you broadcast: `python3 test_taproot_spends.py <keypath_txid> <scriptpath_txid>`.
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answer from memory, then compare with [`solutions/quiz-answers.md`](./solutions/quiz-answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_16=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 
 1. Name the function that turns a block's height/hash into the script flags used to validate it, and say which three flags are on for (almost) every block.
 2. What is the difference between `MANDATORY_SCRIPT_VERIFY_FLAGS` and `STANDARD_SCRIPT_VERIFY_FLAGS`, and what happens to a peer that relays a tx violating only the second?

@@ -147,7 +147,7 @@ uses ElligatorSwift-encoded keys, so the bytes look random, followed by ChaCha20
 | # | Worksheet | Produces | Checked by |
 |---|---|---|---|
 | 1 | [`01_two_node_lab.md`](./exercises/01_two_node_lab.md): you configure two (optionally three) regtest nodes, connect them in different connection types, and read `-debug=net` and `getpeerinfo` | journal + running nodes | `./check_14.sh nodes` |
-| 2 | [`02_read_net_vs_net_processing.md`](./exercises/02_read_net_vs_net_processing.md): code-reading questions on the handshake, `Misbehaving`, trickling and addrman | journal answers | self-check |
+| 2 | [`02_read_net_vs_net_processing.md`](./exercises/02_read_net_vs_net_processing.md): code-reading questions on the handshake, `Misbehaving`, trickling and addrman | journal answers | `python3 tools/check_facts.py` (facts) + self-check |
 | 3 | [`03_p2p_kisumu_handshake_test.py`](./exercises/03_p2p_kisumu_handshake_test.py): a **skeleton** functional test with `P2PInterface`. Ping/pong, getheaders/headers, and "late wtxidrelay = disconnect" | your test, passing | `./check_14.sh test` |
 | 4 | [`04_read_upstream_p2p_tests.md`](./exercises/04_read_upstream_p2p_tests.md): read and run `p2p_handshake.py`, `p2p_v2_transport.py`, `p2p_tx_privacy.py`, `p2p_invalid_messages.py` | journal answers | self-check |
 
@@ -159,10 +159,12 @@ uses ElligatorSwift-encoded keys, so the bytes look random, followed by ChaCha20
 ./lab.sh check 14
 ```
 
-Runs: ./check_14.sh (nodes, then your P2P test). Each prints PASS/FAIL with a reason, never the answer. Run `./check_14.sh nodes` or `./check_14.sh test` to check one part.
+Runs: ./check_14.sh (nodes, then your P2P test), python3 ../tools/check_facts.py . (the "Checkable facts" of exercise 2). Each prints PASS/FAIL with a reason, never the answer. Run `./check_14.sh nodes` or `./check_14.sh test` to check one part.
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_14=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 
 1. Which messages may only appear between `version` and `verack`, and what does Core do if they arrive later?
 2. Name the class that owns sockets and the class that interprets messages. Which file holds each?

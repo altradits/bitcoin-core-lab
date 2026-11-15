@@ -66,12 +66,14 @@ can always be fee-bumped.
 |---|-----------|---------|
 | 1 | Go: fill `AllBitcoinNetworks` and `EstimateTxVBytes` from the source (`sovereign_wallet_builder.go`) | `./lab.sh check 11` |
 | 2 | [Write your own signet and mainnet `bitcoin.conf`](./exercises/01-write-your-confs.md) | `./check_confs.sh` |
-| 3 | [Sync signet and read IBD](./exercises/02-sync-signet.md) | journal (self-check) |
+| 3 | [Sync signet and read IBD](./exercises/02-sync-signet.md) | `./check_signet.sh` (reads your synced signet node) |
 | 4 | [Wallet safety drill: encrypt, back up, restore, watch-only](./exercises/03-wallet-safety-drill.md) | `./check_wallet_drill.sh` |
 
 ---
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_11=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. What does `assumevalid` skip, and what does it never skip?
 2. Minimum prune target, and why can a pruned node not run `-txindex`?
 3. Why must you restore a backup before trusting it?

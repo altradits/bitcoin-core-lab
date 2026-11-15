@@ -1,0 +1,85 @@
+{
+ "15.1": {
+  "worksheet": "exercises/01_trace_block_flow.md",
+  "keys": {
+   "F15_MERKLE_REJECT": {
+    "q": "q2: the reject reason for a wrong Merkle root",
+    "accept": [
+     "54ea5116f442d2d13964"
+    ]
+   },
+   "F15_FUTURE_REJECT": {
+    "q": "q3: the reject reason for a block too far in the future",
+    "accept": [
+     "ba2f2000761643d0adfb"
+    ]
+   },
+   "F15_MAX_FUTURE_SECONDS": {
+    "q": "q3: that bound in seconds",
+    "accept": [
+     "95a29094a7a23bcbfee3"
+    ]
+   },
+   "F15_BIP30_REJECT": {
+    "q": "q5: the reject reason for the BIP30 duplicate-txid check",
+    "accept": [
+     "58bdd3910872dac58384"
+    ]
+   },
+   "F15_SUBSIDY_REJECT": {
+    "q": "q5: the reject reason when the coinbase pays too much",
+    "accept": [
+     "484404fb1a4a623cbbea"
+    ]
+   },
+   "F15_SCRIPT_QUEUE": {
+    "q": "q5: the class template that runs script checks in parallel",
+    "accept": [
+     "ebc8d5e42cd6c492d13e"
+    ]
+   },
+   "F15_REORG_MEMPOOL_FN": {
+    "q": "q7: the mempool method called with the reorg filter",
+    "accept": [
+     "7292baa5b4ee2e6241e7",
+     "907c181efec5b17559e9"
+    ]
+   }
+  }
+ },
+ "15.4": {
+  "worksheet": "exercises/04_assumeutxo.md",
+  "keys": {
+   "F15_DUMP_RPC": {
+    "q": "q3: the RPC that writes a UTXO snapshot",
+    "accept": [
+     "3173e5f830d42bf39d5e"
+    ]
+   },
+   "F15_LOAD_RPC": {
+    "q": "q3: the RPC that loads one",
+    "accept": [
+     "aaf663719aa2070dae4a"
+    ]
+   },
+   "F15_STATES_RPC": {
+    "q": "q3: the RPC that lists the chainstates",
+    "accept": [
+     "74c34812e9d8a4f562a5"
+    ]
+   },
+   "F15_VALIDATE_FN_29": {
+    "q": "q4: the `ChainstateManager` method on 29.x that compares the background hash with the snapshot",
+    "accept": [
+     "d108d3247f72440bfcf8"
+    ]
+   },
+   "F15_VALIDATE_FN_MASTER": {
+    "q": "q4: its name on master",
+    "accept": [
+     "b11eb390c1dab2368fde"
+    ]
+   }
+  }
+ }
+}

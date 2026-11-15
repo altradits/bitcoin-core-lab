@@ -211,8 +211,8 @@ All worksheets are in [`exercises/`](./exercises/). Do them in order.
 | 2 | [`02_build_targets_and_ccache.md`](./exercises/02_build_targets_and_ccache.md): install ccache, re-configure, time a cold vs. warm single-target rebuild | timings in your journal | `./check_13.sh build` |
 | 3 | [`03_run_and_read_unit_tests.md`](./exercises/03_run_and_read_unit_tests.md): run suites and cases with filters, read `serialize_tests.cpp` | journal answers | `./check_13.sh build` |
 | 4 | [`04_write_a_unit_test.md`](./exercises/04_write_a_unit_test.md): write `compactsize_boundary_tests.cpp` from the skeleton, register it, mutation-test it | a passing new suite | `./check_13.sh unit` |
-| 5 | [`05_devnotes_serialization_drill.md`](./exercises/05_devnotes_serialization_drill.md): locking annotations, `Assume`/`Assert`, `SERIALIZE_METHODS` | journal answers | self-check vs. `solutions/` |
-| 6 | [`06_trace_getblockcount.md`](./exercises/06_trace_getblockcount.md): trace one RPC from HTTP into `ChainstateManager` | a call-chain diagram in your journal | self-check vs. `solutions/` |
+| 5 | [`05_devnotes_serialization_drill.md`](./exercises/05_devnotes_serialization_drill.md): locking annotations, `Assume`/`Assert`, `SERIALIZE_METHODS` | journal answers | `python3 tools/check_facts.py` (facts) + self-check vs. `solutions/` |
+| 6 | [`06_trace_getblockcount.md`](./exercises/06_trace_getblockcount.md): trace one RPC from HTTP into `ChainstateManager` | a call-chain diagram in your journal | `python3 tools/check_facts.py` (facts) + self-check vs. `solutions/` |
 
 Run the checker from the stage directory:
 
@@ -231,10 +231,20 @@ Run the checker from the stage directory:
 ./lab.sh check 13
 ```
 
-Runs: ./check_13.sh. Each prints PASS/FAIL with a reason, never the answer. Needs your Bitcoin Core build (`BITCOIN_ROOT`, default `~/bitcoin`).
+Runs: ./check_13.sh, python3 ../tools/check_facts.py . (the "Checkable facts" of exercises 5 and 6). Each prints PASS/FAIL with a reason, never the answer. Needs your Bitcoin Core build (`BITCOIN_ROOT`, default `~/bitcoin`).
 Open `solutions/` only after this passes or after three honest attempts.
 
+## Common errors
+
+| Error | Cause | What to do |
+| :--- | :--- | :--- |
+| `CMake Error ... Imported target "PkgConfig::libevent_core" includes non-existent path "/opt/homebrew/Cellar/libevent/<old version>/include"` or `No rule to make target '/opt/homebrew/Cellar/libevent/<old version>/lib/libevent_extra.dylib'` | Homebrew upgraded a dependency after you configured; `CMakeCache.txt` still holds the old Cellar path. Seen on this lab machine on 2026-11-15 (libevent `2.1.13` → `2.1.13_1`). | Remove the stale cache entries and reconfigure: read `cmake --help` for `-U` and drop the entries matching `*libevent*`, or delete the build dir and configure again. Then rebuild only the target you need. |
+| A one-line change in `src/test/CMakeLists.txt` recompiles hundreds of files | Reconfiguring can change flags or generated headers, so CMake rebuilds whatever depends on them. | Expected. Build only `test_bitcoin` with a `-j` that fits 8 GB, and let `ccache` (Exercise 2) make the next rebuild fast. |
+| `Test setup error: no test cases matching filter` | Your suite is not compiled in: the file is not listed in `src/test/CMakeLists.txt`, or you did not rebuild after adding it. | Check the list, rebuild `test_bitcoin`, then `--list_content` and look for your suite. |
+
 ## Self-check quiz (answer from memory; answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_13=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 
 1. Which CMake option builds `test_bitcoin`, and what is its default?
 2. You edited only `src/test/serialize_tests.cpp`. What is the smallest build command that lets you re-run that suite?

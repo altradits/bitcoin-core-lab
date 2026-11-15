@@ -59,3 +59,23 @@ raw 32-byte arrays (the RPC shows them byte-reversed).
 `git grep -n "ActivateBestChain(" -- src/validation.h`, `git grep -n "struct Peer {" -- src/net_processing.cpp`,
 `git grep -n "LOCK_RETURNED" -- src/validation.h`, `ser_writedata32` in `src/serialize.h`.
 </details>
+
+## Checkable facts
+
+After you have answered the questions above in your journal, put these short answers in
+`my-work/13-core-codebase-build-and-unit-tests/answers.env` (one `KEY=value` per line) and run
+`python3 tools/check_facts.py 13-core-codebase-build-and-unit-tests 13.5` from the lab root (or `./lab.sh check 13`).
+Answers are for master `e75b76b12c`. The checker says which ones are wrong, never the right value.
+Your explanations (the "why" questions) are not machine-checked: compare them with `solutions/` afterwards.
+
+| Key | Question |
+|---|---|
+| `F13_DISCONNECTTIP_LOCKS` | Part A q2: the two locks in `DisconnectTip`'s annotation, comma-separated, exactly as written |
+| `F13_DISCOURAGE_MUTEX` | Part A q3: the mutex that guards `m_should_discourage` |
+| `F13_GETMUTEX_RETURNS` | Part A q4: the mutex `ChainstateManager::GetMutex()` returns |
+| `F13_OUTPOINT_HEX` | Part D q2: the serialized outpoint (all-zero hash, n = 1) in hex, no spaces |
+| `F13_OUTPOINT_BYTES` | Part D q2: its size in bytes |
+| `F13_HEADER_BYTES` | Part D q3: total serialized size of `CBlockHeader` in bytes |
+| `F13_CS_253` | Part D q4: CompactSize of 253 in hex |
+| `F13_CS_65536` | Part D q4: CompactSize of 65536 in hex |
+| `F13_CS_REJECT_MSG` | Part D q4: the exception message `ReadCompactSize` throws for 33554433 |

@@ -125,6 +125,8 @@ Runs: ./check_rbf.sh, ./check_cpfp.sh, ./check_code_reading.sh. Each prints PASS
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (from memory; answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_03=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. A 200 vB tx paid 400 sat. On v29 with default settings, what is the smallest fee its 210 vB replacement can pay? On master?
 2. Why does rule 3 (absolute fee) exist when rule 6 already demands a higher feerate?
 3. Your tx's input has `nSequence = 0xffffffff`. Can your v29 node replace it? Why might the `bip125-replaceable` field say `no`?

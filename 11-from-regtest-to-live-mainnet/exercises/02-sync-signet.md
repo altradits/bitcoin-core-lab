@@ -1,6 +1,11 @@
 # Stage 11 Worksheet 2: Sync signet and read IBD
 
-**Output:** journal entries. **Checker:** self-check (sync time depends on your network).
+**Output:** journal entries and three answers. **Checker:** `./check_signet.sh` (run it once your node is synced;
+sync time depends on your network). It reads your signet node, so point it there:
+`SIGNET_CLI="bitcoin-cli -conf=<your signet.conf> -datadir=<your signet datadir>" ./check_signet.sh`.
+
+Put in `my-work/11-from-regtest-to-live-mainnet/answers.env`: `SIGNET_TIP_SEEN` (the best block hash
+when sync finished), `SIGNET_WALLET` (the wallet you made in step 5) and `FAUCET_TXID`.
 
 Run ONE node at a time on the 8 GB M1: stop your regtest node first.
 

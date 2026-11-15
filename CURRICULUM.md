@@ -226,6 +226,8 @@ skill the whole plan is built around.
 
 Each criterion is objective. Record the evidence (a link, a file, a date) in
 [BTRUST_READINESS_TRACKER.md](./BTRUST_READINESS_TRACKER.md).
+Run `./lab.sh progress` to see which criteria your checker passes, quiz scores
+(`my-work/quiz-scores.env`) and tracker rows already meet, and which ones only you can judge.
 
 ### Gate 1: "I can build and test Core and review a test-only PR" (target: week 6)
 - [ ] From an empty directory, you cloned, configured and built `bitcoind`, `bitcoin-cli` and `test_bitcoin` on `master`. Every command is in `my-work/13-*/journal.md`, typed by you.

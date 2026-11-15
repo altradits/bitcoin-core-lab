@@ -38,3 +38,8 @@ The tracker is [`../../BTRUST_READINESS_TRACKER.md`](../../BTRUST_READINESS_TRAC
   single comment.
 
 **Done when:** every proof-of-work output listed in the stage README has a row with a working link.
+
+**Checker:** `python3 check_practicum.py evidence` checks that every row you filled in is well-formed: a real
+link, an `ACK` that names its commit, what you tested, a merged date for merged PRs. Add `--online` (needs
+`gh auth login`; set `GITHUB_USER` to your handle) to have GitHub confirm each PR's status and author.
+It also prints your progress against the Starter Grant numbers (5 merged code PRs, 2 references).

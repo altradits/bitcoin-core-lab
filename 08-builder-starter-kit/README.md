@@ -46,6 +46,8 @@ In another terminal, write your own `curl` calls against `POST /api/invoice` (bo
 - **C. OP_RETURN verifier:** `GET /api/verify?txid=…&data_hex=…` uses `getrawtransaction <txid> true` and compares the `nulldata` output's script hex with your `BuildOPReturnScript`.
 
 ## Self-check quiz (answers: [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_08=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why is P2WPKH dust 294 sat while P2PKH is 546 sat? Show the byte arithmetic.
 2. Why does a P2TR output have the same dust threshold as P2WSH even though spending it is cheaper?
 3. What does `ParseBTC("0.1")` return, and what goes wrong if you compute `0.1 * 1e8` in float64 and truncate?

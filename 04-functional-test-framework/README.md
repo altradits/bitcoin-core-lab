@@ -102,6 +102,8 @@ Runs: ./check_anatomy.sh, ./check_functional_test.sh, ./check_functional_test.sh
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_04=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Which two methods must every functional test define?
 2. Why do most tests start with 200 blocks, and how do you opt out?
 3. Why is `self.generate(node, 1)` preferred over `node.generatetoaddress(1, addr)`?

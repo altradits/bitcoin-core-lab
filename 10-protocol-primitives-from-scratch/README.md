@@ -75,6 +75,8 @@ Stage 02 (you decoded a tx on paper). Go 1.22+. Estimated time: 14 hours.
 ---
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_10=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. The genesis block hash as printed starts with `000000000019d6…`. What do its first raw bytes look like?
 2. Encode 252, 253, 65535, 65536 as CompactSize.
 3. Why does the segwit marker byte `0x00` not confuse a legacy parser on a tx with 0 inputs?

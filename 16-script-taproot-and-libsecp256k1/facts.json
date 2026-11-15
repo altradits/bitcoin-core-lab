@@ -1,0 +1,133 @@
+{
+ "16.1": {
+  "worksheet": "exercises/16.1-interpreter-reading.md",
+  "keys": {
+   "F16_SCRIPTCHECK_CLASS": {
+    "q": "Part A q2: the class that wraps `VerifyScript` for parallel block validation",
+    "accept": [
+     "b66e872fabd05f572710"
+    ]
+   },
+   "F16_WEIGHT_OFFSET": {
+    "q": "Part C: the constant added to the witness size to initialise `m_validation_weight_left` (its value)",
+    "accept": [
+     "1a34cdf2e4a4e355fed6"
+    ]
+   },
+   "F16_TAPSCRIPT_LEAF": {
+    "q": "Part C: the leaf version of tapscript, in hex",
+    "accept": [
+     "37bd17759d8dc3be4cc8"
+    ]
+   },
+   "F16_WITNESS_BIT": {
+    "q": "Part D: the bit number of `SCRIPT_VERIFY_WITNESS` (n in 1U << n)",
+    "accept": [
+     "75789d77ff87c454c851"
+    ]
+   },
+   "F16_TAPROOT_BIT": {
+    "q": "Part D: the bit number of `SCRIPT_VERIFY_TAPROOT`",
+    "accept": [
+     "cb6cdf08a87cbcbd8fa3"
+    ]
+   },
+   "F16_NULLDUMMY_BIT": {
+    "q": "Part D: the bit number of `SCRIPT_VERIFY_NULLDUMMY`",
+    "accept": [
+     "55481926020d0af5d096"
+    ]
+   }
+  }
+ },
+ "16.2": {
+  "worksheet": "exercises/16.2-sighash-table.md",
+  "keys": {
+   "F16_ONE_HASHTYPE": {
+    "q": "Part B q1: the hash type (base name) for which legacy `SignatureHash` returns `uint256::ONE`",
+    "accept": [
+     "63dca65c401dd5742f65",
+     "7484baecd2238ee37bbd"
+    ]
+   },
+   "F16_BIP341_EPOCH": {
+    "q": "Part A: the value of the BIP341 epoch byte",
+    "accept": [
+     "2c3382cd63291e7c13c6",
+     "de79f1611a9a19853f81"
+    ]
+   },
+   "F16_SIGHASH_SUITE": {
+    "q": "Part C: the Boost suite name in `sighash_tests.cpp`",
+    "accept": [
+     "640cd740926f724e3599"
+    ]
+   }
+  }
+ },
+ "16.5": {
+  "worksheet": "exercises/16.5-test-vectors.md",
+  "keys": {
+   "F16_FLAGMAP_FILE": {
+    "q": "Part A q3: the file (path from repo root) where flag names are mapped to bits",
+    "accept": [
+     "5bcbb9d0886872c1566d"
+    ]
+   },
+   "F16_SCRIPT_SUITE": {
+    "q": "Part A q5: the Boost suite that contains `script_json_test`",
+    "accept": [
+     "1c818430c9d49f560c17"
+    ]
+   },
+   "F16_BIP341_JSON": {
+    "q": "Part B: the JSON file `bip341_keypath_test_vectors` loads (file name only)",
+    "accept": [
+     "1406b961b73019090940"
+    ]
+   },
+   "F16_SIGOPS_CONST": {
+    "q": "Part C q4: a `script.h` constant the sigops-ratio tests probe (its name)",
+    "accept": [
+     "663f38776993d0cdc19c",
+     "e5aecb60de807c0f86a8"
+    ]
+   }
+  }
+ },
+ "16.6": {
+  "worksheet": "exercises/16.6-secp256k1-musig.md",
+  "keys": {
+   "F16_SIGN_CONTEXT": {
+    "q": "Part B q1: the signing context variable in `src/key.cpp`",
+    "accept": [
+     "ca3419c803ebd37bc996"
+    ]
+   },
+   "F16_ECDSA_NONCE_FN": {
+    "q": "Part B q2: the nonce function ECDSA signing passes",
+    "accept": [
+     "0249cea786359e156964"
+    ]
+   },
+   "F16_MUSIG_29": {
+    "q": "Part C q4: is the MuSig module enabled in Core's build on 29.x (ON/OFF)",
+    "accept": [
+     "d11b0a304080b700f413"
+    ]
+   },
+   "F16_MUSIG_MASTER": {
+    "q": "Part C q4: and on master (ON/OFF)",
+    "accept": [
+     "e1bc53e1d037f4f2456c"
+    ]
+   },
+   "F16_MUSIG_MASTER_FILE": {
+    "q": "Part C q4: the file (path from repo root) that sets it on master",
+    "accept": [
+     "c9075189a69c4011c12a"
+    ]
+   }
+  }
+ }
+}

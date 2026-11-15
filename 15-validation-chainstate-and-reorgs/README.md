@@ -110,10 +110,10 @@ PR #27596 ("assumeutxo (2)") and #30214 (state representation).
 
 | # | Worksheet | Checker |
 |---|-----------|---------|
-| 1 | [Trace a block through the code](./exercises/01_trace_block_flow.md) | self-check vs `solutions/trace_answers.md` |
+| 1 | [Trace a block through the code](./exercises/01_trace_block_flow.md) | `python3 tools/check_facts.py` (facts) + compare with `solutions/trace_answers.md` |
 | 2 | [Reorg drill on regtest](./exercises/02_reorg_drill.md) | `./check_15.sh reorg` |
 | 3 | [Write the reorg functional test](./exercises/03_feature_kisumu_reorg_mempool.py) | `./check_15.sh test` |
-| 4 | [AssumeUTXO: read and run the test](./exercises/04_assumeutxo.md) | self-check |
+| 4 | [AssumeUTXO: read and run the test](./exercises/04_assumeutxo.md) | `python3 tools/check_facts.py` (facts) |
 
 ---
 
@@ -123,10 +123,12 @@ PR #27596 ("assumeutxo (2)") and #30214 (state representation).
 ./lab.sh check 15
 ```
 
-Runs: ./check_15.sh (your reorg drill, then your functional test). Each prints PASS/FAIL with a reason, never the answer. Run `./check_15.sh reorg` or `./check_15.sh test` to check one part.
+Runs: ./check_15.sh (your reorg drill, then your functional test), python3 ../tools/check_facts.py . (the "Checkable facts" of exercises 1 and 4). Each prints PASS/FAIL with a reason, never the answer. Run `./check_15.sh reorg` or `./check_15.sh test` to check one part.
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_15=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why is `CheckBlock` split from `ContextualCheckBlock`?
 2. Where are UTXOs looked up and spent during block connection?
 3. What do undo files contain and when are they used?

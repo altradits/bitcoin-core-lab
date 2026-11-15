@@ -87,7 +87,7 @@ validation flags are *consensus*. A non-standard tx can still be valid in a bloc
 
 | # | Worksheet | Checker |
 |---|-----------|---------|
-| 18.1 | [Read the policy docs on master vs 29.x](./exercises/18.1-policy-docs.md) | self-check vs `solutions/18.1-answers.md` |
+| 18.1 | [Read the policy docs on master vs 29.x](./exercises/18.1-policy-docs.md) | `python3 tools/check_facts.py` (facts) + compare with `solutions/18.1-answers.md` |
 | 18.2 | Write `linearize.py` from [the skeleton](./exercises/linearize_skeleton.py): chunk, diagram, compare | `python3 18-cluster-mempool-wallet-and-policy/test_linearize.py` |
 | 18.3 | Complete [the package-RBF / cluster-limit functional test](./exercises/mempool_pkgrbf_cluster_skeleton.py) | `./check_18.sh pkgrbf` |
 | 18.4 | [Predict coin selection, then ask the wallet](./exercises/18.4-coin-selection-predict.md) | `./check_18.sh coinsel` |
@@ -101,10 +101,12 @@ validation flags are *consensus*. A non-standard tx can still be valid in a bloc
 ./lab.sh check 18
 ```
 
-Runs: python3 test_linearize.py, ./check_18.sh. Each prints PASS/FAIL with a reason, never the answer. `./check_18.sh pkgrbf|coinsel|unit` checks one part. The cluster-mempool part needs a master build and is skipped on 29.x.
+Runs: python3 test_linearize.py, ./check_18.sh, python3 ../tools/check_facts.py . (the "Checkable facts" of 18.1). Each prints PASS/FAIL with a reason, never the answer. `./check_18.sh pkgrbf|coinsel|unit` checks one part. The cluster-mempool part needs a master build and is skipped on 29.x.
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz-answers.md`](./solutions/quiz-answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_18=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. Why is the ancestor feerate a poor estimate of a transaction's mining value in some clusters? Give an example.
 2. Chunk the linearization [A: 1000 sat/200 vB, B: 100/100 (child of A), C: 3000/100 (child of B)].
 3. What does "strictly better feerate diagram" mean, and why is it incentive compatible?

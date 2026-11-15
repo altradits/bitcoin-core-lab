@@ -133,6 +133,8 @@ Runs: ./check_setup.sh, ./check_decode.sh, ./check_raw_tx.sh, ./check_policy.sh.
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_02=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. A tx has base size 113 and total size 222. Weight? vsize?
 2. Why does the 32-byte prev-txid in raw hex look different from the txid `listunspent` prints?
 3. What exactly is hashed to get the txid of a segwit tx, and why does that matter for Lightning?

@@ -88,10 +88,10 @@ tasks. Keep going after that: the habit to keep is **1–2 real reviews a week**
 | :-: | :-- | :-- |
 | 1 | [`exercises/01-review-method.md`](./exercises/01-review-method.md): the method you use on every PR, plus the PR-type matrix | `my-work/19-review-and-contribution-practicum/method-notes.md` |
 | 2 | [`exercises/02-review-gauntlet.md`](./exercises/02-review-gauntlet.md): 10 merged PRs, reviewed blind, then compared with the real thread | `my-work/19-review-and-contribution-practicum/gauntlet/Gxx-*-blind.md` and `-compare.md` |
-| 3 | [`exercises/03-pr-review-club.md`](./exercises/03-pr-review-club.md): prepare for, attend, and practice with past meetings | `my-work/19-review-and-contribution-practicum/review-club/` |
+| 3 | [`exercises/03-pr-review-club.md`](./exercises/03-pr-review-club.md): prepare for, attend, and practice with past meetings | `my-work/19-review-and-contribution-practicum/review-club/` (checked by `python3 check_practicum.py club`) |
 | 4 | [`exercises/04-contribution-craft.md`](./exercises/04-contribution-craft.md): finding work, commit hygiene, signing, rebasing, feedback, and a dry-run branch in **your own** clone | a signed, hygienic branch that passes `check_commit_hygiene.sh` |
-| 5 | [`exercises/05-technical-communication.md`](./exercises/05-technical-communication.md): bug reproduction, Delving/mailing-list post, BitDevs presentation | `my-work/19-review-and-contribution-practicum/comms/` |
-| 6 | [`exercises/06-btrust-evidence.md`](./exercises/06-btrust-evidence.md): turn each activity into a public link | rows in `../BTRUST_READINESS_TRACKER.md` |
+| 5 | [`exercises/05-technical-communication.md`](./exercises/05-technical-communication.md): bug reproduction, Delving/mailing-list post, BitDevs presentation | `my-work/19-review-and-contribution-practicum/comms/` (checked by `python3 check_practicum.py comms`) |
+| 6 | [`exercises/06-btrust-evidence.md`](./exercises/06-btrust-evidence.md): turn each activity into a public link | rows in `../BTRUST_READINESS_TRACKER.md` (checked by `python3 check_practicum.py evidence`) |
 
 Blank templates are in [`exercises/templates/`](./exercises/templates/). Copy them into
 `my-work/19-review-and-contribution-practicum/` and fill them in yourself.
@@ -142,10 +142,12 @@ Current `CONTRIBUTING.md` ("Peer Review" section) defines:
 ./lab.sh check 19
 ```
 
-Runs: ./check_gauntlet.sh. Each prints PASS/FAIL with a reason, never the answer. Check your own commit stack separately: `./check_commit_hygiene.sh <your-clone> <base>..<branch>` (read-only).
+Runs: ./check_gauntlet.sh, python3 check_practicum.py (Review Club, communication, evidence). Each prints PASS/FAIL with a reason, never the answer. Check your own commit stack separately: `./check_commit_hygiene.sh <your-clone> <base>..<branch>` (read-only).
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answer from memory, then check `solutions/self-check-answers.md`)
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_19=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 
 1. What is the difference between `Concept ACK` and `Approach NACK`? Can a person give both on one PR?
 2. Why must an ACK name the full commit hash and not just say "ACK"?

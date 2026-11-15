@@ -39,8 +39,10 @@ You type every command and write every line of code that teaches a skill
 2. Do each worksheet in `exercises/` yourself. Log every command you typed in
    `my-work/<stage>/journal.md`; write answers in `my-work/<stage>/answers.env` when a worksheet asks.
 3. `./lab.sh check NN` until every checker passes. A FAIL line tells you what is wrong, not how to fix it.
-4. Answer the stage's self-check quiz from memory, then compare with `solutions/`.
-5. Log evidence in [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md).
+4. Answer the stage's self-check quiz from memory, mark it against `solutions/`, and record the score in
+   `my-work/quiz-scores.env` (e.g. `QUIZ_04=9/10`).
+5. Log public evidence in [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md), then run `./lab.sh progress`
+   to see where you stand against the three mastery gates.
 
 ## Start here
 1. [`START_HERE.md`](./START_HERE.md): what to install (pinned versions), `./lab.sh doctor`, and the stage map with time estimates.
@@ -82,6 +84,7 @@ in [`CURRICULUM.md`](./CURRICULUM.md).
 ## `./lab.sh`
 ```
 ./lab.sh doctor                  # check installed tools and versions
+./lab.sh progress                # your progress against the three mastery gates
 ./lab.sh stage <00..19>          # README, worksheets and checkers of a stage
 ./lab.sh check <00..19>          # run that stage's checkers
 ./lab.sh blank|solve <07|08|10|11|12>   # Go stages: fresh skeleton / reference (your file is backed up)

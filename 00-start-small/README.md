@@ -85,6 +85,8 @@ Runs: ./check_micro_steps.sh, ./check_first_app.sh. Each prints PASS/FAIL with a
 Open `solutions/` only after this passes or after three honest attempts.
 
 ## Self-check quiz (answer from memory, then compare with [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+
+After marking your answers, record the score in `my-work/quiz-scores.env` as `QUIZ_00=<right>/<total>` (Gates 1 and 2 ask for 80%; `./lab.sh progress` reads it).
 1. What is block 0 called, and where in the Bitcoin Core source is it defined?
 2. Why does a wallet show 50 BTC spendable (not 5050 BTC) after you mine 101 blocks?
 3. Where does a transaction wait between broadcast and confirmation? Is it the same on every node?

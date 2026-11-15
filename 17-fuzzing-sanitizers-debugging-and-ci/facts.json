@@ -1,0 +1,110 @@
+{
+ "17.1": {
+  "worksheet": "exercises/17.1-fuzz-anatomy.md",
+  "keys": {
+   "F17_TARGET_ENV": {
+    "q": "q2: the environment variable that selects the target to run",
+    "accept": [
+     "064bd43272887188588f"
+    ]
+   },
+   "F17_PRINT_ENV": {
+    "q": "q2: the variable that prints all target names and exits",
+    "accept": [
+     "863f12a158c3ab78690d"
+    ]
+   },
+   "F17_WRITE_ENV": {
+    "q": "q2: the variable that writes all target names to a file and exits",
+    "accept": [
+     "49faa129820107df93fa"
+    ]
+   },
+   "F17_TAPBRANCH_HITS": {
+    "q": "q7: how many files in `src/test/fuzz/` mention `ComputeTapbranchHash` or `ComputeTaprootMerkleRoot`",
+    "accept": [
+     "63cacbe32b3562fc8d3f"
+    ]
+   }
+  }
+ },
+ "17.4": {
+  "worksheet": "exercises/17.4-sanitizers.md",
+  "keys": {
+   "F17_SANITIZER_CMAKE": {
+    "q": "Part A q1: the CMake variable that enables sanitizers",
+    "accept": [
+     "8f2fb2d27d697b30a8df",
+     "dc68420b3afb14bd85d7"
+    ]
+   },
+   "F17_UBSAN_ENV": {
+    "q": "Part A q1: the env var that points UBSan at its suppression file",
+    "accept": [
+     "fa056ff14ec61ac10fc2"
+    ]
+   },
+   "F17_ASAN_CI_SANITIZERS": {
+    "q": "Part A q3: the exact `SANITIZERS` value in `00_setup_env_native_asan.sh`",
+    "accept": [
+     "aa686af5dad63ac6ee96"
+    ]
+   },
+   "F17_TSAN_CI_SANITIZERS": {
+    "q": "Part A q3: the `SANITIZERS` value in `00_setup_env_native_tsan.sh`",
+    "accept": [
+     "e5493bc2615663e59b43"
+    ]
+   }
+  }
+ },
+ "17.5": {
+  "worksheet": "exercises/17.5-lldb.md",
+  "keys": {
+   "F17_LOGGING_RPC": {
+    "q": "Part C q3: the RPC that changes log categories at runtime",
+    "accept": [
+     "d53d7bb6412ed52d12f5"
+    ]
+   },
+   "F17_DEBUG_BUILD_TYPE": {
+    "q": "Part A q4: the CMake build type that keeps all variables visible to the debugger",
+    "accept": [
+     "b0a39f6f16a156cde705"
+    ]
+   }
+  }
+ },
+ "17.7": {
+  "worksheet": "exercises/17.7-lint-ci-bench.md",
+  "keys": {
+   "F17_CI_FILE_ENV_COUNT": {
+    "q": "Part A q1: how many `file-env:` entries `.github/workflows/ci.yml` has",
+    "accept": [
+     "149cabe8bd9bd3ae1c7b"
+    ]
+   },
+   "F17_UNIT_TESTS_VAR": {
+    "q": "Part A q3: the env var in `03_test_script.sh` that switches unit tests on",
+    "accept": [
+     "9b6b6f1a9231d78abc9d"
+    ]
+   },
+   "F17_LINT_HELPER": {
+    "q": "Part B q1: the helper script that runs the linters inside the CI container (path from repo root)",
+    "accept": [
+     "b101ee19a8d25d2aa95f",
+     "e8f0a5724c0baa63be9f"
+    ]
+   },
+   "F17_BENCH_OPTION": {
+    "q": "Part D q1: the CMake option that builds `bench_bitcoin`",
+    "accept": [
+     "21922906fed103291624",
+     "770c2df6ab76748215b5",
+     "a7b21938955556e2bcbc"
+    ]
+   }
+  }
+ }
+}
