@@ -122,11 +122,22 @@ func BuildOPReturnScriptHex(message string) (digestHex string, scriptHex string)
 	return digestHex, scriptHex
 }
 
+func rpcBaseURL() string {
+	if url := os.Getenv("BITCOIND_RPC_URL"); url != "" {
+		return url
+	}
+	return "http://127.0.0.1:18443"
+}
+
 func loadRegtestAuth() (string, string, error) {
 	home, _ := os.UserHomeDir()
 	cookieCandidates := []string{
 		filepath.Join(home, "Library", "Application Support", "Bitcoin", "regtest", ".cookie"),
 		filepath.Join(home, ".bitcoin", "regtest", ".cookie"),
+	}
+	// Explicit cookie path first, for custom datadirs.
+	if explicit := os.Getenv("BITCOIN_COOKIE"); explicit != "" {
+		cookieCandidates = append([]string{explicit}, cookieCandidates...)
 	}
 	for _, path := range cookieCandidates {
 		if data, err := os.ReadFile(path); err == nil {
@@ -281,11 +292,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load regtest credentials: %v", err)
 	}
-	rpc := &BitcoinRPC{BaseURL: "http://127.0.0.1:18443", User: user, Pass: pass}
+	rpc := &BitcoinRPC{BaseURL: rpcBaseURL(), User: user, Pass: pass}
 
 	if len(os.Args) > 1 && os.Args[1] == "--demo" {
 		// Run end-to-end self-test against live bitcoind -regtest
-		digest, scriptHex := BuildOPReturnScriptHex("BitDevs Kisumu Sovereign Block Timestamp #001")
+		digest, scriptHex := BuildOPReturnScriptHex("BitDevs Kisumu Block Timestamp #001")
 		fmt.Printf("1. Computed OP_RETURN Commitment:\n   SHA256: %s\n   Script: %s\n", digest, scriptHex)
 
 		addrRes, err := rpc.Call("sovereign_watch_only", "getnewaddress", "builder_demo", "bech32")
@@ -294,7 +305,7 @@ func main() {
 		}
 		var addr string
 		json.Unmarshal(addrRes, &addr)
-		uri, err := BuildBIP21(addr, 50_000, "Sovereign Builder Demo")
+		uri, err := BuildBIP21(addr, 50_000, "Builder Demo")
 		if err != nil {
 			log.Fatalf("BuildBIP21 failed: %v", err)
 		}
@@ -303,6 +314,9 @@ func main() {
 	}
 
 	addr := "127.0.0.1:8080"
-	fmt.Printf("⚡ Sovereign Bitcoin Builder Server listening on http://%s\n", addr)
+	if envAddr := os.Getenv("BUILDER_LISTEN_ADDR"); envAddr != "" {
+		addr = envAddr
+	}
+	fmt.Printf("Bitcoin builder server listening on http://%s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, NewServerMux(rpc)))
 }

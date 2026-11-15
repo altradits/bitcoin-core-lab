@@ -102,11 +102,22 @@ func (c *RPCClient) Call(wallet, method string, params ...interface{}) (json.Raw
 	return rpcResp.Result, nil
 }
 
+func rpcBaseURL() string {
+	if url := os.Getenv("BITCOIND_RPC_URL"); url != "" {
+		return url
+	}
+	return "http://127.0.0.1:18443"
+}
+
 func loadRegtestAuth() (string, string, error) {
 	home, _ := os.UserHomeDir()
 	cookieCandidates := []string{
 		filepath.Join(home, "Library", "Application Support", "Bitcoin", "regtest", ".cookie"),
 		filepath.Join(home, ".bitcoin", "regtest", ".cookie"),
+	}
+	// Explicit cookie path first, for custom datadirs.
+	if explicit := os.Getenv("BITCOIN_COOKIE"); explicit != "" {
+		cookieCandidates = append([]string{explicit}, cookieCandidates...)
 	}
 	for _, path := range cookieCandidates {
 		if data, err := os.ReadFile(path); err == nil {
@@ -153,7 +164,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to load regtest auth: %v\n", err)
 		os.Exit(1)
 	}
-	client := &RPCClient{BaseURL: "http://127.0.0.1:18443", User: user, Pass: pass}
+	client := &RPCClient{BaseURL: rpcBaseURL(), User: user, Pass: pass}
 
 	const signerWallet = "sovereign_cold_signer"
 	const watchWallet = "sovereign_watch_only"
@@ -278,5 +289,5 @@ func main() {
 	var spendTxid string
 	json.Unmarshal(txidRes, &spendTxid)
 	_, _ = client.Call("", "generatetoaddress", 1, minerAddr)
-	fmt.Printf("6. Finalized & Broadcasted Sovereign Settlement TXID: %s\n", spendTxid)
+	fmt.Printf("6. Finalized & Broadcast Settlement TXID: %s\n", spendTxid)
 }
