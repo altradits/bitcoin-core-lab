@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#28463`
+# Audit: bitcoin/bitcoin#28463 `p2p: Increase inbound capacity for block-relay only connections`
 
 - **PR Title:** Merge bitcoin/bitcoin#28463: p2p: Increase inbound capacity for block-relay only connections
 - **Concentric Risk Ring:** **🟡 Ring 2 — P2P NETWORKING (Eclipse / Remote Memory DoS Risk)**
 - **Merge Commit:** `11ebbd907217a037d2c0c9be0395091e1d6395e1`
 - **Audited PR Tip Commit:** `c11508406e6e0cd14c07c58e23085e1a8ff543fa`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 

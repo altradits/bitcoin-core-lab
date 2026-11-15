@@ -51,8 +51,8 @@ If you want to understand why Bitcoin Core reviewers are the most conservative e
   ```
 - **The Lesson for Every PR You Review:** Never check `sum(A + B) <= MAX` without first checking that `A` and `B` individually lie within `[0, MAX_MONEY]` before addition!
 
-### 2. The 2018 Duplicate-Input Inflation Bug (`CVE-2018-17144`)
-- **What Happened:** To speed up block validation in Bitcoin Core 0.15, a PR removed a "redundant" duplicate-input check during UTXO spending, assuming it had already been checked earlier. An attacker mining a block could include a transaction whose `vin` array listed the **same `COutPoint(txid, vout)` twice** (`vin[0] == vin[1]`), spending a 10 BTC UTXO twice to create 20 BTC!
+### 2. The 2018 Duplicate-Input Bug (`CVE-2018-17144`)
+- **What Happened:** In Bitcoin Core 0.14, an optimization (PR #9049) skipped the duplicate-input check during block validation, assuming it was redundant. On 0.14 a block spending the same `COutPoint(txid, vout)` twice in one transaction crashed the node (assertion failure). In 0.15 the assert was rewritten to check only that the coin exists, which turned the crash into an inflation bug on 0.15 through 0.16.2: a miner could spend one UTXO twice in a single transaction. Reported 2018-09-17, fixed in 0.16.3 on 2018-09-18, fully disclosed 2018-09-20. Never exploited on mainnet.
 - **How It Was Fixed (`src/consensus/tx_check.cpp`, lines 36–45):**
   ```cpp
   // Check for duplicate inputs (see CVE-2018-17144)

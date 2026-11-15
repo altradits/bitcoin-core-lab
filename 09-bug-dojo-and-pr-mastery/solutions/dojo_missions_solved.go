@@ -164,7 +164,7 @@ func ValidateBIP125Replacement(originalFee, originalVsize, replacementFee, repla
 
 // ============================================================================
 // MISSION 5: PSBT Partial Signature Verification (Upstream PR #33014)
-// Upstream Reference: src/wallet/rpc/spend.cpp -> descriptorprocesspsbt
+// Upstream Reference: src/rpc/rawtransaction.cpp -> descriptorprocesspsbt
 // ============================================================================
 //
 // SELF-CONTAINED LESSON:

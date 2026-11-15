@@ -1,10 +1,11 @@
-# 🛡️ Guardian Security & Consensus Audit: `bitcoin/bitcoin#33014`
+# Audit: bitcoin/bitcoin#33014 `rpc: Fix internal bug in descriptorprocesspsbt when encountering invalid signatures`
 
 - **PR Title:** Merge bitcoin/bitcoin#33014: rpc: Fix internal bug in descriptorprocesspsbt when encountering invalid signatures
 - **Concentric Risk Ring:** **🟢 Ring 3 — Wallet / RPC / Build / Tests**
 - **Merge Commit:** `5311b15727f2f282274472184185423e441abd85`
 - **Audited PR Tip Commit:** `7e19ce200b2e65770907a818b02e4ec3da9c5374`
 - **Auditor:** Stanley Chege Thuita ([@altradits](https://github.com/altradits))
+- **Checked:** 2026-11-06
 
 ---
 
