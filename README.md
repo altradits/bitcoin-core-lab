@@ -1,5 +1,6 @@
 # Bitcoin Core and Lightning Lab
 
+[![CI](https://github.com/altradits/bitcoin-core-lab/actions/workflows/ci/badge.svg)](https://github.com/altradits/bitcoin-core-lab/actions/workflows/ci)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 A hands on lab for learning to contribute to Bitcoin Core and LND.
