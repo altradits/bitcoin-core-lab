@@ -12,7 +12,7 @@ import (
 
 // ============================================================================
 // LESSON 1: Double-SHA256 (SHA256d), Byte-Order Reversal & BIP340 Tagged Hashes
-// Upstream C++: src/crypto/sha256.cpp & src/uint256.h
+// Upstream C++: src/crypto/sha256.cpp & src/hash.h (TaggedHash)
 // ============================================================================
 
 // Hash256 computes Satoshi's double-SHA256: SHA256(SHA256(data)).
@@ -59,6 +59,7 @@ func TaggedHash(tag string, msg []byte) [32]byte {
 //   - 0xfd .. 0xffff (253..65535)  -> 3 bytes: 0xfd + uint16_le
 //   - 0x10000 .. 0xffffffff        -> 5 bytes: 0xfe + uint32_le
 //   - 0x100000000 .. uint64_max    -> 9 bytes: 0xff + uint64_le
+//
 // CONSENSUS RULE: CompactSize MUST be minimally encoded (e.g., encoding 100 as 0xfd6400 is rejected!).
 func EncodeCompactSize(n uint64) []byte {
 	if n < 253 {
@@ -133,9 +134,10 @@ func DecodeCompactSize(r *bytes.Reader) (uint64, error) {
 
 // CompactBitsToTarget decodes Bitcoin's 32-bit compact "nBits" target representation
 // into a 256-bit big.Int threshold:
-//   exponent = nBits >> 24
-//   mantissa = nBits & 0x007fffff
-//   target   = mantissa * 2^(8 * (exponent - 3))
+//
+//	exponent = nBits >> 24
+//	mantissa = nBits & 0x007fffff
+//	target   = mantissa * 2^(8 * (exponent - 3))
 func CompactBitsToTarget(nBits uint32) *big.Int {
 	exponent := int(nBits >> 24)
 	mantissa := nBits & 0x007fffff
@@ -166,8 +168,9 @@ func VerifyBlockHeaderPoW(header80 []byte) (blockHashHex string, validPoW bool, 
 
 // CalculateNextWorkRequired implements Satoshi's 2016-block difficulty retargeting algorithm
 // in src/pow.cpp:
-//   actualTimespan = clamped to [targetTimespan / 4, targetTimespan * 4]
-//   newTarget = oldTarget * actualTimespan / targetTimespan
+//
+//	actualTimespan = clamped to [targetTimespan / 4, targetTimespan * 4]
+//	newTarget = oldTarget * actualTimespan / targetTimespan
 func CalculateNextWorkRequired(oldTarget *big.Int, actualTimespanSec int64) *big.Int {
 	const TargetTimespanSec int64 = 14 * 24 * 60 * 60 // 1,209,600 seconds (2 weeks)
 	if actualTimespanSec < TargetTimespanSec/4 {

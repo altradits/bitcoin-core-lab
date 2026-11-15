@@ -1,145 +1,210 @@
-# Stage 11: Apple M1 Sovereign Node, Wallet of Satoshi Migration, Fee/Speed Mastery & PR Fix Proposals
+# Stage 11: Run a node on a small machine
 
-> *"Your Apple M1 MacBook Air is your sovereign Bitcoin command center. On this single machine, you compile Bitcoin Core from C++ source, run your own pruned Mainnet node inside 16.5 GB of disk space, graduate from custodial apps like Wallet of Satoshi to your own verifiable `bc1q...` / `bc1p...` cold/watch-only vault, minimize miner fees with SegWit/Taproot/RBF/CPFP, and review upstream `bitcoin/bitcoin` PRs using Satoshi's original consensus principles."*
+You size a pruned mainnet node for limited disk and RAM, compare the
+four networks, practice fee math across address types, and walk a
+checklist for moving from a custodial wallet to your own node wallet.
+Hands on work stays on regtest. Mainnet steps are read only planning
+plus one optional signet sync.
 
----
+## Goal
 
-## Part 1: Hardware Audit of Your MacBook Air (`MacBookAir10,1`)
+After this stage you can write a `bitcoin.conf` that fits your disk,
+explain pruning, estimate fees by address type, and describe a safe
+custodial to self custody move.
 
-We inspected the exact hardware specifications of this Mac so your Bitcoin node never slows down your laptop or fills up your SSD:
+## Why it matters
 
-| Component | Detected Spec on Your Mac | What It Means for Bitcoin Core (`bitcoind`) | Optimal `bitcoin.conf` Setting |
-| :--- | :--- | :--- | :--- |
-| **Chip / CPU** | **Apple M1 (`arm64`, 8 Cores: 4 Perf + 4 Eff)** | Hardware ARMv8 SHA-256 extensions validate blocks & `secp256k1` signatures at workstation speed. | `par=4` (uses the 4 Performance cores) |
-| **Memory (RAM)** | **8 GB Unified Memory** | Must balance UTXO cache (`dbcache`) so macOS and your compiler never swap to disk. | `dbcache=1024` (1 GB RAM for UTXO set) |
-| **SSD Storage** | **228 GiB Total / ~68 GiB Available Free** | An unpruned 700 GB node **will not fit**. You **must** run in **Pruned Mode** (`prune=5500`). | `prune=5500` (~5.5 GB blocks + ~11 GB UTXO set = **~16.5 GB total**, leaving **>50 GB free!**) |
-| **Network** | **Local + Wi-Fi** | Cap inbound/outbound peers so background P2P traffic stays light. | `maxconnections=40` |
+Most students run small laptops, not servers. Pruning keeps a fully
+validating node in a few GB by deleting old block files after
+validation. The skills transfer directly: fee estimation by vByte,
+UTXO hygiene, and descriptor wallets are the same on every network.
+This stage connects the lab to the real world without risking real
+money.
 
-### Your Tailored `bitcoin.conf` for This M1 MacBook Air
-When you are ready to run Signet and Pruned Mainnet alongside Regtest, place these settings in `/Users/mac/Library/Application Support/Bitcoin/bitcoin.conf`:
+## Prerequisites
 
-```ini
-daemon=1
-server=1
-prune=5500
-dbcache=1024
-par=4
-maxconnections=40
-walletrbf=1
-rpcallowip=127.0.0.1
-```
+* Stage 07 (descriptor wallets; the live check reuses them).
+* Go 1.22 or later.
+* A running regtest node for the live check.
 
----
-
-## Part 2: Moving Sats From "Wallet of Satoshi" to Your Sovereign Mac Wallet
-
-Right now, you hold sats in **Wallet of Satoshi (WoS)**. Here is the critical difference:
-- **Wallet of Satoshi is Custodial:** WoS holds the private keys. Your balance in the app is a database promise until you withdraw those sats on-chain to an address whose keys **you** control.
-- **Your Bitcoin Core Wallet on This Mac is Sovereign:** When you generate a `bc1q...` (Native SegWit) or `bc1p...` (Taproot) address on your own `bitcoind` node, **you** hold the cryptographic keys and **your own compiled C++ code** verifies every block.
-
-### Step-by-Step: How to Create Your Secure Mac Wallet & Withdraw From Wallet of Satoshi
-
-Follow this exact sequence when your Mainnet node is synced (`verificationprogress` = `0.9999+` in `bitcoin-cli getblockchaininfo`):
+## Setup
 
 ```bash
-# STEP 1: Create your encrypted Mainnet Descriptor Wallet on your Mac
-# (Replace YOUR_STRONG_PASSPHRASE with a passphrase written on physical paper!)
-bitcoin-cli createwallet "stanley_mainnet_vault" false false "YOUR_STRONG_PASSPHRASE"
-
-# STEP 2: Back up your wallet file AND your public descriptors to a USB drive / offline paper
-bitcoin-cli -rpcwallet=stanley_mainnet_vault backupwallet "/Users/mac/stanley_mainnet_vault_backup.dat"
-bitcoin-cli -rpcwallet=stanley_mainnet_vault listdescriptors false > "/Users/mac/stanley_public_descriptors.json"
-
-# STEP 3: Generate a fresh Native SegWit (bc1q...) or Taproot (bc1p...) receiving address
-MY_MAINNET_ADDR=$(bitcoin-cli -rpcwallet=stanley_mainnet_vault getnewaddress "from_wallet_of_satoshi" "bech32")
-echo "Send sats to this Mainnet address: $MY_MAINNET_ADDR"
-
-# STEP 4: ALWAYS verify your node recognizes & can solve this address BEFORE sending real money!
-bitcoin-cli -rpcwallet=stanley_mainnet_vault getaddressinfo "$MY_MAINNET_ADDR"
-# Confirm output shows: "ismine": true, "solvable": true
+go -C ./11-from-regtest-to-live-mainnet test ./...
 ```
 
-### STEP 5: Sending Sats From Wallet of Satoshi (The Golden Fee Rules!)
-1. **Do NOT withdraw tiny amounts (`5,000 sats`) on-chain!**
-   - Wallet of Satoshi charges an on-chain withdrawal fee, **and** every time you receive an on-chain payment, it creates one separate digital coin (`UTXO`) in your wallet.
-   - If you withdraw `10,000 sats` ten separate times, you end up with **10 tiny UTXOs**. Later, when you want to spend `100,000 sats`, your transaction must include all 10 inputs (`10 x 68 vBytes = 680 vBytes`), multiplying your future miner fees by **7x**!
-   - **Best Practice:** Keep accumulating small daily Lightning payments inside Wallet of Satoshi until you reach a healthy chunk (e.g., **`100,000` to `500,000+ sats`**), then withdraw in **ONE single on-chain transaction** to `$MY_MAINNET_ADDR` during a quiet mempool period (usually weekends when feerates drop to **`1–3 sat/vB`**).
-2. **Test With One Small Withdrawal First, Then Send the Rest:**
-   - The very first time you use your Mainnet wallet, practice the full lifecycle (receive, unlock wallet with `walletpassphrase`, sign, verify backup) before moving large savings.
+Expected output:
 
----
+```text
+ok  	github.com/altradits/bitcoin-core-lab/11-from-regtest-to-live-mainnet	0.474s
+```
 
-## Part 3: How to Minimize Transaction Fees & Maximize Speed When Spending
+## Steps
 
-Because Bitcoin miners charge fees per **virtual byte (`sat/vB`)**—*not* per dollar or per BTC sent—you control your fee and your confirmation speed using the exact protocol mechanics you built in **Stages 02, 03, and 05**:
+### Step 1: Run the unit tests verbosely
 
-### Technique 1: Use `bc1q...` (Native SegWit) & `bc1p...` (Taproot)
-As proven in [`EstimateTxVBytes`](file:///Users/mac/bitcoin-core-lab/11-from-regtest-to-live-mainnet/sovereign_wallet_builder.go#L97-L120):
-- **Legacy (`1...`):** `148 vB` per input, `34 vB` per output (`226 vB` for a 1-in, 2-out tx).
-- **Native SegWit (`bc1q...`):** `68 vB` per input, `31 vB` per output (`141 vB` for a 1-in, 2-out tx — **38% cheaper fees!**).
-- **Taproot (`bc1p...`):** `57.5 vB` per input, `43 vB` per output (cheapest input size when consolidating multiple UTXOs!).
-
-### Technique 2: Start With a Low Fee + Accelerate Instantly With `bumpfee` (BIP125 RBF)
-Never overpay out of fear! Because we set `walletrbf=1` in your `bitcoin.conf`:
-1. **When you are not in a rush (Minimize Fees):**
-   Send with a low target (e.g., 6 to 24 blocks) or explicit low feerate (`fee_rate=2` sat/vB):
-   ```bash
-   bitcoin-cli -rpcwallet=stanley_mainnet_vault sendtoaddress "bc1q..." 0.005 "" "" false true null "unset" null 2.0
-   ```
-2. **If you suddenly need Instant Next-Block Speed (Maximize Speed):**
-   Instead of waiting hours, run `bumpfee` (Stage 03) to replace the unconfirmed transaction in the mempool with a higher fee in 1 second:
-   ```bash
-   bitcoin-cli -rpcwallet=stanley_mainnet_vault bumpfee "<stuck_txid>" '{"fee_rate": 15.0}'
-   ```
-
-### Technique 3: Unstick Incoming Payments With `CPFP` (Child-Pays-For-Parent)
-What if Wallet of Satoshi (or someone paying you) broadcasts your incoming payment with a `1 sat/vB` fee and the mempool spikes to `20 sat/vB`?
-- You don't have to wait! Even while the incoming UTXO has `0 confirmations`, your Bitcoin Core wallet sees it in the mempool (`listunspent 0 0`).
-- Spend that unconfirmed UTXO back to a fresh address in your own wallet with a higher fee. Miners evaluate the **Parent + Child Package Feerate together** (Stage 03 & Stage 05) and mine both transactions in the very next block!
-
-### Technique 4: Batch Multiple Payments Into One (`sendmany`)
-If you need to pay 4 people, **never** send 4 separate transactions (`4 x 141 vB = 564 vB`). Use `sendmany` so all 4 outputs share a single input (`10.5 + 68 + 5*31 = 233.5 vB`), cutting your miner fee by **nearly 60%**:
 ```bash
-bitcoin-cli -rpcwallet=stanley_mainnet_vault sendmany "" '{"bc1q_person1...":0.001, "bc1q_person2...":0.002}'
+go -C ./11-from-regtest-to-live-mainnet test -v ./...
 ```
 
----
+Expected output:
 
-## Part 4: How to Propose Exact Fixes in Open-Source PR Reviews (Based on Satoshi's Principles)
+```text
+--- PASS: TestAllBitcoinNetworksGraduationLadder (0.00s)
+--- PASS: TestGenerateLaptopMainnetConfigM1Safety (0.00s)
+--- PASS: TestEstimateTxVBytesFeeMinimization (0.00s)
+ok
+```
 
-When you review another developer's Pull Request on `bitcoin/bitcoin`, you don't just say *"Looks good"* or *"This is broken."* Respected open-source reviewers **diagnose the exact flaw using Bitcoin Core's historical principles and propose the exact code fix**.
+The tests pin the four networks (ports, address prefixes), the small
+machine config values, and the fee math (226 vB legacy vs 141 vB
+SegWit for 1 input 2 outputs).
 
-Here is your **Satoshi Guardian PR Fix Proposal Matrix**—use this whenever you inspect a PR diff with `./lab.sh pr-audit <PR_NUM>`:
+### Step 2: Run the node sizing program
 
-| What You Spot in the Author's Diff | Which Satoshi Principle / Historical Bug It Violates | How to Propose the Exact Fix to the Author on GitHub |
+```bash
+go -C ./11-from-regtest-to-live-mainnet run .
+```
+
+Expected output (descriptors and addresses differ):
+
+```text
+STAGE 11: SMALL MACHINE NODE, WALLET MIGRATION & FEE MATH
+...
+[1] SMALL MACHINE NODE PROFILE (EXAMPLE: 8 GB RAM, 60+ GB FREE DISK):
+  • Node Mode         : Pruned Mainnet (-prune=5500 -dbcache=1024 -par=4)
+  • Disk Footprint    : about 5.5 GB of block files plus the UTXO set database
+...
+[2] THE 4 BITCOIN NETWORKS BITCOIN CORE SUPPORTS:
+  • 1. Regtest (Stage 00-10 Sandbox)       | Prefix: bcrt1... | Flag: -regtest
+  • 2. Signet (BIP325 Global Test Network) | Prefix: tb1... | Flag: -signet
+  • 3. Testnet4 (BIP94 Global PoW Testnet) | Prefix: tb1... | Flag: -testnet4
+  • 4. Mainnet (Live Bitcoin)              | Prefix: bc1... | Flag: (none)
+...
+[3] FEE MATH (WHY ADDRESS TYPE AND UTXO COUNT MATTER):
+  • 1-Input, 2-Output Legacy (1...)      : 226 vBytes (at 10 sat/vB = 2260 sats)
+  • 1-Input, 2-Output Native SegWit(bc1q): 141 vBytes (at 10 sat/vB = 1410 sats, about 38% less)
+  • 5-Input Consolidation SegWit (bc1q)  : 413 vBytes vs Taproot (bc1p): 384 vBytes
+...
+[4] LIVE WALLET CHECK ON THIS MACHINE (COLD SIGNER AND WATCH ONLY VAULT):
+  • Public BIP84 Descriptor (no private keys):
+    wpkh([61a93833/84h/1h/0h]tpubDDfbE8xyK5wcPXM5J9DMWTkinUBC82bhK9ndUVkuY1YvA34iUJDHXQSbSv83415BsSuZqL1BtrDpBoq1RBrCCQdd6B4YzpwLirshx9VuZda/0/*)#8l3mypq4
+  • Watch Only Receiving Address : bcrt1q...
+```
+
+Section 1 sizes the node: `prune=5500` caps block files near 5500 MiB
+(the minimum allowed is 550 MiB), `dbcache=1024` caps the UTXO cache
+at 1 GB, `par=4` uses 4 validation threads. Section 4 repeats the
+Stage 07 descriptor check on your live regtest node. If your node uses
+a custom datadir, export `BITCOIN_CLI` first (same convention as
+Stage 06).
+
+### Step 3: Write your own bitcoin.conf (planning only)
+
+Copy the generated config from `GenerateLaptopMainnetConfig` into a
+draft file. Do not start mainnet yet. Read each line and answer:
+
+1. Where does `prune=5500` store its data on your OS, and how much
+   free disk remains after 5.5 GB plus the UTXO set?
+2. What happens if you set `dbcache` above half your RAM?
+3. Why is `walletrbf=1` useful when fees spike?
+
+Done when you can answer all three without looking.
+
+### Step 4 (optional): Sync signet and measure real disk use
+
+Signet is small and syncs fast. Start it with a separate datadir so
+regtest is untouched:
+
+```bash
+bitcoind -signet -datadir=/tmp/bitcoin-signet -daemon
+sleep 30
+bitcoin-cli -signet -datadir=/tmp/bitcoin-signet getblockchaininfo | python3 -c "import sys,json; b=json.load(sys.stdin); print('blocks:', b['blocks'], 'size_on_disk:', b.get('size_on_disk'))"
+```
+
+Expected output (numbers grow over time):
+
+```text
+blocks: 250000 size_on_disk: 900000000
+```
+
+This shows real `size_on_disk` accounting on a live network. Stop it
+when done:
+
+```bash
+bitcoin-cli -signet -datadir=/tmp/bitcoin-signet stop
+```
+
+### Step 5: Migration checklist (read, do not run on mainnet yet)
+
+Moving from a custodial wallet to your own node wallet:
+
+1. Sync and verify. `verificationprogress` must read `0.9999` or
+   higher in `getblockchaininfo` before you trust addresses.
+2. Create an encrypted descriptor wallet with a passphrase stored on
+   paper, never in a file or chat log.
+3. Back up the wallet file and `listdescriptors` output to two
+   separate offline media.
+4. Generate one receiving address and confirm `getaddressinfo` shows
+   `ismine: true` before sharing it.
+5. Test with a small amount first, spend it once, restore from backup
+   on a second machine if you can, then move the rest in as few
+   UTXOs as possible during low fee periods.
+
+Never paste seeds, passphrases, or private keys into the lab, issues,
+or chat logs.
+
+## Checkpoint
+
+```bash
+./lab.sh check 11
+```
+
+Expected output:
+
+```text
+PASS: stage 11. unit tests passed; live wallet check reached the node.
+```
+
+The check runs the unit tests plus the Step 2 program and requires
+section 4 to print a descriptor. You can also rerun Steps 1 and 2 by
+hand.
+
+## Common errors and fixes
+
+| Error | Cause | Fix |
 | :--- | :--- | :--- |
-| **1. Adding two `CAmount` (`int64_t`) values without checking `MoneyRange` before & after** | **Supply Invariant (`CVE-2010-5139` — 184B BTC Overflow Bug):** Adding signed/unsigned integers can wrap around or exceed `MAX_MONEY` (`21,000,000 BTC`). | *"In `<file>:<line>`, accumulating `nValueOut += out.nValue` without checking `MoneyRange(out.nValue)` and `MoneyRange(nValueOut)` risks integer overflow (similar to `CVE-2010-5139` in `src/consensus/tx_check.cpp`). Suggest adding `if (!MoneyRange(val)) return ...` before adding."* |
-| **2. Iterating over transaction inputs or UTXOs without checking for duplicates** | **Uniqueness Invariant (`CVE-2018-17144` — Duplicate Input Inflation Bug):** Spending the same `COutPoint` twice inflates supply. | *"Could `vout` / `vin` contain duplicate outpoints here if called before `CheckTransaction`? To preserve the `CVE-2018-17144` uniqueness invariant, we should either `Assume` deduplicated inputs or track seen `COutPoint`s in a `std::set`."* |
-| **3. Using raw byte size (`GetTotalSize()`) instead of virtual size (`GetVirtualTransactionSize()`) for fee calculations** | **BIP141 SegWit Weight & `PR #32800` SigOp Vsize Rule:** Fees must divide by `max(weight/4, sigop_weight/4)` so high-sigop or witness-heavy txs cannot underpay miners. | *"In `<file>:<line>`, dividing `nFee` by raw serialized size undercharges high-sigop transactions (see `PR #32800`). Please use `GetVirtualTransactionSize(tx, nSigOpCost, ::nBytesPerSigOp)` so sigop-heavy transactions pay for the block weight they consume."* |
-| **4. Allowing a mempool replacement without checking BOTH feerate AND absolute fee increase** | **BIP125 Rule #3 & #4 (`src/policy/rbf.cpp` — Free Relay Bandwidth DoS):** A higher feerate alone on a tiny tx allows free bandwidth relay attacks. | *"Checking only `new_feerate > old_feerate` violates BIP125 Rule #4 (`PaysForRBF` in `src/policy/rbf.cpp`). A smaller replacement tx could have a higher sat/vB while paying fewer total satoshis, enabling free P2P relay exhaustion. Suggest calling `PaysForRBF(...)`."* |
-| **5. Accepting a cryptographic key, seed, or PSBT signature without validating bounds/pubkey match** | **BIP32 Seed Bounds (`PR #35320`) & PSBT Signer Check (`PR #33014`):** Silent truncation or unverified external signatures corrupt wallets. | *"Per `PR #35320` / `PR #33014`, we should not trust external bytes without explicit bounds/signature verification. Suggest returning `false` if `seed.size() < 16 || seed.size() > 64` (or verifying the signature against the target pubkey before inserting into `partial_sigs`)."* |
-| **6. The PR fixes a bug in `src/`, but only adds a 'happy path' test** | **Maintainer Mutation-Test Standard:** Every bug-fix PR must include a negative test that fails on `master` and passes on the PR branch. | *"Approach ACK! To prevent future regressions, could you add a negative test case in `<test_file>` that passes the invalid `<input>` and asserts `BOOST_CHECK_EQUAL(..., expected_error)`? I tested locally that reverting your check causes that test to fail."* |
+| Section 4 prints only the Note line | Node is down or `BITCOIN_CLI` unset for custom datadirs | Start the node; export `BITCOIN_CLI` |
+| `Wallet not found` in section 4 | Stage 07 wallets missing | Run Stage 07 Step 2 first |
+| Signet `Could not connect` | Daemon still starting | Wait 30 seconds and retry |
+| `Prune mode is incompatible with -txindex` | Config conflict | Pruned nodes cannot serve the full transaction index; drop `-txindex` |
 
-### Copy-Paste Template When Proposing a Fix on someone's GitHub PR:
+## Going further
 
-When you find an issue while running `./lab.sh pr-audit <PR_NUM>` or `./lab.sh drill 7`, post this constructive comment on GitHub:
+1. Price your own wallet. List your regtest UTXOs, count inputs for a
+   typical spend, and estimate its vBytes with `EstimateTxVBytes`.
+   Done when your estimate is within 5 vB of a real `decoderawtransaction`.
+2. Try assumeUTXO sync. Read `doc/` notes on assume valid snapshots
+   and sync signet that way. Done when you can explain what security
+   tradeoff it makes.
+3. Measure dbcache effect. Sync signet twice with `dbcache=100` and
+   `dbcache=1024` and compare wall time. Done when both numbers are
+   on screen.
 
-````markdown
-Concept ACK — solving `<problem>` is a great improvement.
+## Contribution task
 
-While reviewing `<file_path>` and testing locally on macOS M1 (`arm64`), I noticed an edge case at line `<line_number>` regarding `<invariant_name>`:
+Pick one `bitcoin.conf` option from this stage (`prune`, `dbcache`,
+`par`, `maxconnections`) and check that its help text matches the
+source in `src/init.cpp`. If the help text is unclear, propose better
+wording in a lab docs issue with the exact lines. Upstream doc fixes
+are welcome once a maintainer agrees.
 
-### Issue & Historical Context
-Currently, `<current_code>` does not guard against `<edge_case>` (similar to the invariant enforced in `<src/consensus/tx_check.cpp or PR #XXXXX>`). If a caller/peer passes `<malicious_input>`, `<consequence>` can occur.
+## Sources
 
-### Proposed Fix
-We can guard this upfront with:
-```suggestion
-if (<guard_condition>) {
-    return <error_return>;
-}
-```
-
-### Verification
-I applied this guard locally, recompiled `test_bitcoin` (`cmake --build build --target test_bitcoin`), and verified that adding a negative test case in `src/test/<test_file>.cpp` catches the unguarded case and passes with the fix. Happy to re-test and post a `Tested ACK` once updated!
-````
+* `src/init.cpp` (`-prune` help: MiB target, minimum 550) and
+  `src/validation.h` (`MIN_DISK_SPACE_FOR_BLOCK_FILES`).
+* `doc/reduce-memory.md` and `doc/reduce-traffic.md` in
+  bitcoin/bitcoin: small machine tuning.
+* BIP325 (Signet) and BIP94 (Testnet4): the test networks.
+* `bitcoin-cli -regtest help getblockchaininfo` (`size_on_disk`,
+  `verificationprogress`).

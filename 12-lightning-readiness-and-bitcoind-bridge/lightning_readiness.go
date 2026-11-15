@@ -13,14 +13,12 @@ import (
 )
 
 // ============================================================================
-// STAGE 12: BITCOIN CORE -> LIGHTNING NETWORK READINESS, POLAR & DOCKER BRIDGE
+// STAGE 12: BITCOIN CORE TO LIGHTNING READINESS, POLAR AND DOCKER BRIDGE
 // ============================================================================
-// Core Truth: "Lightning IS Bitcoin."
 // Every Lightning channel open, off-chain payment, HTLC, and channel close is
-// 100% built out of standard Bitcoin Core Layer-1 transactions.
-// Once you master the 6 Layer-1 Prerequisites below, you use your installed
-// Polar + Docker networks ("Addis Ababa Bootcamp" & "Bitrust Bootcamp 2026")
-// and native /Users/mac/bin/lncli to simulate multi-node LND, CLN, and Eclair!
+// built out of standard Bitcoin layer 1 transactions. This program lists the
+// 6 layer 1 skills the lab teaches, simulates channel state updates, and
+// inspects local Polar networks in ~/.polar when present.
 // ============================================================================
 
 type L1Prerequisite struct {
@@ -127,7 +125,8 @@ func EvaluateBroadcastedCommitment(state *ChannelState, currentBlockHeight int, 
 	return state.AliceSats, state.BobSats, "FORCE_CLOSE_MATURED: OP_CSV timelock expired; both Alice and Bob have swept their exact channel balances on-chain."
 }
 
-// PolarNetworkSummary holds the parsed topology of Stanley's local ~/.polar/networks/networks.json
+// PolarNetworkSummary holds the parsed topology of one entry in
+// ~/.polar/networks/networks.json.
 type PolarNetworkSummary struct {
 	ID             int
 	Name           string
@@ -183,8 +182,12 @@ func InspectLocalPolarNetworks(polarDir string) ([]PolarNetworkSummary, error) {
 			sum.BitcoinNodes = append(sum.BitcoinNodes, fmt.Sprintf("%s (bitcoind v%s)", b.Name, b.Version))
 		}
 		for _, l := range n.Nodes.Lightning {
-			sum.LightningNodes = append(sum.LightningNodes, fmt.Sprintf("%s (%s v%s | REST:%d gRPC:%d)",
-				l.Name, l.Implementation, l.Version, l.Ports.REST, l.Ports.GRPC))
+			ports := fmt.Sprintf("REST:%d", l.Ports.REST)
+			if l.Ports.GRPC != 0 {
+				ports += fmt.Sprintf(" gRPC:%d", l.Ports.GRPC)
+			}
+			sum.LightningNodes = append(sum.LightningNodes, fmt.Sprintf("%s (%s v%s | %s)",
+				l.Name, l.Implementation, l.Version, ports))
 		}
 		out = append(out, sum)
 	}
@@ -192,6 +195,14 @@ func InspectLocalPolarNetworks(polarDir string) ([]PolarNetworkSummary, error) {
 }
 
 func runBitcoinCLI(args ...string) (string, error) {
+	if override := os.Getenv("BITCOIN_CLI"); override != "" {
+		full := append(strings.Fields(override), args...)
+		out, err := exec.Command(full[0], full[1:]...).CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		}
+		return strings.TrimSpace(string(out)), nil
+	}
 	cmdArgs := append([]string{"-regtest"}, args...)
 	out, err := exec.Command("bitcoin-cli", cmdArgs...).CombinedOutput()
 	if err != nil {
@@ -202,7 +213,7 @@ func runBitcoinCLI(args ...string) (string, error) {
 
 func main() {
 	fmt.Println("======================================================================")
-	fmt.Println("⚡ STAGE 12: BITCOIN CORE -> LIGHTNING READINESS, POLAR & DOCKER LAB")
+	fmt.Println("STAGE 12: BITCOIN CORE TO LIGHTNING READINESS, POLAR AND DOCKER LAB")
 	fmt.Println("======================================================================")
 
 	fmt.Println("\n[1] THE 6 BITCOIN CORE SKILLS YOU MUST HAVE BEFORE LIGHTNING:")
@@ -236,20 +247,27 @@ func main() {
 	fmt.Printf("  • Honest Settlement on bitcoind (State #2)  : %s (Alice=%d, Bob=%d)\n",
 		honestMsg, aliceFinal, bobFinal)
 
-	fmt.Println("\n[3] DETECTED POLAR & DOCKER LIGHTNING NETWORKS ON THIS MAC (~/.polar):")
-	if nets, err := InspectLocalPolarNetworks("/Users/mac/.polar"); err == nil {
+	fmt.Println("\n[3] POLAR AND DOCKER LIGHTNING NETWORKS IN ~/.polar:")
+	home, _ := os.UserHomeDir()
+	if nets, err := InspectLocalPolarNetworks(filepath.Join(home, ".polar")); err == nil {
 		for _, n := range nets {
 			fmt.Printf("  • Polar Network #%d: %q (%s)\n", n.ID, n.Name, n.Path)
 			fmt.Printf("    - Bitcoin L1 Backend : %s\n", strings.Join(n.BitcoinNodes, ", "))
 			fmt.Printf("    - Lightning L2 Nodes : %s\n", strings.Join(n.LightningNodes, ", "))
 			if _, err := os.Stat(n.AliceMacaroon); err == nil {
-				fmt.Printf("    - Alice Admin Macaroon Verified: %s\n", n.AliceMacaroon)
+				fmt.Printf("    - Alice Admin Macaroon Present: %s\n", n.AliceMacaroon)
 			}
 		}
+	} else {
+		fmt.Println("  • None found. Install Polar (https://lightningpolar.com) to add some,")
+		fmt.Println("    then create a network with at least one LND node.")
 	}
 
 	if height, err := runBitcoinCLI("getblockcount"); err == nil {
-		fmt.Printf("\n[4] LIVE BITCOIND <-> LND RPC BRIDGE VERIFIED (Current L1 Block Height: #%s)\n", height)
+		fmt.Printf("\n[4] LOCAL BITCOIND REACHABLE (CURRENT REGTEST HEIGHT: #%s)\n", height)
+		fmt.Println("    An LND node uses this RPC plus ZMQ block events to track channels.")
+	} else {
+		fmt.Printf("\n[4] No local bitcoind on regtest (%v). Start it to finish the bridge check.\n", err)
 	}
 	fmt.Println("======================================================================")
 }

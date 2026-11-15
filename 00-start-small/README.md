@@ -142,7 +142,7 @@ three things: ask the node for state, make an address, send coins.
 Expected output:
 
 ```text
-Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 57-70):
+Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 59-72):
 	// 1. Check each output individually AND cumulative sum (CVE-2010-5139 defense)
 	var nValueOut int64 = 0
 	for _, txout := range tx.Vout {

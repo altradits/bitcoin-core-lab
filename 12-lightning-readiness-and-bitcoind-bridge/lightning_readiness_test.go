@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -55,13 +56,45 @@ func TestChannelBalanceConservationAndRevocationPenalty(t *testing.T) {
 }
 
 func TestInspectLocalPolarNetworksIfPresent(t *testing.T) {
-	if _, err := os.Stat("/Users/mac/.polar/networks/networks.json"); err == nil {
-		nets, err := InspectLocalPolarNetworks("/Users/mac/.polar")
+	home, _ := os.UserHomeDir()
+	polarDir := filepath.Join(home, ".polar")
+	if _, err := os.Stat(filepath.Join(polarDir, "networks", "networks.json")); err == nil {
+		nets, err := InspectLocalPolarNetworks(polarDir)
 		if err != nil {
 			t.Fatalf("failed to parse ~/.polar/networks/networks.json: %v", err)
 		}
 		if len(nets) < 1 {
 			t.Fatalf("expected at least 1 configured Polar network")
 		}
+	} else {
+		t.Skip("no ~/.polar/networks/networks.json on this machine")
+	}
+}
+
+func TestInspectLocalPolarNetworksFixture(t *testing.T) {
+	dir := t.TempDir()
+	netDir := filepath.Join(dir, "networks")
+	if err := os.MkdirAll(netDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	fixture := `{"networks": [{"id": 7, "name": "fixture", "path": "/tmp/fixture/7",
+"nodes": {"bitcoin": [{"name": "backend1", "version": "30.0"}],
+"lightning": [{"name": "alice", "implementation": "LND", "version": "0.20.0-beta",
+"ports": {"rest": 8081, "grpc": 10001, "p2p": 9735}}]}}]}`
+	if err := os.WriteFile(filepath.Join(netDir, "networks.json"), []byte(fixture), 0644); err != nil {
+		t.Fatal(err)
+	}
+	nets, err := InspectLocalPolarNetworks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nets) != 1 || nets[0].ID != 7 || nets[0].Name != "fixture" {
+		t.Fatalf("unexpected parse result: %+v", nets)
+	}
+	if len(nets[0].BitcoinNodes) != 1 || len(nets[0].LightningNodes) != 1 {
+		t.Fatalf("unexpected node lists: %+v", nets[0])
+	}
+	if !strings.Contains(nets[0].LightningNodes[0], "LND v0.20.0-beta") {
+		t.Fatalf("unexpected lightning entry: %s", nets[0].LightningNodes[0])
 	}
 }
