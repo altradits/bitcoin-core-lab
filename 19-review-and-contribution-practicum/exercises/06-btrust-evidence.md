@@ -3,8 +3,9 @@
 **Requirements:** use the verified ones in [`../../BTRUST_AND_BITDEVS_PLAYBOOK.md`](../../BTRUST_AND_BITDEVS_PLAYBOOK.md)
 (checked 2026-11-09). In short: the **Starter Grant** asks for at least **five merged code-based PRs**
 (excluding docs, not labelled "good first issue") and at least **two references**, and the page
-showed "Applications closed" that day. **Btrust Builders** is for Africa, asks for 3+ years of production
-experience and 20+ hours/week, includes a code challenge, and is open all year. btrust.tech/grants
+showed "Applications closed" that day. **Btrust Builders** is for Africa; btrust.tech asks for 3+ years of production
+experience and 20+ hours/week with a code challenge, while builders.btrust.tech asks for one year and
+offers free pathways, the BOSS challenge and a Fellowship (playbook Part 2A, checked 2026-11-15). btrust.tech/grants
 says applicants outside the listed regions are considered "contingent on their Proof of Work".
 Re-check the live pages before applying. Anything the playbook marks `UNVERIFIED` stays unverified.
 

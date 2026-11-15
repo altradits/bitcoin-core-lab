@@ -15,7 +15,7 @@ Last updated: ____-__-__
 | Question | Your answer |
 |---|---|
 | Route now: Builders / Starter Grant / other (and why) | |
-| Builders: do I have 3+ years of software work in a production environment? Where can I show it? | |
+| Builders: how many years of software work in a production environment do I have (btrust.tech asks 3+, builders.btrust.tech asks 1+)? Where can I show it? | |
 | Builders: can I commit at least 20 h/week? | |
 | Target project for the Starter Grant (one, specific) | |
 | Why this project (review speed, my skills, community need) | |

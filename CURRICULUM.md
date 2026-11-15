@@ -260,9 +260,10 @@ These criteria quote the Btrust **Starter Grant** page as checked on 2026-11-09 
 Five merged non-trivial PRs in `bitcoin/bitcoin` can take a long time. Choosing a
 project with a faster review cycle (for example BDK, LDK, rust-bitcoin or
 libsecp256k1) is a legitimate choice. Make it at Gate 2 and record why.
-The **Btrust Builders** program has different, lighter entry criteria (3+ years of
-production experience, an active GitHub, at least 20 h/week, and a code challenge). It is
-a valid route before Gate 3. See the playbook.
+The **Btrust Builders** program has different, lighter entry criteria: an active GitHub,
+production experience (btrust.tech says 3+ years, builders.btrust.tech says one year), time each
+week, and a code challenge or the BOSS preliminary challenge. Its self-paced pathways are always
+open. It is a valid route before Gate 3. See the playbook, Part 2A.
 
 ---
 
