@@ -31,7 +31,7 @@ them automatically:
 # 2. Reimplement them from memory, then test:
 ./lab.sh recall check
 
-# 3. Restore the reference solutions when done:
+# 3. Only after `check` passes, or after 3 honest attempts, look at the reference solutions:
 ./lab.sh recall solve
 ```
 
@@ -57,7 +57,7 @@ only, never copied). Details in [LICENSES.md](../LICENSES.md).
 
 ## 3. Stage to book map
 
-Which chapter to read when a stage assumes a skill you lack:
+The order you study in, and the competency IDs, come from [CURRICULUM.md](../CURRICULUM.md). This table only says where to read when you are stuck:
 
 | Stage | Programming gap | Protocol gap | Verify with |
 | :--- | :--- | :--- | :--- |
@@ -65,13 +65,20 @@ Which chapter to read when a stage assumes a skill you lack:
 | [01: Node basics](../01-node-foundations/README.md) | [Book 1: Ch 1-2](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md), [Book 2: Ch 1](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [SATOSHI_WHITEPAPER.md](./SATOSHI_WHITEPAPER.md), `./lab.sh book mb ch02` | `./lab.sh recall check` (Drill 1) |
 | [02: Raw transactions](../02-raw-tx-and-mempool/README.md) | [Book 1: Ch 1, 3](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 1-2](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), `./lab.sh bip 141` | `./lab.sh recall check` (Drills 1-3, 6) |
 | [03: RBF and CPFP](../03-rbf-and-cpfp/README.md) | [Book 1: Ch 4](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 2-3](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), `./lab.sh bip 125` | `./lab.sh recall check` (Drills 6-7) |
-| [04: Functional tests](../04-functional-test-framework/README.md) | [Book 2: Ch 5](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [PR-36439 journey](../pr-reviews/merged-journeys/PR-36439-JOURNEY.md) | `./lab.sh practice 04` |
-| [05: TRUC and packages](../05-truc-package-relay-review/README.md) | [Book 2: Ch 1-3](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [Book 4: Ch 2](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), `./lab.sh bip 431` | `./lab.sh practice 05` |
-| [06: HTLC contracts](../06-lightning-htlc-state-machine/README.md) | [Book 2: Ch 5](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md), [Book 1: Ch 2](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 3](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), [Book 5: Ch 2-3](./books/BOOK-5-LIGHTNING-BOLTS-AND-LND-ARCHITECTURE.md) | `./lab.sh practice 06` |
-| [07: Descriptors and PSBT](../07-psbt-descriptors-and-miniscript/README.md) | [Book 1: Ch 3, 5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 3: Ch 1-4](./books/BOOK-3-CRYPTOGRAPHY-AND-SERIALIZATION-PRIMER.md), `./lab.sh bip 174` | `./lab.sh practice 07` |
-| [08: Builder starter kit](../08-builder-starter-kit/README.md) | [Book 1: Ch 1-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | `./lab.sh book cli 05`-`08` | `./lab.sh practice 08` |
+| [04: Functional tests](../04-functional-test-framework/README.md) | [Book 2: Ch 5](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [PR-36439 journey](../pr-reviews/merged-journeys/PR-36439-JOURNEY.md) | `./lab.sh stage 04` |
+| [05: TRUC and packages](../05-truc-package-relay-review/README.md) | [Book 2: Ch 1-3](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [Book 4: Ch 2](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), `./lab.sh bip 431` | `./lab.sh stage 05` |
+| [06: HTLC contracts](../06-lightning-htlc-state-machine/README.md) | [Book 2: Ch 5](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md), [Book 1: Ch 2](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 3](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md), [Book 5: Ch 2-3](./books/BOOK-5-LIGHTNING-BOLTS-AND-LND-ARCHITECTURE.md) | `./lab.sh stage 06` |
+| [07: Descriptors and PSBT](../07-psbt-descriptors-and-miniscript/README.md) | [Book 1: Ch 3, 5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 3: Ch 1-4](./books/BOOK-3-CRYPTOGRAPHY-AND-SERIALIZATION-PRIMER.md), `./lab.sh bip 174` | `./lab.sh stage 07` |
+| [08: Builder starter kit](../08-builder-starter-kit/README.md) | [Book 1: Ch 1-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | `./lab.sh book cli 05`-`08` | `./lab.sh stage 08` |
 | [09: Bug dojo](../09-bug-dojo-and-pr-mastery/README.md) | [Book 1: Ch 4-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md), [Book 2: Ch 1-4](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [Book 4: Ch 4](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md) | `./lab.sh dojo check` |
 | [10: Protocol code](../10-protocol-primitives-from-scratch/README.md) | [Book 1: Ch 1-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 3: Ch 1-4](./books/BOOK-3-CRYPTOGRAPHY-AND-SERIALIZATION-PRIMER.md), [Book 4: Ch 1-4](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md) | `./lab.sh recall check` (all drills) |
-| [11: Small machine node](../11-from-regtest-to-live-mainnet/README.md) | [Book 1: Ch 1-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 2](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md) | `./lab.sh practice 11` |
-| [12: Lightning bridge](../12-lightning-readiness-and-bitcoind-bridge/README.md) | [Book 1: Ch 2-3](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 5: Ch 1-4](./books/BOOK-5-LIGHTNING-BOLTS-AND-LND-ARCHITECTURE.md), `./lab.sh bolt 2` | `./lab.sh practice 12`, `./lab.sh polar` |
+| [11: Small machine node](../11-from-regtest-to-live-mainnet/README.md) | [Book 1: Ch 1-5](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 4: Ch 2](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md) | `./lab.sh stage 11` |
+| [12: Lightning bridge](../12-lightning-readiness-and-bitcoind-bridge/README.md) | [Book 1: Ch 2-3](./books/BOOK-1-GO-AND-SYSTEMS-FROM-MEMORY.md) | [Book 5: Ch 1-4](./books/BOOK-5-LIGHTNING-BOLTS-AND-LND-ARCHITECTURE.md), `./lab.sh bolt 2` | `./lab.sh stage 12`, `./lab.sh polar` |
+| [13: Core Codebase, Build & Unit Tests](../13-core-codebase-build-and-unit-tests/README.md) | [`Book 2: Ch 1–4`](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | `~/bitcoin/doc/build-osx.md`, `~/bitcoin/doc/developer-notes.md`, `~/bitcoin/src/test/README.md` | Stage 13 checkers |
+| [14: P2P & net_processing](../14-p2p-and-net-processing/README.md) | [`Book 2: Ch 2`](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) (locking) | `./lab.sh bip 152`, `./lab.sh bip 324`, `./lab.sh book mb ch10` | Stage 14 checkers |
+| [15: Validation, Chainstate & Reorgs](../15-validation-chainstate-and-reorgs/README.md) | [`Book 2: Ch 1–4`](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | `~/bitcoin/doc/assumeutxo.md`, [`Book 4: Ch 4`](./books/BOOK-4-TRANSACTIONS-SCRIPT-AND-CONSENSUS-ENGINE.md) | Stage 15 checkers |
+| [16: Script, Taproot & libsecp256k1](../16-script-taproot-and-libsecp256k1/README.md) | [`Book 3: Ch 1–4`](./books/BOOK-3-CRYPTOGRAPHY-AND-SERIALIZATION-PRIMER.md) | `./lab.sh bip 340`/`341`/`342`/`327`, `./lab.sh book pb ch03` | Stage 16 checkers |
+| [17: Fuzzing, Sanitizers, Debugging & CI](../17-fuzzing-sanitizers-debugging-and-ci/README.md) | [`Book 2`](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | `~/bitcoin/doc/fuzzing.md`, `~/bitcoin/test/lint/README.md`, `~/bitcoin/ci/README.md` | Stage 17 checkers |
+| [18: Cluster Mempool, Wallet & Policy](../18-cluster-mempool-wallet-and-policy/README.md) | [`Book 2`](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | `~/bitcoin/doc/policy/`, `./lab.sh bip 431`, `./lab.sh bip 380` | Stage 18 checkers |
+| [19: Review & Contribution Practicum](../19-review-and-contribution-practicum/README.md) | — | `~/bitcoin/CONTRIBUTING.md`, `git -C ~/bitcoin show master:doc/AI_POLICY.md`, `~/bitcoin/doc/productivity.md` | [Tracker](../BTRUST_READINESS_TRACKER.md) |
 | [Drills and PR reviews](../BUILDING_BITCOIN_CORE_FROM_SOURCE.md) | [Book 2: Ch 1-5](./books/BOOK-2-CPP-AND-PYTHON-FOR-BITCOIN-CORE.md) | [journeys](../pr-reviews/merged-journeys/README.md) | `./lab.sh drill 1..8`, `./lab.sh journeys` |

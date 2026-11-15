@@ -194,3 +194,16 @@ func ProcessPSBTPartialSignatures(existing []PartialSig, newSig PartialSig) ([]P
 	validSigs = append(validSigs, newSig)
 	return validSigs, nil
 }
+
+// ---------------------------------------------------------------------------
+// Mission 6: the coinbase scriptSig length rule (src/consensus/tx_check.cpp, "bad-cb-length").
+// In this mission the code is given and YOU write the regression test (mission6_test.go).
+// ---------------------------------------------------------------------------
+
+// CheckCoinbaseScriptSigLength mirrors CheckTransaction: a coinbase scriptSig must be 2..100 bytes inclusive.
+func CheckCoinbaseScriptSigLength(scriptSigLen int) error {
+	if scriptSigLen < 2 || scriptSigLen > 100 {
+		return errors.New("bad-cb-length")
+	}
+	return nil
+}

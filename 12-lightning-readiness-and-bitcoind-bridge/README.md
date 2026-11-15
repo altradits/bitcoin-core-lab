@@ -1,199 +1,98 @@
-# Stage 12: Connect Lightning to your node
+# Stage 12: Lightning Readiness — the Channel State Machine, the `lnd` ↔ `bitcoind` Bridge, and Polar
 
-You confirm the six layer 1 skills Lightning needs, simulate channel
-state updates and a justice penalty in Go, and inspect local Polar
-networks that run LND, Core Lightning, and Eclair against a Polar
-`bitcoind`. The optional hands on part opens a real channel on Polar.
+> Checked: `lnd --help` of your `~/bin/lnd` (v0.21.3-beta) for option names; BOLTs from
+> `~/bitcoin-references/bolts/`; ZMQ options in Core's `doc/zmq.md`.
+> Note: `--bitcoin.active` appears in older Polar compose files but is not an option in lnd 0.21.
 
-## Goal
+**No-Shortcuts Rule.** You write the channel state machine in Go (`./lab.sh blank|check|solve 12`),
+you write `lnd.conf` and the matching `bitcoind` ZMQ settings yourself, and you drive a channel
+open → pay → close with `lncli` commands you look up yourself. The old finished program is in
+[`solutions/`](./solutions/). Journal: `my-work/12-lightning-readiness-and-bitcoind-bridge/journal.md`.
 
-After this stage you can explain how `lnd` uses `bitcoind` (RPC plus
-ZMQ), run the channel simulator, and open and close a channel on a
-local Polar network.
+---
 
-## Why it matters
+## Objectives
 
-Lightning does not replace Bitcoin. Funding, commitment, HTLC, and
-justice transactions are all standard layer 1 transactions using the
-multisig, SegWit, timelock, hashlock, and fee bump skills from Stages
-01 to 06. LND is a client of your node: it scans blocks, estimates
-fees, and broadcasts through RPC, and it learns about new blocks over
-ZMQ. Polar packages that whole stack into Docker containers so you can
-practice with real Lightning software on regtest.
+| ID | You can... |
+|----|------------|
+| C-LN-1 | say what each BOLT (01–11) covers and which Bitcoin Core features each depends on |
+| C-LN-3 | model commitment states, revocation and penalty, and the `to_self_delay` race |
+| C-LN-4 | explain why anchors, CPFP, package relay and TRUC matter for force-closes |
+| C-LN-5 | configure `lnd` against `bitcoind` (RPC + ZMQ) and operate it with `lncli` |
+| C-LN-6 | follow a payment from invoice (BOLT 11) through onion routing (BOLT 4) at concept level |
 
-## Prerequisites
+## Prerequisites — the readiness gate
+Do not start until you can do each of these without notes (stage where you learned it):
+1. Build and decode a 2-of-2 P2WSH output (02, 06).
+2. Explain txid vs wtxid and why pre-signed children need malleability-proof parents (02).
+3. Use relative (CSV) and absolute (CLTV) timelocks (06).
+4. Build hashlock scripts and spend both HTLC paths (06).
+5. Fee-bump with RBF and CPFP; submit a TRUC package (03, 05).
+6. Read `bitcoind` logs and RPC output during sync (11).
 
-* Stages 01 to 06 (the six skills this stage builds on).
-* Go 1.22 or later.
-* For the optional part: Docker Desktop and Polar
-  (https://lightningpolar.com) with one network created. The lab pins
-  LND v0.20.0-beta, the version in the checked Polar networks.
+Estimated time: 12 hours. **8 GB RAM rule:** Docker + Polar with 5 nodes uses ~3.5 GB. Stop your
+native `bitcoind` and any C++ build while Polar runs; quit Docker afterwards.
 
-## Setup
+---
 
-```bash
-go -C ./12-lightning-readiness-and-bitcoind-bridge test ./...
-```
+## Theory
 
-Expected output:
+### 1. A channel is a Bitcoin UTXO
+Funding: a 2-of-2 P2WSH (or Taproot for newer channel types) output. Each state is a pair of
+**commitment transactions** (one per side) spending it. Moving to a new state = signing new
+commitments **and revoking the old ones** by handing over the old per-commitment secret
+(`revoke_and_ack`, BOLT 2). The broadcaster's own output (`to_local`) is CSV-delayed by
+`to_self_delay`, so the counterparty has time to punish a revoked broadcast with the revocation key.
 
-```text
-ok  	github.com/altradits/bitcoin-core-lab/12-lightning-readiness-and-bitcoind-bridge	0.805s
-```
+### 2. HTLCs in flight
+Every pending payment adds an HTLC output (BOLT 3). Offered/received scripts combine a hashlock,
+an absolute timeout (`cltv_expiry`) and the revocation path; second-stage HTLC-success/timeout
+transactions add the CSV delay. Routing nodes must claim on-chain before `cltv_expiry` — this is
+where mempool policy (Stages 03, 05, 18) decides whether funds are safe.
 
-## Steps
+### 3. The bridge (`lnd` with `--bitcoin.node=bitcoind`)
+- **RPC** (`bitcoind.rpchost`, cookie or user/pass): block and tx lookups, fee estimation
+  (`estimatesmartfee`), broadcasting (`sendrawtransaction`).
+- **ZMQ** (`bitcoind.zmqpubrawblock`, `bitcoind.zmqpubrawtx` in lnd; `zmqpubrawblock`,
+  `zmqpubrawtx` in `bitcoin.conf`): push notifications of new blocks and txs. Alternatively
+  `bitcoind.rpcpolling`.
+- Whether your lnd version submits packages with `submitpackage` for anchor/TRUC channels:
+  **UNVERIFIED** — check lnd's release notes before you claim it in a talk.
 
-### Step 1: Run the unit tests verbosely
+### 4. BOLT map (read in this order)
+BOLT 3 (tx formats) → BOLT 2 (channel lifecycle) → BOLT 5 (on-chain handling) → BOLT 11
+(invoices) → BOLT 4 (onion routing) → BOLT 7 (gossip) → BOLT 8 (transport) → BOLT 1, 9, 10, 12.
 
-```bash
-go -C ./12-lightning-readiness-and-bitcoind-bridge test -v ./...
-```
+---
 
-Expected output (the Polar presence test skips without `~/.polar`):
+## Exercises
 
-```text
---- PASS: TestRequiredBitcoinSkillsForLightningCompleteness (0.00s)
---- PASS: TestChannelBalanceConservationAndRevocationPenalty (0.00s)
---- PASS: TestInspectLocalPolarNetworksIfPresent (0.00s)
---- PASS: TestInspectLocalPolarNetworksFixture (0.00s)
-ok
-```
+| # | Worksheet | Checker |
+|---|-----------|---------|
+| 1 | Go: write `UpdateChannelBalance` and `EvaluateBroadcastedCommitment` from their specs in `lightning_readiness.go` | `./lab.sh check 12` |
+| 2 | [Write `lnd.conf` and the `bitcoind` ZMQ settings yourself](./exercises/01-write-lnd-conf.md) | `./check_lnd_conf.sh` |
+| 3 | [Channel lifecycle in Polar, by `lncli` only](./exercises/02-polar-channel-lifecycle.md) | journal + `./check_polar_journal.sh` |
+| 4 | [Find the Bitcoin Core in a force-close](./exercises/03-force-close-on-chain.md) | journal (self-check) |
 
-The channel test pins three outcomes: revoked broadcast inside the
-delay pays everything to the victim, honest broadcast inside the delay
-locks the broadcaster side, and honest broadcast after the delay pays
-both sides.
+---
 
-### Step 2: Run the readiness program
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. What exactly does "revoking" a state hand over, and to whom?
+2. Why must `to_local` be CSV-delayed but `to_remote` need not be?
+3. Your peer broadcasts a revoked state while you are offline for longer than `to_self_delay`. What happens?
+4. Which two ZMQ topics does lnd need, and what would break without them (and without polling)?
+5. Why is an HTLC's `cltv_expiry` a mempool-policy problem for routing nodes?
+6. Which BOLT defines the invoice format? Which defines the commitment transaction scripts?
+7. What is an anchor output and which Core policy features does it rely on?
 
-```bash
-go -C ./12-lightning-readiness-and-bitcoind-bridge run .
-```
+## Review lens (Core PRs that matter to Lightning)
+- Files: `src/policy/truc_policy.cpp`, `src/policy/packages.cpp`, `src/policy/ephemeral_policy.cpp`,
+  `src/zmq/` (`zmqpublishnotifier.cpp`), `src/rpc/fees.cpp`, `src/policy/fees/` (master) or
+  `src/policy/fees.cpp` (v29).
+- Questions: Does this change make it harder or easier to get a time-critical transaction mined
+  (pinning, package limits)? Does it change ZMQ message content or ordering that L2 software
+  depends on? Is the fee estimator's behaviour under sudden fee spikes affected?
 
-Expected output (abridged; Polar section depends on your machine):
-
-```text
-[1] THE 6 BITCOIN CORE SKILLS YOU MUST HAVE BEFORE LIGHTNING:
-  1. UTXO Conservation & 2-of-2 Multisig (P2WSH / MuSig2)               [Stages 01 & 02]
-  ...
-
-[2] SIMULATING A LIGHTNING CHANNEL ON TOP OF BITCOIN CORE:
-  • Channel Opened (State #0, 1 on-chain tx)  : Alice = 1000000 sats | Bob = 0 sats
-  • Off-Chain Payment #1 (State #1, 0 L1 txs) : Alice = 750000 sats | Bob = 250000 sats (State #0 Revoked!)
-  • Off-Chain Payment #2 (State #2, 0 L1 txs) : Alice = 600000 sats | Bob = 400000 sats (State #1 Revoked!)
-  • Cheat Attempt on bitcoind (State #0)      : JUSTICE_PENALTY_APPLIED: ... (Bob gets 1000000 sats, revKey=...)
-  • Honest Settlement on bitcoind (State #2)  : FORCE_CLOSE_MATURED: ... (Alice=600000, Bob=400000)
-
-[3] POLAR AND DOCKER LIGHTNING NETWORKS IN ~/.polar:
-  • Polar Network #1: "Addis Ababa Bootcamp" (/Users/mac/.polar/networks/1)
-    - Bitcoin L1 Backend : backend1 (bitcoind v30.0)
-    - Lightning L2 Nodes : alice (LND v0.20.0-beta | REST:8081 gRPC:10001), ...
-
-[4] LOCAL BITCOIND REACHABLE (CURRENT REGTEST HEIGHT: #995)
-    An LND node uses this RPC plus ZMQ block events to track channels.
-```
-
-Section 2 is the whole Lightning trust model in five lines: only open
-and close touch layer 1, each payment revokes the old state, and a
-cheat inside `to_self_delay` loses everything. If section 3 says
-none found, install Polar and create a network, then rerun.
-
-### Step 3: See how lnd talks to bitcoind
-
-Open `~/.polar/networks/1/docker-compose.yml` and find the alice
-service flags:
-
-```text
---bitcoin.active --bitcoin.regtest --bitcoin.node=bitcoind
---bitcoind.rpchost=polar-n1-backend1 --bitcoind.rpcuser=polaruser --bitcoind.rpcpass=polarpass
---bitcoind.zmqpubrawblock=tcp://polar-n1-backend1:28334
---bitcoind.zmqpubrawtx=tcp://polar-n1-backend1:28335
-```
-
-LND needs five things from the node: block data (`getblock`), fee
-estimates (`estimatesmartfee`), broadcast (`sendrawtransaction`,
-`submitpackage` for anchors), wallet free chain scans, and live ZMQ
-push of blocks and transactions. The ports section maps the Polar
-backend RPC to host port 18446 so your host CLI can reach it:
-
-```bash
-bitcoin-cli -regtest -rpcport=18446 -rpcuser=polaruser -rpcpassword=polarpass getblockcount
-```
-
-Run this only while the Polar network is started.
-
-### Step 4 (optional): Open a channel on Polar
-
-Start network 1 in the Polar app (or
-`docker compose -f ~/.polar/networks/1/docker-compose.yml up -d`),
-then in a terminal:
-
-```bash
-./lab.sh polar
-```
-
-The command prints ready to run `lncli` lines for your machine,
-including the TLS cert and macaroon paths. With them you can run
-`getinfo`, `openchannel`, `sendpayment`, and `closechannel` against
-alice. When done, stop everything to free RAM:
-
-```bash
-./lab.sh rest
-```
-
-## Checkpoint
-
-```bash
-./lab.sh check 12
-```
-
-Expected output:
-
-```text
-PASS: stage 12. unit tests passed; readiness program reached the node.
-```
-
-The check runs the unit tests plus the Step 2 program and requires
-section 4 to report a height. Polar is not required for the check.
-You can also rerun Steps 1 and 2 by hand.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| Section 3 says none found | Polar never created a network | Open Polar, create a network with one LND node, rerun |
-| `[4] No local bitcoind on regtest` | Node down, or custom datadir | Start the node; export `BITCOIN_CLI` for custom setups |
-| `Could not connect` on port 18446 | Polar network not started | Start it in Polar first |
-| `macaroon not found` from lncli | Wrong network number in the path | Use the exact paths `./lab.sh polar` prints |
-| Docker out of memory | Too many networks running | Run `./lab.sh rest`, keep one network up at a time |
-
-## Going further
-
-1. Change the simulator delay. Edit `toSelfDelayCSV` in the
-   `EvaluateBroadcastedCommitment` calls and show a cheat that
-   succeeds because the victim slept past the delay. Done when
-   `BREACH_MISSED` prints.
-2. Route a payment on Polar. Open alice to bob and bob to carol,
-   then pay alice to carol through bob. Done when all three
-   balances move correctly.
-3. Force close on Polar and watch `bitcoind`. Close a channel with
-   `--force`, find the commitment transaction on the Polar backend,
-   and count the `to_self_delay` blocks. Done when the sweep
-   confirms.
-
-## Contribution task
-
-LND and Core Lightning label beginner friendly issues. Pick one docs
-or test only issue in `lightningnetwork/lnd` (for example a
-`lncli` help text fix), reproduce the behavior on your Polar alice
-node, and comment your reproduction steps on the issue. Never claim a
-fix you did not run.
-
-## Sources
-
-* BOLT 2 (channel open and close) and BOLT 3 (transactions):
-  funding, commitment, HTLC outputs.
-* BOLT 5 (on chain handling): force closes and justice.
-* LND docs (https://docs.lightning.engineering): `lnd` plus
-  `bitcoind` backend configuration.
-* Polar source networks on disk: `~/.polar/networks/*/docker-compose.yml`.
+## Proof-of-work output
+A BitDevs Kisumu session plan (your own slides/notes) walking through a force-close on regtest
+with the real transactions you produced — no copied slides.

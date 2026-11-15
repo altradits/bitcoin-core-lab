@@ -1,92 +1,95 @@
-# Bitcoin Core and Lightning Lab
+# Bitcoin Core & Lightning Lab (`bitcoin-core-lab`)
 
 [![CI](https://github.com/altradits/bitcoin-core-lab/actions/workflows/ci/badge.svg)](https://github.com/altradits/bitcoin-core-lab/actions/workflows/ci)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F7931A.svg)](./LICENSE)
 
-A hands on lab for learning to contribute to Bitcoin Core and LND.
-You run a node on regtest, build transactions by hand, write tests,
-review real pull requests, and connect a Lightning node. No real money
-is used anywhere. Regtest and signet only.
+A self-paced, offline-friendly curriculum for becoming a **Bitcoin Core / Lightning reviewer and
+contributor**: from your first regtest node to reviewing consensus, P2P, mempool and wallet PRs and
+contributing upstream. Built for **BitDevs Kisumu** and for anyone preparing to apply to
+**Btrust** or similar developer programs.
 
-New here? Read [Start here](./START_HERE.md). It lists what to install,
-how much time each stage takes, and where to begin.
+## The rule: no shortcuts
+You type every command and write every line of code that teaches a skill
+([`CURRICULUM_CONVENTIONS.md`](./CURRICULUM_CONVENTIONS.md)):
+- **Worksheets** (`NN-stage/exercises/`) say *what* to achieve and *which* RPC, file or function to use,
+  with layered hints — never the finished command.
+- **Checkers** (`check_*.sh`, `test_*.py`, Go tests) inspect your node, your files or your code and
+  print PASS/FAIL with a reason — never the answer.
+- **Solutions** (`NN-stage/solutions/`) are spoilers: open them after a checker passes or after three
+  honest attempts.
+- Your work goes in [`my-work/`](./my-work/README.md) (journals, answers, your programs).
+- Nothing in this repo is a review comment or ACK to post in your name. Bitcoin Core's
+  `doc/AI_POLICY.md` (master) and `CONTRIBUTING.md` apply to everything you publish.
 
-## Pinned versions
-
-The lab is tested with these versions. Newer versions may work, but
-these are the ones the steps and outputs match.
-
-| Tool | Version |
-| :--- | :--- |
-| Bitcoin Core | v29.0 |
-| Go | 1.22 or later |
-| Python | 3.10 or later |
-| LND (Stage 12, via Polar) | v0.20.0-beta |
+## Start here
+0. [`START_HERE.md`](./START_HERE.md) — what to install (pinned versions), `./lab.sh doctor`, and the stage map with time estimates.
+1. [`CURRICULUM.md`](./CURRICULUM.md) — every competency (`C-…` IDs), the stage map, a weekly schedule and three mastery checkpoints.
+2. [`00-start-small/`](./00-start-small/README.md) — your first node and first program, in micro-steps.
+3. [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md) — the evidence log you fill as you go,
+   and [`BTRUST_AND_BITDEVS_PLAYBOOK.md`](./BTRUST_AND_BITDEVS_PLAYBOOK.md) — verified program requirements.
 
 ## Stages
 
-Work through the stages in order. Each stage README follows the same
-template: goal, setup, numbered steps with expected output, a
-checkpoint, common errors, and one small contribution task.
+| # | Stage | You will be able to… |
+|---|-------|----------------------|
+| 00 | [Start small](./00-start-small/README.md) | run regtest, read UTXOs, write a 60-line Go program against your node |
+| 01 | [Node foundations](./01-node-foundations/README.md) | write your own `bitcoin.conf` and start/stop procedure; coinbase maturity and subsidy |
+| 02 | [Raw tx & mempool](./02-raw-tx-and-mempool/README.md) | decode a tx byte by byte; build/sign/broadcast raw txs; tell policy from consensus |
+| 03 | [RBF & CPFP](./03-rbf-and-cpfp/README.md) | replace and fee-bump by hand with exact arithmetic; full-RBF |
+| 04 | [Functional tests](./04-functional-test-framework/README.md) | write a two-node functional test and prove it catches a bug |
+| 05 | [TRUC & package relay](./05-truc-package-relay-review/README.md) | submit TRUC packages, sibling eviction, ephemeral dust; write a concept review |
+| 06 | [HTLCs](./06-lightning-htlc-state-machine/README.md) | assemble an HTLC by hand and spend both branches; compare with BOLT 3 |
+| 07 | [PSBT, descriptors, miniscript](./07-psbt-descriptors-and-miniscript/README.md) | implement PSBT/descriptor pieces in Go; air-gapped PSBT flow by CLI |
+| 08 | [Builder starter kit](./08-builder-starter-kit/README.md) | build a small Go tool on bitcoind JSON-RPC |
+| 09 | [Bug dojo](./09-bug-dojo-and-pr-mastery/README.md) | fix real historical bugs; write a regression test that kills mutants |
+| 10 | [Primitives from scratch](./10-protocol-primitives-from-scratch/README.md) | hashing, CompactSize, tx parsing, PoW/retarget, Merkle (CVE-2012-2459), bech32m, script numbers |
+| 11 | [Regtest → signet → mainnet](./11-from-regtest-to-live-mainnet/README.md) | write node configs; sync signet; wallet backup/restore/watch-only drill |
+| 12 | [Lightning readiness](./12-lightning-readiness-and-bitcoind-bridge/README.md) | channel state machine; `lnd.conf` against bitcoind; Polar channel lifecycle |
+| 13 | [Core codebase, build, unit tests](./13-core-codebase-build-and-unit-tests/README.md) | navigate, build and test the C++; write a Boost unit test |
+| 14 | [P2P & net_processing](./14-p2p-and-net-processing/README.md) | read `net`/`net_processing`; write a `P2PInterface` test |
+| 15 | [Validation, chainstate, reorgs](./15-validation-chainstate-and-reorgs/README.md) | trace block validation; drive and test reorgs; assumeutxo |
+| 16 | [Script, Taproot, libsecp256k1](./16-script-taproot-and-libsecp256k1/README.md) | interpreter, sighashes, taproot spends, Schnorr/MuSig2 concepts |
+| 17 | [Fuzzing, sanitizers, debugging, CI](./17-fuzzing-sanitizers-debugging-and-ci/README.md) | write a fuzz target, use sanitizers and lldb, bisect, reproduce CI |
+| 18 | [Cluster mempool, wallet, policy](./18-cluster-mempool-wallet-and-policy/README.md) | chunks and feerate diagrams; package RBF; coin selection |
+| 19 | [Review & contribution practicum](./19-review-and-contribution-practicum/README.md) | blind-review real merged PRs, PR Review Club, your own contributions |
 
-| Stage | Topic | Time |
-| :--- | :--- | :--- |
-| [00](./00-start-small/README.md) | Start small: first block, coins, and send | 1 hour |
-| [01](./01-node-foundations/README.md) | Node basics: coinbase maturity and halvings | 2 hours |
-| [02](./02-raw-tx-and-mempool/README.md) | Raw transactions, fees, and SegWit weight | 2 hours |
-| [03](./03-rbf-and-cpfp/README.md) | Fee bumps: BIP125 RBF and CPFP | 3 hours |
-| [04](./04-functional-test-framework/README.md) | Python functional tests | 3 hours |
-| [05](./05-truc-package-relay-review/README.md) | TRUC (v3) and package relay | 3 hours |
-| [06](./06-lightning-htlc-state-machine/README.md) | HTLC contracts on Bitcoin | 3 hours |
-| [07](./07-psbt-descriptors-and-miniscript/README.md) | Descriptors and offline signing (PSBT) | 3 hours |
-| [08](./08-builder-starter-kit/README.md) | Build an app on top of bitcoind | 4 hours |
-| [09](./09-bug-dojo-and-pr-mastery/README.md) | Bug dojo: break and fix real bugs | 6 hours |
-| [10](./10-protocol-primitives-from-scratch/README.md) | Protocol code from scratch in Go | 6 hours |
-| [11](./11-from-regtest-to-live-mainnet/README.md) | Run a pruned node on a small machine | 3 hours |
-| [12](./12-lightning-readiness-and-bitcoind-bridge/README.md) | Connect Lightning (LND) to your node | 4 hours |
-
-## Guides and references
-
-| Guide | What it covers |
-| :--- | :--- |
-| [BUILDING_BITCOIN_CORE_FROM_SOURCE.md](./BUILDING_BITCOIN_CORE_FROM_SOURCE.md) | Repetition drills: clone, build, test, review |
-| [OFFLINE_30_DAY_CURRICULUM.md](./OFFLINE_30_DAY_CURRICULUM.md) | A 30 day study plan for offline work |
-| [FIRST_PRINCIPLES_WORKBOOK.md](./FIRST_PRINCIPLES_WORKBOOK.md) | Whitepaper ideas mapped to C++ code and drills |
-| [BITCOIN_CORE_SECURITY_NOTES.md](./BITCOIN_CORE_SECURITY_NOTES.md) | Past consensus bugs and how to audit a pull request |
-| [BTRUST_AND_BITDEVS_PLAYBOOK.md](./BTRUST_AND_BITDEVS_PLAYBOOK.md) | Grants and running a local study group |
-| [offline-library/](./offline-library/OFFLINE_INDEX.md) | Workbooks and recall drills for offline study |
-| [pr-reviews/](./pr-reviews/) | Audits and review journeys of real upstream pull requests |
-
-## Helper script
-
-`./lab.sh` runs demos and checks for the stages. It assumes a
-`bitcoind -regtest` node on this machine. Run `./lab.sh help` for the
-full command list.
-
-```bash
-./lab.sh doctor     # check installed tools and versions
-./lab.sh check 01   # run the automated checkpoint for a stage
+## `./lab.sh`
+```
+./lab.sh doctor                  # check installed tools and versions
+./lab.sh stage <00..19>          # README, worksheets and checkers of a stage
+./lab.sh check <00..19>          # run that stage's checkers
+./lab.sh blank|solve <07|08|10|11|12>   # Go stages: fresh skeleton / reference (your file is backed up)
+./lab.sh dojo break|check [1-6]|solve   # Stage 09
+./lab.sh step <1..5>             # Stage 00 micro-steps (shows the worksheet section)
+./lab.sh drill <1..8>            # from-source repetition drills
+./lab.sh book | recall | bip <n> | bolt <n>   # offline library
+./lab.sh journeys | pr-list | pr-audit <n>    # PR study material (blank review checklists)
+./lab.sh health | rest           # 8 GB M1: check RAM, stop daemons
+./lab.sh selftest                # check the lab itself (skeletons fail, solutions pass)
 ```
 
-## Layout
+## Reference material
+- [`offline-library/`](./offline-library/OFFLINE_INDEX.md) — from-memory workbooks, offline books, the whitepaper, blind-recall drills.
+- [`pr-reviews/`](./pr-reviews/README.md) — review method, merged-PR review journeys, and auto-generated PR study files
+  (read the known-issues list in that README first).
+- [`BUILDING_BITCOIN_CORE_FROM_SOURCE.md`](./BUILDING_BITCOIN_CORE_FROM_SOURCE.md) (repetition drills: clone, build, test, review),
+  [`FIRST_PRINCIPLES_WORKBOOK.md`](./FIRST_PRINCIPLES_WORKBOOK.md) (whitepaper ideas mapped to code),
+  [`BITCOIN_CORE_SECURITY_NOTES.md`](./BITCOIN_CORE_SECURITY_NOTES.md) (past consensus bugs, how to read a PR),
+  [`OFFLINE_30_DAY_CURRICULUM.md`](./OFFLINE_30_DAY_CURRICULUM.md) (days without internet).
 
-Each stage folder holds one README plus its scripts or Go module:
-
-```text
-00-start-small/          first block, coins, send, tiny Go program
-01-node-foundations/     coinbase maturity script
-...
-09-bug-dojo-and-pr-mastery/  Go break and fix exercises
-offline-library/         study workbooks and recall drills
-pr-reviews/              upstream pull request audits
-```
+## Environment
+Tested with Bitcoin Core v29.0, Go 1.22+, Python 3.10+ and LND v0.20.0-beta (via Polar, Stage 12).
+Written for an Apple M1 with 8 GB RAM (Linux works too): one `bitcoind` at a time, small `dbcache`,
+limited `-j` when building. Bitcoin Core source at `~/bitcoin` (override with `BITCOIN_ROOT`), books
+and specs at `~/bitcoin-references` (override with `BITCOIN_REFERENCES`). Stages teach current
+`master` and note where the v29.x binary behaves differently. Regtest and signet only: no exercise
+uses real money.
 
 ## Contributing
+Found a mistake or want to add an exercise? See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and
+[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md). Third-party material (books, BIPs, BOLTs, specs) is
+linked, not copied: see [`LICENSES.md`](./LICENSES.md).
 
-Found a mistake? See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to
-report it. One line commit messages, no signing key needed.
+---
 
-## License
-
-MIT. See [LICENSE](./LICENSE). Outside sources (books, whitepaper,
-specs) are linked, not copied. See [LICENSES.md](./LICENSES.md).
+Maintained by Stanley Chege Thuita ([@altradits](https://github.com/altradits)), BitDevs Kisumu · MIT License

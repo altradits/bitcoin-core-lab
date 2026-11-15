@@ -1,174 +1,120 @@
-# Stage 04: Python functional tests
+# Stage 04: The Functional Test Framework — Read It, Then Write Your Own Test
 
-You run two upstream functional tests, then run a custom two node test
-that replays Stage 03 over P2P: relay, RBF rejection, cross node
-eviction, CPFP package sync, and ordered confirmation.
+> Source checked: `test/functional/` at `v29.0` (`f490f5562d`) and `master` (`e75b76b12c`).
+> The framework APIs used here (`BitcoinTestFramework`, `MiniWallet`, `assert_*`, `self.generate`,
+> `sync_mempools`) exist in both.
 
-## Goal
+**No-Shortcuts Rule.** You write the whole test yourself, starting from a skeleton made of TODOs.
+The previous finished test is now the spoiler in
+[`solutions/kisumu_pos_rbf_test.py`](./solutions/kisumu_pos_rbf_test.py); open it only after
+`check_functional_test.sh` passes or after **3 honest attempts**. Journal:
+`my-work/04-functional-test-framework/journal.md`.
 
-After this stage you can run any upstream functional test and write
-your own test with `BitcoinTestFramework` and `MiniWallet`.
+Almost every Bitcoin Core PR that changes behaviour adds or changes a functional test. Reviewers
+run them, read them, and ask for more of them. If you cannot write one, you cannot fully review one.
 
-## Why it matters
+---
 
-Bitcoin Core reviews require functional tests for behavior changes.
-The framework (`test/functional/test_framework/`) spawns real nodes in
-temporary datadirs, connects them over P2P, and syncs them
-deterministically. `MiniWallet` builds SegWit transactions in pure
-Python with no wallet database. Contributing upstream means writing
-tests like the one in this stage.
+## Objectives
+
+| ID | You can... |
+|----|------------|
+| C-PY-1 | explain the life of a functional test: `set_test_params` → `setup_chain` → `setup_network` → `run_test` → shutdown and cleanup; where the cached 200-block chain comes from |
+| C-PY-2 | use `MiniWallet`, `sync_mempools`/`sync_blocks`, `self.generate`, `assert_equal`, `assert_raises_rpc_error`, `wait_until` correctly |
+| C-PY-3 | write a deterministic two-node test, run it alone and through `test_runner.py`, and know how to register it in `BASE_SCRIPTS` |
+| C-TEST-3 (intro) | prove a test catches a bug by breaking the behaviour it asserts |
 
 ## Prerequisites
+Stage 03 (you did the same RBF/CPFP flow by hand). A Bitcoin Core build with
+`build/test/config.ini` (Stage 13 teaches the build; your machine already has one at
+`~/bitcoin/build`).
 
-* Stage 03 (you know RBF and CPFP by hand; this stage automates them).
-* A compiled Bitcoin Core tree with functional tests enabled. The lab
-  default path is `~/bitcoin`. See
-  BUILDING_BITCOIN_CORE_FROM_SOURCE.md if you have not built yet.
-* Python 3.10 or later.
+Estimated time: 12 hours.
 
-## Setup
+---
 
-Point the lab at your Bitcoin Core checkout and confirm the test
-runner exists:
+## Theory
 
-```bash
-export BITCOIN_ROOT="$HOME/bitcoin"
-ls "$BITCOIN_ROOT/build/test/functional/test_runner.py"
+### 1. Anatomy (`test/functional/test_framework/test_framework.py`)
+- `set_test_params()` — **required**. Sets `self.num_nodes`, `self.extra_args`,
+  `self.setup_clean_chain`, `self.supports_cli`, …
+- `skip_test_if_missing_module()` — e.g. `self.skip_if_no_wallet()`.
+- `setup_chain()` — copies a cached regtest datadir with **200 blocks** (so 100 coinbase outputs
+  are mature) unless `setup_clean_chain = True`.
+- `setup_network()` → `setup_nodes()` + connects node *i* to node *i+1*.
+- `run_test()` — **required**. Your assertions.
+- `main()` parses options (`--configfile`, `--tmpdir`, `--nocleanup`, `--randomseed`,
+  `--tracerpc`, `--pdbonfailure`, `--timeout-factor`) and always shuts nodes down.
+
+Read the file's comments yourself; `test/functional/example_test.py` is the official tour and
+`test/functional/README.md` the style guide (naming prefixes `feature_`, `mempool_`, `p2p_`,
+`rpc_`, `wallet_`, `mining_`, `interface_`, `tool_`).
+
+### 2. MiniWallet (`test_framework/wallet.py`)
+A tiny wallet in Python. It needs no wallet support in `bitcoind`, so tests run on builds made
+with `-DENABLE_WALLET=OFF`. Default mode `ADDRESS_OP_TRUE` uses a fixed P2TR (bech32m) address whose
+coins are spent through a script path that is just `OP_TRUE`, so no signatures are needed
+(`MiniWalletMode`; `RAW_P2PK` exists when a test needs real signatures). Key methods: `get_utxo`, `create_self_transfer`,
+`send_self_transfer`, `create_self_transfer_multi`, `send_to`, `rescan_utxos`. Each created tx
+dict carries `txid`, `wtxid`, `hex`, `tx` and `new_utxo`.
+
+### 3. Determinism
+Tests run in parallel on CI, many times a day. A flaky test wastes reviewers' time and gets
+reverted. Rules: always `sync_*` or `wait_until` before asserting across nodes; never `sleep`;
+use `self.generate(...)` (it syncs for you; `sync_fun=self.no_op` when you deliberately do not
+want sync); use mock time (`setmocktime`) for anything time-dependent; seed randomness from the
+framework (`--randomseed`).
+
+### 4. Running
 ```
-
-Expected output:
-
-```text
-/Users/mac/bitcoin/build/test/functional/test_runner.py
+build/test/functional/test_runner.py <test.py> [--jobs=N]   # registered tests
+python3 <your_test.py> --configfile=build/test/config.ini     # any file
 ```
+On the 8 GB M1 keep `--jobs` at 2–3; every test starts real `bitcoind` processes.
 
-(Your home path differs.) Every command below needs `BITCOIN_ROOT`
-set. Add the export to your shell profile to keep it.
+### 5. v29 vs master differences that change test expectations
+- `incrementalrelayfee` default: 1 sat/vB (v29) → 0.1 sat/vB (master). A "+50 sat" replacement
+  that fails rule 4 on v29 is **accepted** on master.
+- `getmempoolentry` gains `chunkweight` / `fees.chunk` on master (cluster mempool).
 
-## Steps
+---
 
-### Step 1: Run two upstream tests
+## Exercises
 
-```bash
-python3 "$BITCOIN_ROOT/build/test/functional/test_runner.py" feature_rbf.py mempool_packages.py
-```
+| # | Worksheet | Checker |
+|---|-----------|---------|
+| 1 | [Run and read upstream tests](./exercises/01-run-and-read.md) | `./check_anatomy.sh` |
+| 2 | [Write the Kisumu POS test from the skeleton](./exercises/02-write-your-test.md) | `./check_functional_test.sh` |
+| 3 | [Prove your test catches a bug (mutation)](./exercises/03-mutation.md) | `./check_functional_test.sh --mutation` |
 
-Expected output:
+Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
+`my-work/04-functional-test-framework/answers.env`.
 
-```text
-TEST                | STATUS    | DURATION
+---
 
-feature_rbf.py      | Passed    | 13 s
-mempool_packages.py | Passed    | 4 s
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Which two methods must every functional test define?
+2. Why do most tests start with 200 blocks, and how do you opt out?
+3. Why is `self.generate(node, 1)` preferred over `node.generatetoaddress(1, addr)`?
+4. What does MiniWallet's default mode use as its output script, and why does that make tests fast?
+5. Name three ways a functional test becomes flaky and the fix for each.
+6. Where do you register a new test so CI runs it, and what naming prefix would a mempool-policy test use?
+7. Your assertion passed on v29 but fails on master: the "+50 sat" replacement is accepted. Why?
+8. What does `assert_raises_rpc_error(-26, "msg", fn, arg)` check, and what happens if `fn` succeeds?
 
-ALL                 | Passed    | 17 s (accumulated)
-Runtime: 13 s
-```
+---
 
-Durations differ on your machine. Both must say Passed. These are the
-upstream tests for the behavior you did by hand in Stage 03.
+## Review lens
+When a PR adds or changes a functional test:
+- Run it alone **and** with `--jobs` in `test_runner.py`; run it several times
+  (`for i in $(seq 10); do …; done`) to look for flakiness.
+- Read it for: missing syncs, sleeps, hard-coded fees that depend on defaults that may change,
+  assertions that would still pass if the feature were removed (mutation thinking).
+- Check registration in `test/functional/test_runner.py` and the file name prefix.
+- Useful references: `test/functional/README.md`, `test/functional/example_test.py`,
+  `test_framework/wallet.py`, `test_framework/p2p.py` (Stage 14).
 
-### Step 2: Run the custom two node test
-
-```bash
-python3 ./04-functional-test-framework/kisumu_pos_rbf_test.py --configfile="$BITCOIN_ROOT/build/test/config.ini"
-```
-
-Expected output (seed and directory differ):
-
-```text
-TestFramework (INFO): PRNG seed is: 4405568864662296658
-TestFramework (INFO): Initializing test directory /var/folders/8k/.../T/bitcoin_func_test_so1_bc6a
-TestFramework (INFO): 1. Broadcasting initial low-fee RBF transaction (200 sats) on Node 0...
-TestFramework (INFO): 2. Verifying PaysForRBF Rule #4 rejection (+50 sats < incremental relay fee)...
-TestFramework (INFO): 3. Broadcasting valid BIP125 replacement (5,000 sats) and verifying P2P eviction...
-TestFramework (INFO): 4. Broadcasting high-fee CPFP child (20,000 sats) from Merchant Node 1...
-TestFramework (INFO): 5. Mining confirmation block and verifying topological ordering...
-TestFramework (INFO): Stopping nodes
-TestFramework (INFO): Cleaning up /var/folders/8k/.../T/bitcoin_func_test_so1_bc6a on exit
-TestFramework (INFO): Tests successful
-```
-
-The test asserts five things across Node 0 (customer) and Node 1
-(merchant):
-
-1. `tx_v1` relays to Node 1 with `bip125-replaceable: True`.
-2. `tx_v2_bad` (+50 sats) is rejected with `not enough additional
-   fees to relay`.
-3. `tx_v2_good` (5,000 sats) evicts `tx_v1` from both nodes.
-4. The child from Node 1 syncs back with `ancestorcount == 2` and
-   ancestor fees of 0.00025000 BTC.
-5. One mined block holds parent at index 1 and child at index 2.
-
-### Step 3: Read the test code
-
-Open [kisumu_pos_rbf_test.py](./kisumu_pos_rbf_test.py). It is 93
-lines. Notice the three framework pieces:
-
-* `set_test_params` declares two nodes.
-* `MiniWallet(customer_node)` funds transactions without a wallet
-  database. `create_self_transfer` builds and signs in Python.
-* `self.sync_mempools()` blocks until both nodes hold the same
-  mempool, which makes P2P assertions deterministic.
-
-## Checkpoint
-
-```bash
-./lab.sh check 04
-```
-
-Expected output:
-
-```text
-PASS: stage 04. custom two node test passed; upstream rbf and package tests passed.
-```
-
-The check runs Step 1 and Step 2 and requires all three files to pass.
-You can also rerun the Step 2 command by hand.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `No such file or directory: .../test_runner.py` | Core was not built, or `BITCOIN_ROOT` is wrong | Build first (see the build manual); `echo $BITCOIN_ROOT` to check |
-| `Config file not found` | Wrong `--configfile` path | Use `$BITCOIN_ROOT/build/test/config.ini` exactly |
-| `Address already in use` | A previous test run left nodes behind | Wait 30 seconds and retry; the framework cleans up on exit |
-| `AssertionError` mid test | Usually a stale datadir or a code edit | Rerun; if it repeats, open a lab bug issue with the output |
-
-## Going further
-
-1. Break the test on purpose. Change the assertion on
-   `ancestorcount` from 2 to 3, rerun, and read the failure. Then
-   revert. Done when you can explain what the failure line means.
-2. Add a sixth assertion. After step 5, assert the merchant node
-   balance of the child output with `gettxout`. Done when the test
-   passes with your new line.
-3. Read an upstream test. Open
-   `test/functional/feature_rbf.py` in your checkout and find where it
-   tests Rule 4. Done when you can name the function.
-
-## Contribution task
-
-Review open upstream test issues for one that reproduces on your
-machine. Run it, and if it fails, report the exact failure with your
-OS and commit hash on the issue. A concrete starting point: run
-`mempool_truc.py` (used in Stage 05) and confirm it passes:
-
-```bash
-python3 "$BITCOIN_ROOT/build/test/functional/test_runner.py" mempool_truc.py
-```
-
-Expected: `mempool_truc.py | Passed`. If it fails, open a lab bug
-issue first.
-
-## Sources
-
-* `test/functional/README.md` in bitcoin/bitcoin: how to run the
-  suite.
-* `test/functional/test_framework/test_framework.py`
-  (`BitcoinTestFramework`): node setup and sync helpers.
-* `test/functional/test_framework/wallet.py` (`MiniWallet`):
-  framework wallet.
-* `test/functional/feature_rbf.py` and
-  `test/functional/mempool_packages.py`: the upstream tests from
-  Step 1.
+## Proof-of-work output
+Your own passing test file in `my-work/04-functional-test-framework/`. Later (Stage 19) the
+same skill produces a real upstream contribution: a test-coverage PR or a test you write while
+reviewing someone else's PR.

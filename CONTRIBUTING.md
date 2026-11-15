@@ -28,17 +28,22 @@ Contact: 5tan@altradits.com (or 0707172370 for urgent conduct issues).
 
 ## How to add or change a stage
 
-1. Copy [docs/STAGE_TEMPLATE.md](./docs/STAGE_TEMPLATE.md). Keep the
-   10 sections in order.
-2. Show every command with its real expected output, captured from a
-   run on regtest (Bitcoin Core v29.0 unless the stage says
-   otherwise). Never invent output.
-3. End with a working `./lab.sh check NN`. If you add a stage, add
-   its check in the same pull request.
-4. Update [START_HERE.md](./START_HERE.md) (stage map) and the stage
-   table in [README.md](./README.md).
-5. Keep one pull request to one stage or one theme, small enough to
-   review in 30 minutes.
+Every stage follows [CURRICULUM_CONVENTIONS.md](./CURRICULUM_CONVENTIONS.md) (the No-Shortcuts
+Rule): the student types every command and writes every line of code that teaches a skill.
+
+1. Copy [docs/STAGE_TEMPLATE.md](./docs/STAGE_TEMPLATE.md) and keep its sections in order.
+2. Worksheets in `exercises/` say what to achieve and which RPC, file or function to use, with
+   layered hints. They never show the finished command or code.
+3. Checkers (`check_*.sh`, `*_test.go`, `test_*.py`) inspect the student's node, files or code and
+   print PASS/FAIL with a reason. They never print the answer. Wire them into `./lab.sh check NN`.
+4. Reference answers go in `solutions/`. Run the checker against them on regtest (Bitcoin Core
+   v29.0 unless the stage says otherwise) and against an empty attempt; it must pass and fail.
+   Never invent output. Mark anything you could not run as **UNVERIFIED**.
+5. Go stages: keep a skeleton in `exercises/` and the reference in `solutions/`; `./lab.sh selftest`
+   must show the skeleton failing and the solution passing.
+6. Update [START_HERE.md](./START_HERE.md) (stage map), [CURRICULUM.md](./CURRICULUM.md) and the
+   stage table in [README.md](./README.md).
+7. Keep one pull request to one stage or one theme, small enough to review in 30 minutes.
 
 ## How to add a review or audit
 
@@ -53,7 +58,8 @@ Contact: 5tan@altradits.com (or 0707172370 for urgent conduct issues).
 - [ ] New or changed Go code passes `gofmt -l`, `go vet`, `go test`.
 - [ ] New or changed scripts pass `bash -n` and run on regtest.
 - [ ] New or changed Python passes `python3 -m py_compile`.
-- [ ] Stage READMEs follow the template; commands and outputs are real.
+- [ ] Stage READMEs follow the template; worksheets show no finished answers; checkers pass on `solutions/` and fail on an empty attempt.
+- [ ] `./lab.sh selftest` passes.
 - [ ] CI is green.
 
 ## Code of conduct

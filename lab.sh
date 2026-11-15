@@ -76,195 +76,125 @@ run_dojo() {
       fi
       ;;
     *)
-      echo "Usage: ./lab.sh dojo [break | check [1..5] | solve]"
+      echo "Usage: ./lab.sh dojo [break | check [1..6] | solve]"
       exit 1
       ;;
   esac
 }
 
 run_baby_step() {
-  ensure_daemon
   STEP="${1:-1}"
-  case "$STEP" in
-    1)
-      echo "============================================================"
-      echo "🌱 MICRO-STEP 1 (5 Mins): Touching Satoshi's Block #0 & Mining 101 Blocks"
-      echo "============================================================"
-      GEN_HASH=$($CLI getblockhash 0)
-      BEFORE_H=$($CLI getblockcount)
-      MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
-      # 101 blocks: 1 new coin plus 100 confirmations so later steps can spend it.
-      # The 100 block wait is called coinbase maturity. Stage 01 verifies it.
-      $CLI generatetoaddress 101 "$MINER_ADDR" >/dev/null
-      AFTER_H=$($CLI getblockcount)
-      echo "1. Block #0 (Genesis Hash) : $GEN_HASH"
-      echo "2. Height Before Mining    : $BEFORE_H"
-      echo "3. Height After Mining 101 : $AFTER_H"
-      echo ""
-      echo "💡 WHAT JUST HAPPENED:"
-      echo "   A blockchain is just a stack of numbered boxes (blocks)."
-      echo "   You just told your live Bitcoin node to mine 101 new blocks on top of Block #$BEFORE_H!"
-      echo ""
-      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
-      echo "   Run this command yourself in your terminal:"
-      echo "   bitcoin-cli -regtest getblockcount"
-      echo "   Then move to Step 2: ./lab.sh step 2"
-      ;;
-    2)
-      echo "============================================================"
-      echo "🌱 MICRO-STEP 2 (10 Mins): Seeing Your Digital Coins (UTXOs)"
-      echo "============================================================"
-      echo "In Bitcoin, there are NO bank accounts. Your wallet holds individual"
-      echo "digital coins called UTXOs (Unspent Transaction Outputs)."
-      echo ""
-      echo "Here are the top 3 digital coins currently inside your 'kisumu_miner' wallet:"
-      $CLI -rpcwallet=kisumu_miner listunspent | python3 -c "
-import sys, json
-utxos = json.load(sys.stdin)[:3]
-for i, u in enumerate(utxos, 1):
-    print(f'  Coin #{i}: Amount = {u[\"amount\"]} BTC | txid = {u[\"txid\"][:24]}... (vout {u[\"vout\"]})')
-"
-      echo ""
-      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
-      echo "   Check your total balance by adding up all your coins:"
-      echo "   bitcoin-cli -regtest -rpcwallet=kisumu_miner getbalance"
-      echo "   Then move to Step 3: ./lab.sh step 3"
-      ;;
-    3)
-      echo "============================================================"
-      echo "🌱 MICRO-STEP 3 (10 Mins): Sending Bitcoin & Watching the Mempool"
-      echo "============================================================"
-      DEST=$($CLI -rpcwallet=kisumu_merchant getnewaddress "step3_practice" "bech32")
-      TXID=$($CLI -rpcwallet=kisumu_miner sendtoaddress "$DEST" 0.5)
-      MEM_COUNT=$($CLI getmempoolinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['size'])")
-      echo "1. Fresh Merchant Address  : $DEST"
-      echo "2. Sent 0.50 BTC! TXID     : $TXID"
-      echo "3. Waiting in Mempool Now  : $MEM_COUNT unconfirmed transaction(s)"
-      echo ""
-      MINER_ADDR=$($CLI -rpcwallet=kisumu_miner getnewaddress)
-      $CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
-      MEM_AFTER=$($CLI getmempoolinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['size'])")
-      echo "4. Mined 1 Block! Mempool  : $MEM_AFTER unconfirmed transaction(s) (Confirmed!)"
-      echo ""
-      echo "👉 YOUR 1-MINUTE HANDS-ON ACTION:"
-      echo "   Inspect the transaction you just created:"
-      echo "   bitcoin-cli -regtest -rpcwallet=kisumu_merchant gettransaction $TXID"
-      echo "   Then move to Step 4: ./lab.sh step 4"
-      ;;
-    4)
-      echo "============================================================"
-      echo "🌱 MICRO-STEP 4 (15 Mins): Run Your First Bitcoin App"
-      echo "============================================================"
-      go -C "$LAB_DIR/00-start-small" run first_app.go
-      echo ""
-      echo "👉 YOUR 5-MINUTE BUILDER ACTION:"
-      echo "   1. Open 00-start-small/first_app.go in your editor."
-      echo "   2. Change 'myProjectLabel' (line 39) and 'amountBTC' (line 44)."
-      echo "   3. Run './lab.sh step 4' again to see your code changes live!"
-      echo "   Then move to Step 5: ./lab.sh step 5"
-      ;;
-    5)
-      echo "============================================================"
-      echo "🌱 MICRO-STEP 5 (15 Mins): Understand Just ONE 3-Line Bug Fix"
-      echo "============================================================"
-      echo "In 2010, someone created 184 Billion BTC out of thin air (CVE-2010-5139)"
-      echo "because Satoshi forgot to check if a transaction output was negative!"
-      echo ""
-      echo "Look at Mission 1 in 09-bug-dojo-and-pr-mastery/dojo_missions.go (lines 59-72):"
-      sed -n '59,72p' "$LAB_DIR/09-bug-dojo-and-pr-mastery/dojo_missions.go"
-      echo ""
-      echo "Running Mission 1 verification right now:"
-      run_dojo check 1
-      echo ""
-      echo "🎉 CONGRATULATIONS! You just completed all 5 Beginner Micro-Steps!"
-      ;;
-    *)
-      echo "Usage: ./lab.sh step [1..5]"
-      exit 1
-      ;;
+  local ws="$LAB_DIR/00-start-small/exercises/01-micro-steps.md"
+  echo "🌱 Micro-step $STEP lives in your Stage 00 worksheet — you type every command yourself:"
+  echo "   $ws"
+  echo ""
+  awk -v n="$STEP" 'BEGIN{p=0} /^## /{p=($0 ~ ("Step " n "[^0-9]") || $0 ~ ("Step " n "$"))} p' "$ws" 2>/dev/null | head -40
+  echo ""
+  echo "When you have done it: ./00-start-small/check_micro_steps.sh"
+}
+
+# ---------------------------------------------------------------------------
+# Stage helpers (no shortcuts: they show worksheets, run checkers, and swap Go skeletons;
+# they never perform an exercise for you)
+# ---------------------------------------------------------------------------
+stage_dir() {
+  local n; n=$(printf "%02d" "$((10#${1:-0}))" 2>/dev/null) || { echo ""; return; }
+  ls -d "$LAB_DIR/${n}-"* 2>/dev/null | head -1
+}
+
+stage_checkers() {  # prints the checker commands for a stage, one per line (relative to the stage dir)
+  case "$(printf "%02d" "$((10#$1))")" in
+    00) printf '%s\n' ./check_micro_steps.sh ./check_first_app.sh ;;
+    01) printf '%s\n' ./check_conf.sh ./check_node_procedure.sh ./check_coinbase.sh ;;
+    02) printf '%s\n' ./check_setup.sh ./check_decode.sh ./check_raw_tx.sh ./check_policy.sh ;;
+    03) printf '%s\n' ./check_rbf.sh ./check_cpfp.sh ./check_code_reading.sh ;;
+    04) printf '%s\n' ./check_anatomy.sh ./check_functional_test.sh "./check_functional_test.sh --mutation" ;;
+    05) printf '%s\n' ./check_truc.sh ./check_review_notes.sh ;;
+    06) printf '%s\n' ./check_htlc_script.sh ./check_htlc_spends.sh ./check_bolt3.sh ;;
+    07) printf '%s\n' GO ./check_psbt_flow.sh ;;
+    08) printf '%s\n' GO ;;
+    09) printf '%s\n' GO ./check_mission6.sh ;;
+    10) printf '%s\n' GO ;;
+    11) printf '%s\n' GO ./check_confs.sh ./check_wallet_drill.sh ;;
+    12) printf '%s\n' GO ./check_lnd_conf.sh ./check_polar_journal.sh ;;
+    13) printf '%s\n' ./check_13.sh ;;
+    14) printf '%s\n' ./check_14.sh ;;
+    15) printf '%s\n' ./check_15.sh ;;
+    16) printf '%s\n' "python3 test_tagged_hash.py" ;;
+    17) printf '%s\n' "python3 check_fuzz_target.py" "python3 check_bisect.py" ;;
+    18) printf '%s\n' "python3 test_linearize.py" ./check_18.sh ;;
+    19) printf '%s\n' ./check_gauntlet.sh ./check_commit_hygiene.sh ;;
   esac
 }
 
-practice_stage() {
-  ensure_daemon
-  STAGE="${1:-01}"
-  case "$STAGE" in
-    00|0)
-      echo "=== Stage 00: Start Small - Your First Bitcoin App ==="
-      go -C "$LAB_DIR/00-start-small" run first_app.go
-      ;;
-    01|1)
-      echo "=== Stage 01: Coinbase Maturity (COINBASE_MATURITY = 100) ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/consensus/consensus.h"
-      "$LAB_DIR/01-node-foundations/verify_coinbase_maturity.sh"
-      ;;
-    02|2)
-      echo "=== Stage 02: Raw Transactions, Implicit Fees & SegWit Weight ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/consensus/tx_verify.cpp"
-      "$LAB_DIR/02-raw-tx-and-mempool/raw_tx_mempool.sh"
-      ;;
-    03|3)
-      echo "=== Stage 03: BIP125 RBF & Child-Pays-For-Parent (CPFP) ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/policy/rbf.cpp"
-      "$LAB_DIR/03-rbf-and-cpfp/rbf_and_cpfp.sh"
-      ;;
-    04|4)
-      echo "=== Stage 04: Python Functional Test Framework (2-Node P2P) ==="
-      echo "Python Source: $LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py"
-      python3 "$LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py" --configfile="$BITCOIN_ROOT/build/test/config.ini"
-      ;;
-    05|5)
-      echo "=== Stage 05: BIP431 TRUC (v3) & 1P1C Package Relay ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/policy/truc_policy.cpp"
-      "$LAB_DIR/05-truc-package-relay-review/truc_1p1c_package.sh"
-      ;;
-    06|6)
-      echo "=== Stage 06: Lightning P2WSH HTLC State Machine ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/script/interpreter.cpp"
-      python3 "$LAB_DIR/06-lightning-htlc-state-machine/verify_htlc.py"
-      ;;
-    07|7)
-      echo "=== Stage 07: BIP380 Descriptors & BIP174 Airgapped PSBT ==="
-      echo "C++ Source: $BITCOIN_ROOT/src/script/descriptor.cpp & src/psbt.h"
-      go -C "$LAB_DIR/07-psbt-descriptors-and-miniscript" test -v ./...
-      go -C "$LAB_DIR/07-psbt-descriptors-and-miniscript" run .
-      ;;
-    08|8)
-      echo "=== Stage 08: Build an App on Top of bitcoind ==="
-      go -C "$LAB_DIR/08-builder-starter-kit" test -v ./...
-      go -C "$LAB_DIR/08-builder-starter-kit" run . --demo
-      ;;
-    10)
-      echo "=== Stage 10: Bitcoin Protocol Primitives From Scratch ==="
-      go -C "$LAB_DIR/10-protocol-primitives-from-scratch" test -v ./...
-      ;;
-    11)
-      echo "=== Stage 11: Run a Node on a Small Machine ==="
-      go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" test -v ./...
-      go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" run .
-      ;;
-    12)
-      echo "=== Stage 12: Bitcoin Core -> Lightning Readiness Gate & L1/L2 Bridge ==="
-      go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" test -v ./...
-      go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" run .
-      ;;
-    09|9)
-      echo "=== Stage 09: Bitcoin Core Bug Dojo & PR Fix Arena ==="
-      run_dojo check all
-      ;;
-    *)
-      echo "Unknown stage: $STAGE (choose 00..12)"
-      exit 1
-      ;;
-  esac
+stage_info() {
+  local d; d="$(stage_dir "$1")"
+  [ -n "$d" ] || { echo "Unknown stage: $1 (00..19)"; exit 1; }
+  echo "=== $(basename "$d") ==="
+  echo "README   : $d/README.md"
+  [ -d "$d/exercises" ] && { echo "Worksheets:"; ls "$d/exercises" | sed 's/^/  exercises\//'; }
+  echo "Checkers (./lab.sh check $1):"
+  stage_checkers "$1" | sed 's/^GO$/go vet + go test (your code at the stage root)/; s/^/  /'
+  echo "Journal  : my-work/$(basename "$d")/journal.md"
   echo ""
-  echo "📚 Offline Supplementary Knowledge Bank (Zero Internet / Zero AI / Zero Google):"
-  echo "   • Stuck on Go/Systems building blocks? Run: ./lab.sh book 1"
-  echo "   • Stuck on C++20/Python test blocks?   Run: ./lab.sh book 2"
-  echo "   • Stuck on Crypto/Schnorr/Taproot?     Run: ./lab.sh book 3  (or './lab.sh book pb')"
-  echo "   • Stuck on Tx Bytes/Script/Timelocks?  Run: ./lab.sh book 4  (or './lab.sh book mb')"
-  echo "   • Stuck on Lightning/HTLCs/LND?        Run: ./lab.sh book 5  (or './lab.sh book ln')"
-  echo "   • Practice coding from pure memory:    Run: ./lab.sh recall check"
+  echo "Open solutions/ only after a checker passes or after 3 honest attempts."
+}
+
+stage_check() {
+  local d; d="$(stage_dir "$1")"
+  [ -n "$d" ] || { echo "Unknown stage: $1 (00..19)"; exit 1; }
+  local fails=0
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    echo ""
+    if [ "$c" = GO ]; then
+      echo ">>> go vet + go test in $(basename "$d")"
+      (cd "$d" && go vet . && go test .) || fails=$((fails+1))
+    else
+      echo ">>> $c"
+      (cd "$d" && eval "$c") || fails=$((fails+1))
+    fi
+  done < <(stage_checkers "$1")
+  echo ""
+  [ "$fails" -eq 0 ] && echo "✅ Stage $1: every checker passed." || echo "❌ Stage $1: $fails checker(s) failed. Read the FAIL lines above."
+  [ "$fails" -eq 0 ]
+}
+
+stage_swap() {  # $1 = blank|solve, $2 = stage; Go stages with exercises/*.go only
+  local mode="$1" d; d="$(stage_dir "$2")"
+  [ -n "$d" ] && ls "$d"/exercises/*.go >/dev/null 2>&1 || { echo "Stage $2 has no Go skeleton (stages 07, 08, 10, 11, 12)."; exit 1; }
+  local bak="$LAB_DIR/my-work/$(basename "$d")/backups/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$bak"
+  for f in "$d"/exercises/*.go; do
+    local name; name="$(basename "$f")"
+    [ -f "$d/$name" ] && cp "$d/$name" "$bak/$name"
+    if [ "$mode" = blank ]; then cp "$f" "$d/$name"; else cp "$d/solutions/$name" "$d/$name"; fi
+  done
+  echo "Your previous files were saved in $bak"
+  if [ "$mode" = blank ]; then echo "✏️  Fresh skeleton in $(basename "$d"). Write every TODO, then ./lab.sh check $2"
+  else echo "📖 Reference solution copied into $(basename "$d") (spoiler). Restore your own work from the backup when done reading."; fi
+}
+
+lab_selftest() {  # for maintainers: checks the lab itself, never touches your work
+  local fails=0 tmp; tmp="$(mktemp -d)"
+  echo ">>> shell syntax"; for f in "$LAB_DIR"/lab.sh "$LAB_DIR"/*/check_*.sh "$LAB_DIR"/*/solutions/*.sh; do bash -n "$f" || { echo "syntax: $f"; fails=$((fails+1)); }; done
+  echo ">>> python compile"; for f in "$LAB_DIR"/*/*.py "$LAB_DIR"/*/exercises/*.py "$LAB_DIR"/*/solutions/*.py; do [ -f "$f" ] && { python3 -m py_compile "$f" 2>/dev/null || { echo "py_compile: $f"; fails=$((fails+1)); }; }; done
+  echo ">>> Go stages: skeleton must FAIL, solution must PASS"
+  for n in 07 08 10 11 12; do
+    local d; d="$(stage_dir $n)"; rm -rf "$tmp/s"; cp -R "$d" "$tmp/s"
+    for f in "$d"/exercises/*.go; do cp "$f" "$tmp/s/"; done
+    (cd "$tmp/s" && go vet . >/dev/null 2>&1 && ! go test . >/dev/null 2>&1) && echo "  $n skeleton fails: ok" || { echo "  $n skeleton: UNEXPECTED"; fails=$((fails+1)); }
+    for f in "$d"/exercises/*.go; do cp "$d/solutions/$(basename "$f")" "$tmp/s/"; done
+    (cd "$tmp/s" && go test . >/dev/null 2>&1) && echo "  $n solution passes: ok" || { echo "  $n solution: FAILS"; fails=$((fails+1)); }
+  done
+  local d9; d9="$(stage_dir 09)"; rm -rf "$tmp/s"; cp -R "$d9" "$tmp/s"; cp "$d9/solutions/dojo_missions_solved.go" "$tmp/s/dojo_missions.go"; rm -f "$tmp/s/mission6_test.go"
+  (cd "$tmp/s" && go test . >/dev/null 2>&1) && echo "  09 solution passes: ok" || { echo "  09 solution: FAILS"; fails=$((fails+1)); }
+  cp "$d9/broken/dojo_missions_broken.go" "$tmp/s/dojo_missions.go"
+  (cd "$tmp/s" && ! go test . >/dev/null 2>&1) && echo "  09 broken fails: ok" || { echo "  09 broken: UNEXPECTED"; fails=$((fails+1)); }
+  echo ">>> Stage 18 linearize reference"; python3 "$LAB_DIR/18-cluster-mempool-wallet-and-policy/test_linearize.py" "$LAB_DIR/18-cluster-mempool-wallet-and-policy/solutions/linearize.py" | tail -1
+  rm -rf "$tmp"
+  echo ""; [ "$fails" -eq 0 ] && echo "✅ Lab self-test passed." || echo "❌ Lab self-test: $fails problem(s)."
+  [ "$fails" -eq 0 ]
 }
 
 read_bip() {
@@ -378,21 +308,22 @@ $(git -C "$BITCOIN_ROOT" diff "${BASE_COMMIT}...${PR_HEAD}" | head -n 160)
 
 ---
 
-## 5. The 6-Point Satoshi Guardian Audit Checklist
-- [x] **1. Ring & Consensus Boundary:** Classified as \`${RING}\`. Verified whether consensus determinism is affected.
-- [x] **2. Invariant Preservation:** Checked that supply (\`MAX_MONEY\`), UTXO conservation, and cryptographic validation rules remain intact.
-- [x] **3. Integer & Memory Bounds:** Inspected diff for signed/unsigned overflow, underflow, or unbounded vector allocations.
-- [x] **4. Lock Ordering & Thread Safety:** Checked mutex acquisitions (\`cs_main\`, \`mempool.cs\`) and \`AssertLockHeld\` annotations.
-- [x] **5. Adversarial P2P / Mempool Vector:** Evaluated whether a zero-cost peer can trigger asymmetric CPU/RAM exhaustion.
-- [x] **6. Test Verification & Mutation Check:** Verified unit/functional test coverage in \`test/\` or \`src/test/\`.
+## 5. Review checklist (YOURS to tick — nothing below was checked for you)
+- [ ] **1. Risk area:** Which subsystem and invariant does this PR touch? Is consensus affected? (The ring \`${RING}\` was assigned by a script.)
+- [ ] **2. Invariants:** Which invariants must hold, and how did you check them?
+- [ ] **3. Bounds:** Overflow/underflow, unbounded containers or loops reachable by a peer or RPC caller?
+- [ ] **4. Locking:** Which mutexes are taken; do the annotations still hold?
+- [ ] **5. Adversarial input:** Can an untrusted peer or caller make the node do expensive work?
+- [ ] **6. Tests:** Do the PR's tests fail without the change (mutation)? What did you run, on which commit?
 
-## 6. Your Sign-Off (Fill In After Testing)
-\`\`\`markdown
-Tested ACK <commit-you-actually-built-and-ran>
-\`\`\`
-Replace the line above only after you build the commit and run its tests.
+## 6. Your conclusion (from YOUR OWN testing; never post text you did not write)
+- Commit I reviewed: \`________\`
+- What I built and ran: ________
+- Manual testing beyond the PR's tests: ________
+- Questions for the author: ________
+- My conclusion: ________
 INNER_EOF
-  echo "✅ Generated PR audit draft at: $OUT_FILE"
+  echo "✅ Generated Guardian PR Audit Report at: $OUT_FILE"
 }
 
 commit_offline() {
@@ -413,273 +344,6 @@ sync_online() {
   git -C "$LAB_DIR" push origin main
 }
 
-# ver_at_least NEED HAVE: true when HAVE >= NEED (dotted major.minor).
-ver_at_least() {
-  NEED_MAJOR=$(echo "$1" | cut -d. -f1); NEED_MINOR=$(echo "$1" | cut -d. -f2)
-  HAVE_MAJOR=$(echo "$2" | cut -d. -f1); HAVE_MINOR=$(echo "$2" | cut -d. -f2 | sed 's/[^0-9].*//')
-  [ "$HAVE_MAJOR" -gt "$NEED_MAJOR" ] && return 0
-  [ "$HAVE_MAJOR" -lt "$NEED_MAJOR" ] && return 1
-  [ "${HAVE_MINOR:-0}" -ge "${NEED_MINOR:-0}" ]
-}
-
-doctor_check() {
-  FAIL=0
-  if command -v git >/dev/null 2>&1; then
-    echo "OK: git $(git --version | awk '{print $3}')"
-  else
-    echo "MISSING: git (install Xcode tools on Mac, git on Linux)"; FAIL=1
-  fi
-  if command -v go >/dev/null 2>&1; then
-    GO_V=$(go version | sed -E 's/.*go([0-9]+\.[0-9]+).*/\1/')
-    if ver_at_least "1.22" "$GO_V"; then
-      echo "OK: go $GO_V (need 1.22+)"
-    else
-      echo "MISSING: go $GO_V is older than 1.22"; FAIL=1
-    fi
-  else
-    echo "MISSING: go 1.22+ (https://go.dev/dl/)"; FAIL=1
-  fi
-  if command -v python3 >/dev/null 2>&1; then
-    PY_V=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
-    if ver_at_least "3.10" "$PY_V"; then
-      echo "OK: python3 $PY_V (need 3.10+)"
-    else
-      echo "MISSING: python3 $PY_V is older than 3.10"; FAIL=1
-    fi
-  else
-    echo "MISSING: python3 3.10+"; FAIL=1
-  fi
-  if command -v bitcoind >/dev/null 2>&1 && command -v bitcoin-cli >/dev/null 2>&1; then
-    CORE_V=$(bitcoind --version 2>/dev/null | head -n 1 | sed -E 's/.*version v?([0-9]+\.[0-9]+).*/\1/')
-    echo "OK: bitcoind/bitcoin-cli ${CORE_V:-present} (lab tested with v29.0)"
-    case "${CORE_V:-}" in
-      29.*) ;;
-      *) echo "WARN: lab steps match v29.0 output; other versions may differ" ;;
-    esac
-  else
-    echo "MISSING: bitcoind and bitcoin-cli on PATH (add your build/bin)"; FAIL=1
-  fi
-  if $CLI getblockchaininfo >/dev/null 2>&1; then
-    echo "OK: regtest node reachable ($CLI)"
-  else
-    echo "MISSING: no regtest node at default port (run: bitcoind -regtest -daemon -fallbackfee=0.00001)"; FAIL=1
-  fi
-  if [ -x "$BITCOIN_ROOT/build/bin/test_bitcoin" ] && [ -f "$BITCOIN_ROOT/build/test/functional/test_runner.py" ]; then
-    echo "OK: Bitcoin Core build at $BITCOIN_ROOT (stage 04 needs it)"
-  else
-    echo "WARN: no built tree at $BITCOIN_ROOT (set BITCOIN_ROOT; stage 04 needs it)"
-  fi
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    echo "OK: docker running (stage 12 Polar needs it)"
-  else
-    echo "INFO: docker not running (only stage 12 Polar needs it)"
-  fi
-  [ -d "$HOME/.polar/networks" ] && echo "OK: Polar networks in ~/.polar" || echo "INFO: no ~/.polar networks (only stage 12 needs them)"
-  if [ "$FAIL" = "1" ]; then
-    echo "doctor: REQUIRED pieces missing (see MISSING lines above)"
-    return 1
-  fi
-  echo "doctor: all required tools present"
-}
-
-# check_stage runs the automated checkpoint for one stage (00..12).
-# It uses $BITCOIN_CLI when set, else plain "bitcoin-cli -regtest".
-check_stage() {
-  STAGE="${1:-}"
-  CHECK_CLI="${BITCOIN_CLI:-bitcoin-cli -regtest}"
-  export BITCOIN_CLI="$CHECK_CLI"
-  need_node() {
-    # shellcheck disable=SC2086
-    $CHECK_CLI getblockcount >/dev/null 2>&1 || { echo "FAIL: stage $STAGE needs a running regtest node ($CHECK_CLI)"; return 1; }
-  }
-  case "$STAGE" in
-    00)
-      need_node || return 1
-      if go -C "$LAB_DIR/00-start-small" run first_app.go >/tmp/lab-check-00.log 2>&1; then
-        echo "PASS: stage 00. first_app.go sent coins and confirmed them."
-      else
-        echo "FAIL: stage 00. first_app.go failed; see /tmp/lab-check-00.log"; return 1
-      fi
-      ;;
-    01)
-      need_node || return 1
-      if "$LAB_DIR/01-node-foundations/verify_coinbase_maturity.sh" >/tmp/lab-check-01.log 2>&1; then
-        echo "PASS: stage 01. coinbase matured after 100 blocks; regtest halves at height 150."
-      else
-        echo "FAIL: stage 01. maturity invariant broken; see /tmp/lab-check-01.log"; return 1
-      fi
-      ;;
-    02)
-      need_node || return 1
-      # shellcheck disable=SC2086
-      MINER_ADDR=$($CHECK_CLI -rpcwallet=kisumu_miner getnewaddress) || { echo "FAIL: stage 02. kisumu_miner wallet missing"; return 1; }
-      # shellcheck disable=SC2086
-      $CHECK_CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
-      OUT=$("$LAB_DIR/02-raw-tx-and-mempool/raw_tx_mempool.sh") || { echo "FAIL: stage 02. raw tx script failed"; return 1; }
-      TXID=$(echo "$OUT" | sed -n 's/^Broadcasted TXID: //p')
-      # shellcheck disable=SC2086
-      BLOCK_HASH=$($CHECK_CLI generatetoaddress 1 "$MINER_ADDR" | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
-      # shellcheck disable=SC2086
-      if $CHECK_CLI getblock "$BLOCK_HASH" 2 | python3 -c "
-import sys, json
-b = json.load(sys.stdin)
-txs = b['tx']
-assert len(txs) == 2, f'expected coinbase + 1 tx, got {len(txs)}'
-assert txs[1]['txid'] == '$TXID', 'our tx missing from block'
-subsidy = 50.0 / (2 ** (b['height'] // 150))
-got = txs[0]['vout'][0]['value']
-assert abs(got - subsidy - 0.0001) < 1e-8, f'coinbase {got} != subsidy {subsidy} + fee'
-"; then
-        echo "PASS: stage 02. raw tx confirmed; coinbase collected subsidy plus fee."
-      else
-        echo "FAIL: stage 02. coinbase or confirmation wrong"; return 1
-      fi
-      ;;
-    03)
-      need_node || return 1
-      # shellcheck disable=SC2086
-      MINER_ADDR=$($CHECK_CLI -rpcwallet=kisumu_miner getnewaddress) || { echo "FAIL: stage 03. kisumu_miner wallet missing"; return 1; }
-      # shellcheck disable=SC2086
-      $CHECK_CLI generatetoaddress 1 "$MINER_ADDR" >/dev/null
-      OUT=$("$LAB_DIR/03-rbf-and-cpfp/rbf_and_cpfp.sh" 2>/dev/null) || { echo "FAIL: stage 03. rbf script failed"; return 1; }
-      PARENT=$(echo "$OUT" | sed -n 's/^\[2\/3\] Replaced .* with TX_V2: //p')
-      CHILD=$(echo "$OUT" | sed -n 's/^\[3\/3\] Attached .* TX_CHILD: //p')
-      # shellcheck disable=SC2086
-      BLOCK_HASH=$($CHECK_CLI generatetoaddress 1 "$MINER_ADDR" | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
-      # shellcheck disable=SC2086
-      ORDER=$($CHECK_CLI getblock "$BLOCK_HASH" 1 | python3 -c "import sys,json; print(' '.join(json.load(sys.stdin)['tx']))")
-      # shellcheck disable=SC2086
-      set -- $ORDER
-      if [ "$#" = "3" ] && [ "$2" = "$PARENT" ] && [ "$3" = "$CHILD" ]; then
-        echo "PASS: stage 03. RBF replaced the parent; CPFP package confirmed in order."
-      else
-        echo "FAIL: stage 03. block order wrong (want coinbase parent child)"; return 1
-      fi
-      ;;
-    04)
-      [ -f "$BITCOIN_ROOT/build/test/functional/test_runner.py" ] || { echo "FAIL: stage 04. no test runner at \$BITCOIN_ROOT=$BITCOIN_ROOT"; return 1; }
-      if python3 "$LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py" --configfile="$BITCOIN_ROOT/build/test/config.ini" >/tmp/lab-check-04.log 2>&1 \
-        && python3 "$BITCOIN_ROOT/build/test/functional/test_runner.py" feature_rbf.py mempool_packages.py >/tmp/lab-check-04b.log 2>&1; then
-        echo "PASS: stage 04. custom two node test passed; upstream rbf and package tests passed."
-      else
-        echo "FAIL: stage 04. a test failed; see /tmp/lab-check-04.log and /tmp/lab-check-04b.log"; return 1
-      fi
-      ;;
-    05)
-      need_node || return 1
-      OUT=$("$LAB_DIR/05-truc-package-relay-review/truc_1p1c_package.sh" 2>/dev/null) || { echo "FAIL: stage 05. truc script failed"; return 1; }
-      echo "$OUT" | python3 -c "import sys,json; assert json.load(sys.stdin)['package_msg'] == 'success'" \
-        || { echo "FAIL: stage 05. package not accepted"; return 1; }
-      # Mixed v3 parent + v2 child must be rejected with TRUC-violation.
-      # shellcheck disable=SC2086
-      MIXED=$($CHECK_CLI -rpcwallet=kisumu_miner listunspent | python3 -c "import sys,json; u=[x for x in json.load(sys.stdin) if x['amount']>=5.0][0]; print(u['txid'], u['vout'], u['amount'])") \
-        || { echo "FAIL: stage 05. need one coin of at least 5 BTC"; return 1; }
-      # shellcheck disable=SC2086
-      set -- $MIXED
-      # shellcheck disable=SC2086
-      A1=$($CHECK_CLI -rpcwallet=kisumu_miner getnewaddress); A2=$($CHECK_CLI -rpcwallet=kisumu_miner getnewaddress)
-      # shellcheck disable=SC2086
-      RAW=$($CHECK_CLI createrawtransaction "[{\"txid\":\"$1\",\"vout\":$2}]" "[{\"$A1\":$3}]" 0 true)
-      # shellcheck disable=SC2086
-      SIGP=$($CHECK_CLI -rpcwallet=kisumu_miner signrawtransactionwithwallet "03000000${RAW:8}" | python3 -c "import sys,json; print(json.load(sys.stdin)['hex'])")
-      # shellcheck disable=SC2086
-      PTXID=$($CHECK_CLI decoderawtransaction "$SIGP" | python3 -c "import sys,json; print(json.load(sys.stdin)['txid'])")
-      # shellcheck disable=SC2086
-      SPK=$($CHECK_CLI decoderawtransaction "$SIGP" | python3 -c "import sys,json; print(json.load(sys.stdin)['vout'][0]['scriptPubKey']['hex'])")
-      CAMT=$(python3 -c "print(f'{float($3) - 0.00010000:.8f}')")
-      # shellcheck disable=SC2086
-      RAWC=$($CHECK_CLI createrawtransaction "[{\"txid\":\"$PTXID\",\"vout\":0}]" "[{\"$A2\":$CAMT}]")
-      # shellcheck disable=SC2086
-      SIGC=$($CHECK_CLI -rpcwallet=kisumu_miner signrawtransactionwithwallet "$RAWC" "[{\"txid\":\"$PTXID\",\"vout\":0,\"scriptPubKey\":\"$SPK\",\"amount\":$3}]" | python3 -c "import sys,json; print(json.load(sys.stdin)['hex'])")
-      # shellcheck disable=SC2086
-      if $CHECK_CLI submitpackage "[\"$SIGP\", \"$SIGC\"]" | grep -q "TRUC-violation"; then
-        echo "PASS: stage 05. 1P1C package accepted; mixed version package rejected."
-      else
-        echo "FAIL: stage 05. mixed version package was not rejected"; return 1
-      fi
-      ;;
-    06)
-      need_node || return 1
-      if python3 "$LAB_DIR/06-lightning-htlc-state-machine/verify_htlc.py" >/tmp/lab-check-06.log 2>&1 \
-        && grep -q "PASS: HTLC preimage claim and CSV refund both verified." /tmp/lab-check-06.log; then
-        echo "PASS: stage 06. HTLC preimage claim and CSV refund both verified."
-      else
-        echo "FAIL: stage 06. htlc script did not pass; see /tmp/lab-check-06.log"; return 1
-      fi
-      ;;
-    07)
-      need_node || return 1
-      go -C "$LAB_DIR/07-psbt-descriptors-and-miniscript" test ./... >/tmp/lab-check-07.log 2>&1 || { echo "FAIL: stage 07. unit tests failed"; return 1; }
-      if go -C "$LAB_DIR/07-psbt-descriptors-and-miniscript" run . >/tmp/lab-check-07.out 2>>/tmp/lab-check-07.log \
-        && grep -q "Complete=true" /tmp/lab-check-07.out; then
-        echo "PASS: stage 07. unit tests passed; PSBT signed offline and broadcast."
-      else
-        echo "FAIL: stage 07. live signing flow failed; see /tmp/lab-check-07.log"; return 1
-      fi
-      ;;
-    08)
-      need_node || return 1
-      go -C "$LAB_DIR/08-builder-starter-kit" test ./... >/tmp/lab-check-08.log 2>&1 || { echo "FAIL: stage 08. unit tests failed"; return 1; }
-      CHECK_PORT="${BUILDER_CHECK_PORT:-18080}"
-      BUILDER_LISTEN_ADDR="127.0.0.1:$CHECK_PORT" go -C "$LAB_DIR/08-builder-starter-kit" run . >>/tmp/lab-check-08.log 2>&1 &
-      SRV_PID=$!
-      sleep 8
-      RESULT=0
-      NODE_OUT=$(curl -sf "http://127.0.0.1:$CHECK_PORT/api/node") || RESULT=1
-      case "$NODE_OUT" in *'"blocks"'*) ;; *) RESULT=1 ;; esac
-      INV_OUT=$(curl -sf -X POST "http://127.0.0.1:$CHECK_PORT/api/invoice" -d '{"amount_sats": 50000, "label": "check"}') || RESULT=1
-      case "$INV_OUT" in *'bip21_uri'*) ;; *) RESULT=1 ;; esac
-      NOT_OUT=$(curl -sf -X POST "http://127.0.0.1:$CHECK_PORT/api/notarize" -d '{"document_text": "check doc"}') || RESULT=1
-      case "$NOT_OUT" in *'"txid"'*) ;; *) RESULT=1 ;; esac
-      kill $SRV_PID 2>/dev/null || true
-      wait $SRV_PID 2>/dev/null || true
-      if [ "$RESULT" = "0" ]; then
-        echo "PASS: stage 08. unit tests passed; invoice and notarize endpoints live."
-      else
-        echo "FAIL: stage 08. an endpoint failed; see /tmp/lab-check-08.log"; return 1
-      fi
-      ;;
-    09|9)
-      if go -C "$LAB_DIR/09-bug-dojo-and-pr-mastery" test ./... >/tmp/lab-check-09.log 2>&1; then
-        echo "PASS: stage 09. all five dojo missions pass."
-      else
-        echo "FAIL: stage 09. a dojo mission fails; run ./lab.sh dojo check"; return 1
-      fi
-      ;;
-    10)
-      if go -C "$LAB_DIR/10-protocol-primitives-from-scratch" test ./... >/tmp/lab-check-10.log 2>&1; then
-        echo "PASS: stage 10. all five primitive suites pass."
-      else
-        echo "FAIL: stage 10. a primitive suite fails; see /tmp/lab-check-10.log"; return 1
-      fi
-      ;;
-    11)
-      need_node || return 1
-      go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" test ./... >/tmp/lab-check-11.log 2>&1 || { echo "FAIL: stage 11. unit tests failed"; return 1; }
-      if go -C "$LAB_DIR/11-from-regtest-to-live-mainnet" run . >/tmp/lab-check-11.out 2>>/tmp/lab-check-11.log \
-        && grep -q "Public BIP84 Descriptor" /tmp/lab-check-11.out; then
-        echo "PASS: stage 11. unit tests passed; live wallet check reached the node."
-      else
-        echo "FAIL: stage 11. live wallet check failed; see /tmp/lab-check-11.log"; return 1
-      fi
-      ;;
-    12)
-      need_node || return 1
-      go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" test ./... >/tmp/lab-check-12.log 2>&1 || { echo "FAIL: stage 12. unit tests failed"; return 1; }
-      if go -C "$LAB_DIR/12-lightning-readiness-and-bitcoind-bridge" run . >/tmp/lab-check-12.out 2>>/tmp/lab-check-12.log \
-        && grep -q "LOCAL BITCOIND REACHABLE" /tmp/lab-check-12.out; then
-        echo "PASS: stage 12. unit tests passed; readiness program reached the node."
-      else
-        echo "FAIL: stage 12. readiness program failed; see /tmp/lab-check-12.log"; return 1
-      fi
-      ;;
-    *)
-      echo "Unknown stage: $STAGE (choose 00..12)"
-      return 1
-      ;;
-  esac
-}
-
 run_drill() {
   DRILL="${1:-1}"
   case "$DRILL" in
@@ -688,7 +352,7 @@ run_drill() {
       echo "🔨 DRILL 1: Clone, Git Remotes, Directory Map & Toolchain"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  git clone https://github.com/bitcoin/bitcoin.git "$HOME/bitcoin""
+      echo "  git clone https://github.com/bitcoin/bitcoin.git \"\$HOME/bitcoin\""
       echo "  git -C \"$BITCOIN_ROOT\" remote -v"
       echo "  cmake --version && clang++ --version && python3 --version"
       echo ""
@@ -768,7 +432,7 @@ run_drill() {
       echo "  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=bip32_tests"
       echo ""
       echo "  # 2. Run a Python Functional Test:"
-      echo "  python3 $LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=$BITCOIN_ROOT/build/test/config.ini"
+      echo "  python3 $LAB_DIR/my-work/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=$BITCOIN_ROOT/build/test/config.ini"
       echo ""
       echo "LIVE C++ UNIT TEST EXECUTION (merkle_tests & bip32_tests):"
       "$BITCOIN_ROOT/build/bin/test_bitcoin" --run_test=merkle_tests
@@ -814,26 +478,17 @@ run_drill() {
       echo "🔨 DRILL 8: Giving High-Signal Open-Source PR Feedback (ACK / Nit)"
       echo "============================================================"
       cat << 'INNER_EOF'
-THE 4 BITCOIN CORE OPEN-SOURCE REVIEW SIGNALS:
-  1. Concept ACK  : You agree with the goal/motivation of the PR.
-  2. Approach ACK : You agree with the architectural design & files touched.
-  3. Tested ACK <commit_hash> : You compiled, ran tests, mutation-tested & read the diff.
-  4. NACK / Nit   : Polite, specific feedback citing exact file:line numbers.
+REVIEW SIGNALS (read CONTRIBUTING.md "Peer Review" on master for the exact wording):
+  1. Concept (N)ACK  : you do (not) agree with the goal of the PR.
+  2. Approach (N)ACK : Concept ACK, and you do (not) agree with the approach.
+  3. ACK <commit>    : you reviewed the code at that commit; say what you tested
+                       (change-specific manual testing) or that you did not test.
+  4. NACK            : must include a rationale.
 
-COPY-PASTE GITHUB PR REVIEW TEMPLATE:
-------------------------------------------------------------
-Tested ACK <40-char-commit-hash>
-
-### Review Summary
-- **Risk Ring:** Ring <0/1/2/3>
-- **Code Inspection:** Verified `<function_name>` in `<file_path>:<line>` preserves `<invariant>`.
-- **Testing Performed:**
-  - Built cleanly with CMake (`cmake --build build --target bitcoind test_bitcoin`).
-  - Ran C++ unit test: `./build/bin/test_bitcoin --run_test=<suite_name>` (Passed).
-  - Mutation test: commented out the new check in `<file_path>`, recompiled, and confirmed the test fails as expected.
-------------------------------------------------------------
+There is deliberately NO copy-paste template here. Write each review from your own notes:
+use 19-review-and-contribution-practicum/exercises/templates/review-notes.md to organise them.
 INNER_EOF
-      echo "Full manual: BUILDING_BITCOIN_CORE_FROM_SOURCE.md"
+      echo "📘 Full manual: BUILDING_BITCOIN_CORE_FROM_SOURCE.md"
       ;;
     *)
       echo "Usage: ./lab.sh drill [1..8]"
@@ -865,6 +520,75 @@ run_polar() {
   echo "     docker exec polar-n1-alice lncli --network=regtest getinfo"
   echo "     docker exec polar-n1-dave  lncli --network=regtest getinfo"
   echo "======================================================================"
+}
+
+# ver_at_least NEED HAVE: true when HAVE >= NEED (dotted major.minor).
+ver_at_least() {
+  NEED_MAJOR=$(echo "$1" | cut -d. -f1); NEED_MINOR=$(echo "$1" | cut -d. -f2)
+  HAVE_MAJOR=$(echo "$2" | cut -d. -f1); HAVE_MINOR=$(echo "$2" | cut -d. -f2 | sed 's/[^0-9].*//')
+  [ "$HAVE_MAJOR" -gt "$NEED_MAJOR" ] && return 0
+  [ "$HAVE_MAJOR" -lt "$NEED_MAJOR" ] && return 1
+  [ "${HAVE_MINOR:-0}" -ge "${NEED_MINOR:-0}" ]
+}
+
+doctor_check() {
+  FAIL=0
+  if command -v git >/dev/null 2>&1; then
+    echo "OK: git $(git --version | awk '{print $3}')"
+  else
+    echo "MISSING: git (install Xcode tools on Mac, git on Linux)"; FAIL=1
+  fi
+  if command -v go >/dev/null 2>&1; then
+    GO_V=$(go version | sed -E 's/.*go([0-9]+\.[0-9]+).*/\1/')
+    if ver_at_least "1.22" "$GO_V"; then
+      echo "OK: go $GO_V (need 1.22+)"
+    else
+      echo "MISSING: go $GO_V is older than 1.22"; FAIL=1
+    fi
+  else
+    echo "MISSING: go 1.22+ (https://go.dev/dl/)"; FAIL=1
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    PY_V=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+    if ver_at_least "3.10" "$PY_V"; then
+      echo "OK: python3 $PY_V (need 3.10+)"
+    else
+      echo "MISSING: python3 $PY_V is older than 3.10"; FAIL=1
+    fi
+  else
+    echo "MISSING: python3 3.10+"; FAIL=1
+  fi
+  if command -v bitcoind >/dev/null 2>&1 && command -v bitcoin-cli >/dev/null 2>&1; then
+    CORE_V=$(bitcoind --version 2>/dev/null | head -n 1 | sed -E 's/.*version v?([0-9]+\.[0-9]+).*/\1/')
+    echo "OK: bitcoind/bitcoin-cli ${CORE_V:-present} (lab tested with v29.0)"
+    case "${CORE_V:-}" in
+      29.*) ;;
+      *) echo "WARN: lab steps match v29.0 output; other versions may differ" ;;
+    esac
+  else
+    echo "MISSING: bitcoind and bitcoin-cli on PATH (add your build/bin)"; FAIL=1
+  fi
+  if $CLI getblockchaininfo >/dev/null 2>&1; then
+    echo "OK: regtest node reachable ($CLI)"
+  else
+    echo "MISSING: no regtest node at default port (run: bitcoind -regtest -daemon -fallbackfee=0.00001)"; FAIL=1
+  fi
+  if [ -x "$BITCOIN_ROOT/build/bin/test_bitcoin" ] && [ -f "$BITCOIN_ROOT/build/test/functional/test_runner.py" ]; then
+    echo "OK: Bitcoin Core build at $BITCOIN_ROOT (stage 04 needs it)"
+  else
+    echo "WARN: no built tree at $BITCOIN_ROOT (set BITCOIN_ROOT; stage 04 needs it)"
+  fi
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    echo "OK: docker running (stage 12 Polar needs it)"
+  else
+    echo "INFO: docker not running (only stage 12 Polar needs it)"
+  fi
+  [ -d "$HOME/.polar/networks" ] && echo "OK: Polar networks in ~/.polar" || echo "INFO: no ~/.polar networks (only stage 12 needs them)"
+  if [ "$FAIL" = "1" ]; then
+    echo "doctor: REQUIRED pieces missing (see MISSING lines above)"
+    return 1
+  fi
+  echo "doctor: all required tools present"
 }
 
 m1_health_snapshot() {
@@ -978,9 +702,7 @@ case "${1:-help}" in
     rest_mac
     ;;
   step|baby-step)
-    m1_health_snapshot "BEFORE STEP ${2:-1}"
     run_baby_step "${2:-1}"
-    m1_health_snapshot "AFTER STEP ${2:-1}"
     ;;
   drill|setup-drill)
     m1_health_snapshot "BEFORE DRILL ${2:-1}"
@@ -1004,10 +726,20 @@ case "${1:-help}" in
     run_dojo "${2:-check}" "${3:-all}"
     m1_health_snapshot "AFTER DOJO (${2:-check})"
     ;;
-  practice)
-    m1_health_snapshot "BEFORE STAGE ${2:-01}"
-    practice_stage "${2:-01}"
-    m1_health_snapshot "AFTER STAGE ${2:-01}"
+  practice|stage)
+    stage_info "${2:-00}"
+    ;;
+  check)
+    stage_check "${2:?usage: ./lab.sh check <00..19>}"
+    ;;
+  blank|solve)
+    stage_swap "$1" "${2:?usage: ./lab.sh $1 <07|08|10|11|12>}"
+    ;;
+  selftest)
+    lab_selftest
+    ;;
+  doctor)
+    doctor_check
     ;;
   bip)
     read_bip "${2:-1}"
@@ -1183,19 +915,7 @@ PYEOF
     sync_online
     ;;
   verify-all)
-    m1_health_snapshot "BEFORE VERIFY-ALL"
-    show_status
-    for s in 00 01 02 03 05 06 07 08 09 10 11 12; do
-      echo ""
-      practice_stage "$s"
-    done
-    m1_health_snapshot "AFTER VERIFY-ALL"
-    ;;
-  doctor)
-    doctor_check
-    ;;
-  check)
-    check_stage "${2:-}"
+    lab_selftest
     ;;
   *)
     echo "Usage: ./lab.sh <command> [args]"
@@ -1210,36 +930,41 @@ PYEOF
     echo "  ./lab.sh book [mb|pb|cli|ln]     Read Mastering Bitcoin, Programming Bitcoin, Learning CLI, or Mastering LN"
     echo "  ./lab.sh recall [blank|check|solve] Practice coding 8 core Bitcoin building blocks 100% from memory"
     echo ""
+    echo "🩺 Setup:"
+    echo "  ./lab.sh doctor                  Check installed tools and versions (git, go, python, bitcoind)"
+    echo ""
     echo "🌱 Start Small (5-to-15 Minute Micro-Wins When Things Feel Hard):"
-    echo "  ./lab.sh step [1..5]             Walk through 5 tiny interactive steps (with Before/After M1 health check)"
-    echo "  ./lab.sh practice 00             Run your first Bitcoin program (00-start-small/first_app.go)"
+    echo "  ./lab.sh step [1..5]             Show one micro-step of the Stage 00 worksheet (you type every command)"
     echo ""
     echo "🔨 Bitcoin From Source Repetition Drills (Download -> Compile -> Test -> PR Feedback):"
-    echo "  ./lab.sh drill [1..8]            Master every command from git clone & CMake build to Tested ACK"
+    echo "  ./lab.sh drill [1..8]            Repeat the from-source drills: git clone, CMake build, tests, review signals"
     echo ""
     echo "🐻‍❄️ Lightning Readiness, Polar & Docker Simulation:"
     echo "  ./lab.sh polar                   Inspect ~/.polar networks & print lncli / Docker terminal drills"
-    echo "  ./lab.sh practice 12             Run the 6-Point Bitcoin->Lightning Readiness Gate & L1/L2 simulator"
+    echo "  ./lab.sh stage 12                Show the Lightning readiness worksheets and checkers"
     echo ""
     echo "Bug Dojo (Break, Fix & Verify Real Bitcoin Core Bugs):"
-    echo "  ./lab.sh dojo break              Load 5 unfixed pre-PR vulnerabilities into dojo_missions.go"
-    echo "  ./lab.sh dojo check [1..5]       Run the Dojo exploit test suite to verify your fixes"
+    echo "  ./lab.sh dojo break              Load the broken pre-fix code into dojo_missions.go"
+    echo "  ./lab.sh dojo check [1..6]       Run the Dojo tests (Mission 6: you write the test)"
     echo "  ./lab.sh dojo solve              Restore verified upstream solutions into dojo_missions.go"
     echo ""
     echo "Satoshi Foundations & Offline Study:"
-    echo "  ./lab.sh doctor                  Check installed tools and versions (git, go, python, bitcoind)"
-    echo "  ./lab.sh check <00..12>          Run the automated checkpoint for one stage"
     echo "  ./lab.sh genesis                 Inspect Genesis Block & 61-Line Consensus Shield (CVE-2010-5139 / CVE-2018-17144)"
     echo "  ./lab.sh status                  Show regtest node, offline libraries & M1 health snapshot"
     echo "  ./lab.sh bip <number>            Read any BIP offline (e.g., './lab.sh bip 340')"
     echo "  ./lab.sh bolt <number>           Read any Lightning BOLT offline (e.g., './lab.sh bolt 3')"
-    echo "  ./lab.sh practice <00..12>       Run and study a specific stage interactively"
-    echo "  ./lab.sh verify-all              Execute all protocol stages and Go builder tests"
+    echo ""
+    echo "📒 Curriculum stages 00..19 (CURRICULUM.md) — no shortcuts:"
+    echo "  ./lab.sh stage <00..19>          Show a stage's README, worksheets and checkers"
+    echo "  ./lab.sh check <00..19>          Run every checker for that stage (PASS/FAIL, never the answer)"
+    echo "  ./lab.sh blank <07|08|10|11|12>  Put a fresh Go skeleton in place (your file is backed up first)"
+    echo "  ./lab.sh solve <07|08|10|11|12>  Copy the reference solution in (spoiler; backup first)"
+    echo "  ./lab.sh selftest                Check the lab itself (syntax, skeletons fail, solutions pass)"
     echo ""
     echo "Maintainer-Grade Offline PR Auditing, Review Journeys & Sync:"
     echo "  ./lab.sh journeys [PR_NUMBER]    Study 8 real merged PR review journeys (or download any PR's journey)"
     echo "  ./lab.sh pr-list                 List upstream bitcoin/bitcoin PRs stored locally for offline review"
-    echo "  ./lab.sh pr-audit <PR_NUMBER>    Draft a PR audit from local git history (edit and verify after)"
+    echo "  ./lab.sh pr-audit <PR_NUMBER>    Collect a PR's metadata and diff into a study file with a BLANK review checklist"
     echo "  ./lab.sh commit-offline \"<msg>\"  Commit your work locally while offline"
     echo "  ./lab.sh sync                    Push all queued offline commits when back online"
     ;;

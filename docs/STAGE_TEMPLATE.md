@@ -1,120 +1,79 @@
 # Stage README template
 
-Every stage README in this repo uses the same sections in the same
-order. Copy this file when you add a stage. Delete these helper lines
-(the ones in brackets) before you commit.
+Every stage follows [CURRICULUM_CONVENTIONS.md](../CURRICULUM_CONVENTIONS.md): the student types
+every command and writes every line of code that teaches a skill. Copy this file when you add a
+stage, keep the sections in order, and delete the bracketed helper lines before you commit.
+
+```
+NN-stage-name/
+  README.md        # this template
+  exercises/       # worksheets (.md) and code skeletons with TODOs
+  check_*.sh | *_test.go | test_*.py   # outcome checkers (PASS/FAIL with a reason, never the answer)
+  solutions/       # reference answers and quiz answers (spoilers)
+```
 
 ---
 
 # Stage NN: <short plain title>
 
-[One paragraph. Say what the student builds or verifies and where it
-runs. Name regtest explicitly when the stage touches a node.]
+[One paragraph: what the student builds or verifies, and where it runs. Name regtest when the stage
+touches a node.]
 
-## Goal
+> **No shortcuts.** You type every command and write every line of code. Worksheets say what to
+> achieve, not the command. Open `solutions/` only after a checker passes or after three honest
+> attempts. Log what you typed in `my-work/NN-stage-name/journal.md`.
 
-[One or two sentences. Start with "After this stage you can...".]
+## Objectives
 
-## Why it matters
-
-[Two to five sentences. Link the stage to one primary source: a
-whitepaper section, a BIP, a BOLT, or a Bitcoin Core subsystem. Say how
-wallets, miners, or Lightning use this in practice.]
+[Competency IDs from CURRICULUM.md, each with one line: "C-XXX-N: after this stage you can ...".]
 
 ## Prerequisites
 
-[Bullet list. Name the earlier stages and the tools this stage needs.
-Link back to START_HERE.md for install steps. Do not repeat install
-steps here.]
+[Earlier stages and tools, with versions. Link START_HERE.md for installs; do not repeat them.]
 
-* Stage NN (what it provides).
-* Tool and version, for example Bitcoin Core v29.0.
+## Theory
 
-## Setup
+[Short. Link one primary source per idea: a BIP, a BOLT, a whitepaper section, or an exact
+Bitcoin Core file and function. Mark claims you could not check against source as **UNVERIFIED**.]
 
-[Numbered steps that leave the machine ready. Show every command and
-one line that says what success looks like. Keep this short. If setup
-takes more than five minutes, say so.]
+## Exercises
 
-```bash
-<command>
-```
+[One line per worksheet in `exercises/`, with what it produces and which checker verifies it.
+Inside each worksheet: numbered goals, the RPC/file/function to use, and layered hints in
+`<details>` blocks: Hint 1 (concept), Hint 2 (which RPC and its arguments). Never a final hint
+with the full answer.]
 
-Expected output:
-
-```text
-<exact or abbreviated output>
-```
-
-## Steps
-
-[The main work. Number each step. Show every command with its expected
-output. After each command, write one or two sentences that explain
-what happened and why. A student working offline must be able to follow
-this with no other page open.]
-
-### Step 1: <what the student does>
-
-```bash
-<command>
-```
-
-Expected output:
-
-```text
-<output>
-```
-
-[Explanation.]
-
-### Step 2: <next action>
-
-[Same pattern.]
+| Worksheet | You produce | Checker |
+| :--- | :--- | :--- |
+| `exercises/01-....md` | <state, file or code> | `./check_....sh` |
 
 ## Checkpoint
-
-[How the student proves the stage works. Prefer one automated command,
-for example `./lab.sh check NN`. Show the command and the exact output
-of a pass. If there is no automated check yet, give two or three manual
-commands with expected output.]
 
 ```bash
 ./lab.sh check NN
 ```
 
-Expected output:
-
-```text
-<output of a passing check>
-```
+[Say what a pass proves. Never paste output that gives away an answer.]
 
 ## Common errors and fixes
 
-[Table or list. Include every error you hit while testing the stage on
-a fresh machine. Give the exact error text, the cause, and the fix.]
+[Errors you hit while testing the stage on a fresh machine: exact text, cause, what to look at.
+Point to the cause; do not hand over the fixed command.]
 
-| Error | Cause | Fix |
+| Error | Cause | Where to look |
 | :--- | :--- | :--- |
-| `<exact error line>` | <why it happens> | <what to run> |
+| `<exact error line>` | <why it happens> | <RPC help, file, or setting> |
 
-## Going further
+## Self-check quiz
 
-[Two to four optional exercises, easiest first. Each one is one short
-paragraph with a clear done condition.]
+[5 to 10 questions answered from memory. Answers in `solutions/quiz_answers.md`.]
 
-## Contribution task
+## Review lens
 
-[One real, small, upstream appropriate task that uses this stage. Good
-examples: run one upstream functional test and report the result on a
-pull request, review a small open pull request, fix one docs typo. Link
-the exact test file or pull request. Never invent a pull request
-number.]
+[How this stage's knowledge is used when reviewing a real bitcoin/bitcoin (or LND) pull request in
+this area: the files and invariants to look at, and the questions to ask. Never a ready-to-post
+review or ACK.]
 
 ## Sources
 
-[Primary sources only, newest first within each group. Link the exact
-file or section, not a whole repo.]
-
-* Bitcoin Core: `src/...` file and function name.
-* BIP or BOLT: number and title.
-* Docs: `doc/...` path in bitcoin/bitcoin, or the LND docs page.
+[Primary sources only. Link the exact file or section. Never invent a pull request number.]

@@ -1,199 +1,116 @@
-# Stage 06: HTLC contracts on Bitcoin
+# Stage 06: HTLCs — Hand-Assemble the Script, Spend Both Branches, Then Read BOLT 3
 
-You build a Hash Time Locked Contract as a native SegWit (P2WSH)
-output and verify both branches: instant claim with the preimage, and
-refund after a 10 block timeout. You also verify both failure modes:
-a wrong preimage and an early refund.
+> Source checked: `src/script/interpreter.cpp`, `src/consensus/tx_verify.cpp` at `v29.0`
+> (`f490f5562d`); BOLT 3 from your offline copy in `~/bitcoin-references/bolts/`.
 
-## Goal
+**No-Shortcuts Rule.** You assemble the HTLC script byte by byte on paper, you write the Python
+that signs both spending paths, and you read BOLT 3 to see how real Lightning differs from the toy.
+The previous all-in-one script is the spoiler in
+[`solutions/verify_htlc.py`](./solutions/verify_htlc.py). Journal:
+`my-work/06-lightning-htlc-state-machine/journal.md`.
 
-After this stage you can write a two branch witness script, fund it,
-and spend each branch with the correct witness stack.
+---
 
-## Why it matters
+## Objectives
 
-Lightning payments are HTLCs. A Hash Time Locked Contract pays the
-receiver if they reveal a secret, or refunds the sender after a
-timeout. BOLT 2 and BOLT 3 build multi hop payments from this exact
-shape: `OP_SHA256` for the hash lock, `OP_CHECKSEQUENCEVERIFY`
-(BIP112) for the relative timeout. This stage runs the same logic on
-layer 1 so you trust it before you meet `lnd`.
+| ID | You can... |
+|----|------------|
+| C-LN-2 | build an HTLC witness script by hand, fund it as P2WSH, and spend it through the preimage path and the timeout path |
+| C-TX-3 | explain `nSequence` relative locks (BIP68), `OP_CHECKSEQUENCEVERIFY` (BIP112), `OP_CHECKLOCKTIMEVERIFY` (BIP65), and why BIP113 uses median-time-past |
+| C-SCRIPT-2 | build a P2WSH output from a witness script and sign a BIP143 sighash for it |
+| C-LN-3 (intro) | read BOLT 3's offered/received HTLC scripts and explain revocation |
 
 ## Prerequisites
+Stage 02 (serialization, P2WPKH, sighash) and Stage 04 (you can import `test_framework`).
+Estimated time: 8 hours.
 
-* Stage 02 (raw transactions and SegWit witnesses).
-* One coin of at least 5 BTC in `kisumu_miner`.
-* `BITCOIN_ROOT` set to your Bitcoin Core checkout. The script imports
-  the Python test framework for keys and transaction building.
+---
 
-## Setup
+## Theory
 
-```bash
-export BITCOIN_ROOT="$HOME/bitcoin"
-bitcoin-cli -regtest -rpcwallet="kisumu_miner" getbalance
+### 1. The toy HTLC
 ```
-
-Expected output (any value above 5 works):
-
-```text
-50.00000000
-```
-
-If the balance is too low, run `./lab.sh step 1` to mine more blocks.
-
-## Steps
-
-### Step 1: Read the contract
-
-The script uses fixed keys and a fixed secret, so every value below is
-reproducible. Secret preimage `R`:
-
-```text
-kisumu_lightning_htlc_secret_001
-```
-
-Payment hash `H = SHA256(R)`:
-
-```bash
-python3 -c "import hashlib; print(hashlib.sha256(b'kisumu_lightning_htlc_secret_001').hexdigest())"
-```
-
-Expected output:
-
-```text
-742af20ce270fb0e8ae2c5be398a44554cbddcb1bd005ea7bbadef3c522e7afa
-```
-
-Witness script (IF branch: merchant claims with the preimage; ELSE
-branch: sender refunds after 10 blocks):
-
-```text
 OP_IF
-    OP_SHA256 742af20c...e7afa OP_EQUALVERIFY
-    020d4804...fe507 OP_CHECKSIG
+    OP_SHA256 <H> OP_EQUALVERIFY <merchant_pubkey> OP_CHECKSIG      # pay if you know R with SHA256(R)=H
 OP_ELSE
-    10 OP_CHECKSEQUENCEVERIFY OP_DROP
-    022d7d6a...b637d OP_CHECKSIG
+    <delay> OP_CHECKSEQUENCEVERIFY OP_DROP <sender_pubkey> OP_CHECKSIG   # refund after `delay` blocks
 OP_ENDIF
 ```
+Witness stacks (bottom → top, last item is the witness script for P2WSH):
+- claim: `<sig_merchant> <R> 0x01 <script>`
+- refund: `<sig_sender> <empty> <script>` with the input's `nSequence = delay`.
 
-Full script hex:
+Segwit v0 enforces **MINIMALIF** as policy (and tapscript as consensus): the `OP_IF` argument
+must be exactly empty or exactly `0x01` (`SCRIPT_VERIFY_MINIMALIF`, `src/script/interpreter.h`).
 
-```text
-63a820742af20ce270fb0e8ae2c5be398a44554cbddcb1bd005ea7bbadef3c522e7afa8821020d48049735e22172d677161edb6b5ef3ddf39d82949f011f22260250165fe507ac675ab27521022d7d6adbdca821933ac3b0a6baedeb9492a1f822dcfde032c580831c185b637dac68
-```
+### 2. Relative and absolute timelocks
+| Mechanism | Field / opcode | Code |
+|-----------|----------------|------|
+| absolute, tx level | `nLockTime` (+ a non-final `nSequence`) | `IsFinalTx` in `src/consensus/tx_verify.cpp` |
+| absolute, script | `OP_CHECKLOCKTIMEVERIFY` (BIP65) | `CheckLockTime` in `src/script/interpreter.cpp` |
+| relative, tx level | `nSequence` (BIP68; bit 31 disables, bit 22 = time units of 512 s) | `CalculateSequenceLocks`, `SequenceLocks` |
+| relative, script | `OP_CHECKSEQUENCEVERIFY` (BIP112) | `CheckSequence` |
 
-It pays to this P2WSH address (verify with `decodescript`):
+Opcodes only **check** that the tx field is set at least as high; the tx field is what consensus
+enforces against the chain. That is why the refund tx itself must carry `nSequence = delay` and
+`version >= 2`. Time-based locks use **median-time-past** of the last 11 blocks (BIP113) so miners
+cannot game timestamps.
 
-```text
-bcrt1q00umt9mrdel5ufvwnnh7my5y4pmkgufnzdm4vvdupetrk0pna8jql56sqa
-```
+### 3. P2WSH
+`scriptPubKey = OP_0 <SHA256(witness_script)>` = `0x00 0x20 <32 bytes>`. The spender reveals
+the script in the witness; `VerifyWitnessProgram` checks its SHA256 matches.
 
-### Step 2: Fund the contract and verify both branches
+### 4. Real Lightning (BOLT 3) differs
+- Hash: `OP_HASH160 <RIPEMD160(payment_hash)>` (20 bytes) to save space. `OP_HASH160` computes
+  RIPEMD160(SHA256(x)); since `payment_hash = SHA256(preimage)`, hashing the preimage with
+  `OP_HASH160` gives RIPEMD160(payment_hash). `OP_SIZE 32 OP_EQUAL` picks the branch by item size.
+- Every output has a **revocation** path: if a party broadcasts an old commitment, the other
+  claims everything with the revocation key (penalty).
+- The timeout uses **absolute** `cltv_expiry`, enforced through a second-stage HTLC-timeout tx
+  with `nLockTime`, plus `to_self_delay` CSV on the broadcaster's own funds.
+- With anchors, HTLC outputs use `1 OP_CHECKSEQUENCEVERIFY` so they cannot be spent in the same
+  block (CPFP carve-out safety).
 
-```bash
-python3 ./06-lightning-htlc-state-machine/verify_htlc.py
-```
+---
 
-Expected output (txids differ; verdicts do not):
+## Exercises
 
-```text
-Wrong preimage: allowed=False reject-reason='mandatory-script-verify-flag-failed (Script failed an OP_EQUALVERIFY operation)'
-Preimage Claim TXID: fee5357555629d395713b6a87685d92cf41c90f18294b480d34e488240df67ca
-Early refund: allowed=False reject-reason='non-BIP68-final'
-CSV Timeout Refund TXID: 9d631f524e48a585ec15dfa5c8cbcf62014135671e717b34b951ca2ca91aa30a
-PASS: HTLC preimage claim and CSV refund both verified.
-```
+| # | Worksheet | Checker |
+|---|-----------|---------|
+| 1 | [Assemble the HTLC script by hand](./exercises/01-assemble-the-script.md) | `./check_htlc_script.sh` (offline) |
+| 2 | [Fund it and spend both branches with your own Python](./exercises/02-spend-both-branches.md) | `./check_htlc_spends.sh` |
+| 3 | [BOLT 3: toy vs real](./exercises/03-bolt3-compare.md) | `./check_bolt3.sh` (offline) |
 
-The script funds two 1 BTC HTLC outputs, then runs four checks:
+Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
+`my-work/06-lightning-htlc-state-machine/answers.env`.
 
-1. Wrong preimage. A claim with `wrong_secret_preimage_0000000000`
-   fails `OP_EQUALVERIFY` inside `OP_IF`. The signature is valid;
-   the hash is not.
-2. Valid claim. The merchant witness `[sig, R, 0x01, script]`
-   settles at once. `0x01` selects the IF branch.
-3. Early refund. A refund with `nSequence = 10` at 1 confirmation
-   fails with `non-BIP68-final`. The witness `[sig, "", script]`
-   selects ELSE (the empty push satisfies `MINIMALIF`).
-4. Matured refund. After 9 more blocks (10 confirmations) the same
-   transaction confirms.
+---
 
-### Step 3: Read the enforcement code
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Write the byte values of `OP_IF`, `OP_ELSE`, `OP_ENDIF`, `OP_SHA256`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_CHECKSEQUENCEVERIFY`, `OP_DROP`.
+2. How is the number 10 pushed in a script? And 144?
+3. Why must the refund tx have `version >= 2`?
+4. The refund's input has `nSequence = 10`, the funding tx has 3 confirmations. What does `testmempoolaccept` say?
+5. Why is a wrong preimage rejected with `mandatory-script-verify-flag-failed`, while an early refund gives `non-BIP68-final`?
+6. What does `0x01` in the claim witness do, and what would `0x02` cause?
+7. Why does BOLT 3 use `OP_HASH160 <RIPEMD160(payment_hash)>` instead of `OP_SHA256 <payment_hash>`?
+8. What stops a Lightning party from broadcasting an old, favourable commitment?
 
-Relative lock enforcement has two layers. Consensus checks the script
-flag in `EvalScript` (`src/script/interpreter.cpp`,
-`OP_CHECKSEQUENCEVERIFY` case), and mempool plus block validation
-check the input age in `SequenceLocks`
-(`src/consensus/tx_verify.cpp`), which produces `non-BIP68-final`.
-Find both with:
+---
 
-```bash
-grep -n "OP_CHECKSEQUENCEVERIFY" ~/bitcoin/src/script/interpreter.cpp | head -3
-grep -rn "non-BIP68-final" ~/bitcoin/src/consensus/tx_verify.cpp | head -3
-```
+## Review lens
+- Files: `src/script/interpreter.cpp` (`EvalScript` cases for `OP_CHECKLOCKTIMEVERIFY`,
+  `OP_CHECKSEQUENCEVERIFY`; `GenericTransactionSignatureChecker::CheckSequence`/`CheckLockTime`),
+  `src/consensus/tx_verify.cpp` (`IsFinalTx`, `CalculateSequenceLocks`, `EvaluateSequenceLocks`),
+  `src/validation.cpp` (`CheckSequenceLocksAtTip`).
+- Tests: `feature_bip68_sequence.py`, `feature_csv_activation.py`, `feature_cltv.py`,
+  `src/test/script_tests.cpp`, `src/test/data/script_tests.json`.
+- Invariants: timelocks are monotone (once spendable, always spendable on that chain, except via
+  reorg); script checks never depend on wall-clock time; consensus and policy flags stay separated.
+- Questions: does the PR change how sequence/locktime fields are interpreted (consensus!)? Is
+  there a reorg case where a tx becomes non-final again, and is the mempool cleaned
+  (`removeForReorg`)?
 
-Expected output (line numbers may differ by release):
-
-```text
-560:                case OP_CHECKSEQUENCEVERIFY:
-```
-
-plus the `non-BIP68-final` return in `tx_verify.cpp`. The script flag
-and the age check must both pass.
-
-## Checkpoint
-
-```bash
-./lab.sh check 06
-```
-
-Expected output:
-
-```text
-PASS: stage 06. HTLC preimage claim and CSV refund both verified.
-```
-
-The check runs the Step 2 script and requires its final PASS line.
-You can also rerun the script by hand.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `ModuleNotFoundError: test_framework` | `BITCOIN_ROOT` is unset or wrong | Export it as in Setup; the script reads `$BITCOIN_ROOT/test/functional` |
-| `list index out of range` on `listunspent` | No coin of at least 5 BTC | Mine more (`./lab.sh step 1`), then retry |
-| `non-BIP68-final` on the valid claim | You edited the claim sequence | Claims use final sequence, not 10; rerun the script unchanged |
-| `mandatory-script-verify-flag-failed` on the valid claim | Wrong preimage bytes | The preimage is exactly `kisumu_lightning_htlc_secret_001` |
-
-## Going further
-
-1. Change the timeout. Set `csv_delay = 3` in the script, adjust the
-   mining count, and confirm the refund verifies. Done when PASS
-   prints with the new delay.
-2. Try an absolute timeout. Replace the ELSE branch with
-   `OP_CHECKLOCKTIMEVERIFY` (BIP65) and a fixed locktime. Done when
-   the early spend fails and the matured spend passes.
-3. Map this to Lightning. Read BOLT 3, section on the HTLC output,
-   and find the `OP_IF` revocation branch. Done when you can say how
-   it differs from this contract (revocation key instead of sender
-   key).
-
-## Contribution task
-
-Run the upstream script test suite and confirm it passes:
-
-```bash
-./build/bin/test_bitcoin --run_test=script_tests
-```
-
-Run from your `bitcoin` checkout (build it first if needed). If it
-fails, open a lab bug issue with the output. Do not file upstream
-until a maintainer confirms.
-
-## Sources
-
-* BIP68 (relative locktime with `nSequence`), BIP112
-  (`OP_CHECKSEQUENCEVERIFY`), BIP65 (`OP_CHECKLOCKTIMEVERIFY`).
-* `src/script/interpreter.cpp` (`EvalScript`): script execution.
-* `src/consensus/tx_verify.cpp` (`SequenceLocks`): `non-BIP68-final`.
-* BOLT 2 and BOLT 3: HTLCs in Lightning channels.
+## Proof-of-work output
+Your own `htlc_spend.py` in `my-work/06-lightning-htlc-state-machine/` and a one-page note
+comparing the toy HTLC with BOLT 3. Good material for a BitDevs Kisumu Lightning session.

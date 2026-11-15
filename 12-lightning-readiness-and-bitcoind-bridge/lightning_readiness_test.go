@@ -98,3 +98,43 @@ func TestInspectLocalPolarNetworksFixture(t *testing.T) {
 		t.Fatalf("unexpected lightning entry: %s", nets[0].LightningNodes[0])
 	}
 }
+
+func TestChannelUpdateErrorsLeaveStateUnchanged(t *testing.T) {
+	s := &ChannelState{CapacitySats: 500_000, AliceSats: 300_000, BobSats: 200_000}
+	for _, amt := range []int64{0, -1, 300_001} {
+		if _, err := UpdateChannelBalance(s, amt, [32]byte{1}); err == nil {
+			t.Fatalf("payment %d must fail", amt)
+		}
+		if s.IsRevoked || s.AliceSats != 300_000 || s.BobSats != 200_000 {
+			t.Fatalf("a failed update must not touch the previous state (amount %d)", amt)
+		}
+	}
+	broken := &ChannelState{CapacitySats: 500_000, AliceSats: 300_000, BobSats: 100_000}
+	if _, err := UpdateChannelBalance(broken, 1, [32]byte{}); err == nil {
+		t.Fatal("conservation violation must be rejected")
+	}
+	s1, err := UpdateChannelBalance(s, 300_000, [32]byte{9})
+	if err != nil || s1.AliceSats != 0 || s1.BobSats != 500_000 || s1.StateNum != 1 || s1.IsRevoked {
+		t.Fatalf("paying the whole local balance must work: %+v %v", s1, err)
+	}
+	if s.RevokedPreimage != [32]byte{9} {
+		t.Fatal("previous state must store the revocation secret")
+	}
+}
+
+func TestCommitmentBoundaries(t *testing.T) {
+	cur := &ChannelState{CapacitySats: 1000, AliceSats: 700, BobSats: 300}
+	if a, b, o := EvaluateBroadcastedCommitment(cur, 243, 100, 144); a != 0 || b != 300 || !strings.HasPrefix(o, "TIMELOCK_ACTIVE") {
+		t.Fatalf("age 143 < 144: %d %d %s", a, b, o)
+	}
+	if a, b, o := EvaluateBroadcastedCommitment(cur, 244, 100, 144); a != 700 || b != 300 || !strings.HasPrefix(o, "FORCE_CLOSE_MATURED") {
+		t.Fatalf("age 144 == delay must be matured: %d %d %s", a, b, o)
+	}
+	old := &ChannelState{CapacitySats: 1000, AliceSats: 900, BobSats: 100, IsRevoked: true}
+	if a, b, o := EvaluateBroadcastedCommitment(old, 243, 100, 144); a != 0 || b != 1000 || !strings.HasPrefix(o, "JUSTICE_PENALTY_APPLIED") {
+		t.Fatalf("revoked, age 143: %d %d %s", a, b, o)
+	}
+	if a, b, o := EvaluateBroadcastedCommitment(old, 244, 100, 144); a != 900 || b != 100 || !strings.HasPrefix(o, "BREACH_MISSED") {
+		t.Fatalf("revoked, age 144: %d %d %s", a, b, o)
+	}
+}

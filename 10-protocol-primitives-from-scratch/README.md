@@ -1,160 +1,100 @@
-# Stage 10: Protocol code from scratch
+# Stage 10: Protocol Primitives From Scratch (Go, standard library only)
 
-You implement the core Bitcoin data structures in pure Go with no
-Bitcoin libraries: hashing, wire serialization, proof of work math,
-Merkle trees, and a small Script interpreter. Every piece is checked
-against real network values, including the genesis block.
+> Source checked: function names and behaviour against `v29.0` (`f490f5562d`); test vectors from
+> Core's own unit tests (`src/test/pow_tests.cpp`, `merkle_tests.cpp`, `bech32_tests.cpp`,
+> `scriptnum_tests.cpp`), BIP173/350/340, and mainnet block 100000.
 
-## Goal
+**No-Shortcuts Rule.** `primitives.go` in this folder is **your** file. It starts as a skeleton
+of TODOs with an exact spec comment above every function. You write every body. The tests tell
+you when you are right. The reference is [`solutions/primitives.go`](./solutions/primitives.go).
+Open it only after the tests for a lesson pass or after **3 honest attempts**.
 
-After this stage you can hash, serialize, and verify blocks and
-scripts from first principles, and read the matching C++ code.
+```
+./lab.sh blank 10    # copy exercises/primitives.go → primitives.go (fresh start; asks before overwriting)
+./lab.sh check 10    # go vet + go test in this stage
+./lab.sh solve 10    # copy the reference into primitives.go (spoiler)
+go test -run TestLesson3 ./...   # one lesson at a time
+```
 
-## Why it matters
+---
 
-Contributors debug serialization and consensus code, not just RPCs.
-`CompactSize` framing, the `nBits` target formula, Merkle pairing,
-and stack based Script execution appear in almost every consensus
-pull request. Writing them once in Go makes the C++ originals
-(`src/serialize.h`, `src/pow.cpp`, `src/consensus/merkle.cpp`,
-`src/script/interpreter.cpp`) readable.
+## Objectives
+
+| ID | You can... |
+|----|------------|
+| C-TX-1 | parse legacy and segwit transactions byte by byte; compute txid vs wtxid; reject malformed input |
+| C-CRYPTO-1 | SHA256d, BIP340 tagged hashes, Merkle roots, Merkle branches (SPV), and the CVE-2012-2459 mutation |
+| C-CONS-3 | explain CVE-2012-2459 and why Core reports `mutated` instead of trusting the root |
+| C-CONS-4 | convert `nBits` ↔ target (with negative/overflow flags), verify header PoW, compute a difficulty retarget with the 4× clamps |
+| C-SCRIPT-1 (intro) | encode/decode `CScriptNum` minimally and run a tiny script interpreter |
+| C-TX-1 (addresses) | Bech32/Bech32m (BIP173/350) checksums and segwit address rules |
 
 ## Prerequisites
+Stage 02 (you decoded a tx on paper). Go 1.22+. Estimated time: 14 hours.
 
-* Go 1.22 or later.
-* Stages 02 and 06 (weight, witnesses, timelocks) for context.
-* No node needed. This stage is pure Go.
+---
 
-## Setup
+## Lessons (each is a group of TODOs in `primitives.go` and a group of tests)
 
-```bash
-go -C ./10-protocol-primitives-from-scratch test ./...
-```
+| Lesson | Functions you write | Core to read first | Tests |
+|--------|---------------------|--------------------|-------|
+| 1 Hashing & byte order | `Hash256`, `ReverseBytes`, `HashToDisplayHex`, `HashFromDisplayHex`, `TaggedHash` | `src/hash.h`, `src/uint256.h` | `TestLesson1_*` |
+| 2 CompactSize | `EncodeCompactSize`, `DecodeCompactSize` (canonical + range checks) | `WriteCompactSize`/`ReadCompactSize` in `src/serialize.h` | `TestLesson2_*` |
+| 3 Transactions | `ParseTxSummary` (legacy + segwit, txid/wtxid, malformed input) | `UnserializeTransaction` in `src/primitives/transaction.h` | `TestLesson3_*` |
+| 4 Proof of work | `CompactToTarget`, `TargetToCompact`, `VerifyBlockHeaderPoW`, `CalculateNextWorkRequired` | `src/arith_uint256.cpp` (`SetCompact`/`GetCompact`), `src/pow.cpp` | `TestLesson4_*` |
+| 5 Merkle | `ComputeMerkleRoot` (+ mutated), `MerkleBranch`, `RootFromBranch` | `src/consensus/merkle.cpp`, `src/test/merkle_tests.cpp` | `TestLesson5_*` |
+| 6 Addresses | `Bech32Encode/Decode`, `ConvertBits`, `EncodeSegwitAddress`, `DecodeSegwitAddress` | `src/bech32.cpp`, `src/key_io.cpp`; BIP173, BIP350 | `TestLesson6_*` |
+| 7 Script numbers | `ScriptNumEncode/Decode`, `CastToBool`, `EvalMinimalScript` | `CScriptNum` in `src/script/script.h`, `CastToBool` in `src/script/interpreter.cpp` | `TestLesson7_*` |
 
-Expected output:
+### Theory notes you will need
+- **Byte order.** Hashes are stored and hashed in internal order; RPCs print them reversed
+  (`uint256::GetHex`). Every txid you copy from `bitcoin-cli` must be reversed before it goes
+  into raw bytes (Lesson 1 tests this both ways).
+- **CompactSize must be canonical.** `0xfd 0x05 0x00` encodes 5 but is non-canonical; Core
+  rejects it (`non-canonical ReadCompactSize()`). Sizes above `MAX_SIZE` (0x02000000) are rejected
+  when range checking is on.
+- **Retarget.** `CalculateNextWorkRequired` clamps the actual timespan to [timespan/4,
+  timespan×4] and never returns a target above `powLimit`. The tests use the same vectors as
+  `src/test/pow_tests.cpp`.
+- **CVE-2012-2459.** Odd levels duplicate the last hash, so `[a, b, c]` and `[a, b, c, c]` give
+  the same root. Core detects equal adjacent pairs and reports `mutated`; a block with a mutated
+  Merkle tree is rejected as `bad-txns-duplicate` *without* marking the header permanently invalid,
+  because the same header could also commit to a valid tx list.
+- **Bech32 vs Bech32m.** Witness v0 uses Bech32 (constant 1); v1+ (Taproot) uses Bech32m
+  (constant 0x2bc830a3) because of a length-extension weakness in Bech32 (BIP350).
 
-```text
-ok  	github.com/altradits/bitcoin-core-lab/10-protocol-primitives-from-scratch	0.831s
-```
+---
 
-## Steps
+## Extra challenges (write the code AND the test yourself)
+1. Add `OP_ADD` / `OP_SUB` to `EvalMinimalScript` with `CScriptNum` 4-byte input limits; write a
+   test with `<2> <3> OP_ADD <5> OP_EQUAL`.
+2. Write a test proving the retarget never makes difficulty rise more than 4× in one period.
+3. Write a fuzz-style test (`testing.F`) for `DecodeCompactSize` asserting decode(encode(n)) == n
+   and that every accepted encoding is canonical.
 
-### Step 1: Run the suite verbosely
+---
 
-```bash
-go -C ./10-protocol-primitives-from-scratch test -v ./...
-```
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. The genesis block hash as printed starts with `000000000019d6…`. What do its first raw bytes look like?
+2. Encode 252, 253, 65535, 65536 as CompactSize.
+3. Why does the segwit marker byte `0x00` not confuse a legacy parser on a tx with 0 inputs?
+4. What does `nBits = 0x1d00ffff` mean as a target?
+5. Give the retarget clamps and why they exist.
+6. Explain CVE-2012-2459 in two sentences and how Core defends against it.
+7. Why does BIP340 use tagged hashes?
+8. Why was Bech32m introduced for witness v1+?
+9. Minimal encoding of the script number −1 and 128.
 
-Expected output:
+## Review lens
+- Files: `src/serialize.h`, `src/primitives/transaction.h`, `src/pow.cpp`, `src/arith_uint256.cpp`,
+  `src/consensus/merkle.cpp`, `src/bech32.cpp`, `src/script/script.h`; tests
+  `src/test/serialize_tests.cpp`, `pow_tests.cpp`, `merkle_tests.cpp`, `bech32_tests.cpp`,
+  `scriptnum_tests.cpp`; fuzz targets in `src/test/fuzz/` for each.
+- Invariants: serialization round-trips and rejects non-canonical forms; consensus math has no
+  overflow (`arith_uint256`); anything consensus-critical is bit-for-bit identical across versions.
+- Questions: Does the PR change any serialized format or consensus arithmetic? (If yes: why, and
+  is it a soft fork?) Are there new test vectors from the BIP? Is there a fuzz target?
 
-```text
---- PASS: TestGenesisBlockHeaderProofOfWork (0.00s)
---- PASS: TestTaggedHashBIP340Vector (0.00s)
---- PASS: TestCompactSizeCanonicalSerialization (0.00s)
---- PASS: TestMerkleRootSingleAndMultiTx (0.00s)
---- PASS: TestEvalMinimalScriptHTLCHashlock (0.00s)
-ok
-```
-
-### Step 2: Verify the genesis block by hand
-
-Open [primitives.go](./primitives.go) and find `VerifyBlockHeaderPoW`.
-It reads `nBits` from header bytes 72 to 76, expands it with
-`CompactBitsToTarget`, hashes the 80 bytes twice, and compares. The
-test feeds the exact mainnet genesis header (version 1, timestamp
-1231006505, bits `0x1d00ffff`, nonce 2083236893) and requires the
-hash `000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f`
-with valid proof of work. If any byte were wrong, the hash would not
-match.
-
-Compare with `CheckProofOfWork` in `src/pow.cpp`. Same three steps:
-expand bits, hash header, compare.
-
-### Step 3: Trace one value through each engine
-
-Pick the number 100000 and follow it through the code:
-
-* `EncodeCompactSize(100000)` returns 5 bytes: `fe` plus
-  `100000` little endian. `DecodeCompactSize` rejects the same value
-  with an `fd` or `ff` prefix as non canonical. Upstream:
-  `WriteCompactSize` / `ReadCompactSize` in `src/serialize.h`.
-* `ComputeMerkleRoot` pairs hashes left to right and duplicates the
-  last hash on odd levels. Upstream: `ComputeMerkleRoot` in
-  `src/consensus/merkle.cpp`.
-* `EvalMinimalScript` runs pushes, `OP_DUP`, `OP_SHA256`,
-  `OP_EQUAL`, and `OP_EQUALVERIFY` on a byte stack. Feed it
-  `<preimage> OP_SHA256 <hash> OP_EQUALVERIFY OP_1` as the test
-  does. Upstream: `EvalScript` in `src/script/interpreter.cpp`.
-
-### Step 4: Check the tagged hash vector
-
-The test pins `TaggedHash("BIP0340/challenge", "hello")` to
-`a97ff4dc59e2e158c00a7d9cf1e7d60fb090ecf5f728b6d17be7cbbb0fc572dd`,
-computed independently with Python `hashlib`. This is the BIP340
-domain separation construction (`SHA256(tag) || SHA256(tag) || msg`)
-that Taproot uses for tweaks and challenges.
-
-## Checkpoint
-
-```bash
-./lab.sh check 10
-```
-
-Expected output:
-
-```text
-PASS: stage 10. all five primitive suites pass.
-```
-
-The check runs the Go suite. You can also rerun Step 1 by hand.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `expected Genesis hash ..., got ...` | You edited the header hex | Restore the 80 bytes exactly; check the nonce last |
-| `expected error for non-canonical CompactSize` | Canonical check removed | `DecodeCompactSize` must reject overlong encodings |
-| `TaggedHash mismatch` | Prefix written once instead of twice | Write `tagHash` twice before the message |
-| `unsupported opcode 0x..` in your own script | Opcode outside the mini set | The VM only knows pushes, DUP, SHA256, EQUAL, EQUALVERIFY |
-
-## Going further
-
-1. Pin the retarget clamp. Write a test that passes
-   `actualTimespanSec = 100` to `CalculateNextWorkRequired` and
-   proves the new target never drops below `oldTarget / 4`. Done
-   when the test passes. Upstream: `src/pow.cpp`.
-2. Flag Merkle mutation (CVE-2012-2459). Change `ComputeMerkleRoot`
-   to also return `mutated=true` when any paired siblings are
-   identical, matching the C++ `mutated` out parameter. Done when
-   `[a, b, c, c]` reports mutated and `[a, b, c]` does not.
-3. Add `OP_ADD` (0x93) to the VM with a test for
-   `<2> <3> OP_ADD <5> OP_EQUALVERIFY OP_1`. Done when the script
-   succeeds. Note: real `CScriptNum` has sign and minimality rules;
-   document what your version skips.
-4. Implement `VerifyMerkleProof(txid, branch, index, root)`. Done
-   when a proof for a 4 transaction tree verifies and a flipped bit
-   fails.
-
-## Contribution task
-
-Find one fuzz target upstream that covers code from this stage (for
-example `deserialize`, `parse_script`, `eval_script`, or `merkleblock`
-under `src/test/fuzz/`), and report that it builds and runs on your
-machine:
-
-```bash
-ls ~/bitcoin/src/test/fuzz/ | grep -i "deserialize\|parse_script\|eval_script\|merkleblock"
-```
-
-Build and run one harness for 60 seconds following `doc/fuzzing.md`.
-If it fails, open a lab bug issue with the output. Do not file
-upstream until a maintainer confirms.
-
-## Sources
-
-* `src/serialize.h` (`WriteCompactSize`, `ReadCompactSize`).
-* `src/pow.cpp` (`CheckProofOfWork`, retargeting) and
-  `src/arith_uint256.cpp` (`SetCompact`).
-* `src/consensus/merkle.cpp` (`ComputeMerkleRoot`, `mutated` flag).
-* `src/script/interpreter.cpp` (`EvalScript`).
-* BIP340 (Schnorr signatures): the tagged hash construction.
+## Proof-of-work output
+Your passing `primitives.go`, and one write-up in your own words explaining CVE-2012-2459 with a
+diagram — a good first post for your blog or a BitDevs Kisumu session.

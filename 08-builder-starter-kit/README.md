@@ -1,188 +1,63 @@
-# Stage 08: Build an app on top of bitcoind
+# Stage 08: Builder Starter Kit (Go + bitcoind JSON-RPC, standard library only)
 
-You run a zero dependency Go HTTP server that talks to `bitcoind`
-over JSON-RPC. It reports node state, creates BIP21 invoices from the
-watch only wallet, and anchors document hashes on chain with
-`OP_RETURN`.
+> **No shortcuts.** You write the money, dust, OP_RETURN, BIP21 and JSON-RPC code in
+> `kit.go`. The HTTP shell in `cmd/kit` is only wiring. Reference answers are in
+> [`solutions/`](./solutions/). Open them only after `./lab.sh check 08` passes or after 3 honest attempts.
 
-## Goal
+Source checked: `bitcoin/bitcoin` 29.x `f490f5562d` and `master` `e75b76b12c`. Differences are called out.
 
-After this stage you can call any `bitcoind` RPC from Go, derive
-watch only addresses, and build and broadcast transactions from an
-app.
+## Objectives
 
-## Why it matters
-
-Exchanges, merchants, and Lightning nodes are all apps sitting on this
-same RPC interface. BIP21 standardizes payment URIs so wallets can pay
-an invoice in one scan. `OP_RETURN` (a provably unspendable output)
-timestamps data without bloating the UTXO set. This stage turns the
-protocol pieces from Stages 02 and 07 into something a user can click.
+| ID | You can... |
+| :-- | :-- |
+| **C-TX-2** | Drive bitcoind only through JSON-RPC from your own client: cookie auth, wallet endpoints, error objects. |
+| **C-MEMPOOL-1** | Compute the dust threshold exactly like `GetDustThreshold`, and explain the OP_RETURN standardness limit and how it changed between 29.x and master. |
+| **C-TX-4** *(proposed new ID: "application integration — amounts, BIP21, RPC client")* | Handle amounts in integer satoshis, and build and parse BIP21 URIs safely. |
 
 ## Prerequisites
+Stage 07 (wallets `w07_watch` / `w07_signer` exist on your regtest node). Read `bip-0021.mediawiki` offline and [`doc/JSON-RPC-interface.md`](https://github.com/bitcoin/bitcoin/blob/master/doc/JSON-RPC-interface.md).
 
-* Stage 07 (the `sovereign_watch_only` wallet must exist with
-  imported descriptors; the invoice endpoint derives from it).
-* Go 1.22 or later. The server uses the Go 1.22 request pattern
-  syntax (`GET /api/node`).
+## Theory
+1. **Money is an integer.** `CAmount` is `int64_t` satoshis ([`src/consensus/amount.h`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/amount.h)). RPC prints amounts as fixed 8-decimal numbers, and `AmountFromValue` ([`src/rpc/util.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/rpc/util.cpp)) parses them with `ParseFixedPoint`. That function avoids floating point, because `0.1` cannot be represented exactly in binary.
+2. **Dust.** An output is dust if spending it would cost more than it is worth at `-dustrelayfee` (`DUST_RELAY_TX_FEE = 3000` sat/kvB, [`src/policy/policy.h`](https://github.com/bitcoin/bitcoin/blob/master/src/policy/policy.h)). Read `GetDustThreshold` in [`src/policy/policy.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/policy/policy.cpp). Its comment derives 546 sat (P2PKH) and 294 sat (P2WPKH). Note the 75% witness discount applied to the 107-byte assumed signature+pubkey. Also note that taproot outputs use the *same* formula as P2WSH (330 sat), with the comment pointing to PR #22779.
+3. **OP_RETURN.** `OP_RETURN <data>` outputs are provably unspendable (`CScript::IsUnspendable`), so their dust threshold is 0. How much data is *standard* is policy: on 29.x `MAX_OP_RETURN_RELAY = 83` bytes of script. On master it is `MAX_STANDARD_TX_WEIGHT / WITNESS_SCALE_FACTOR`. Verify both yourself with `git -C ~/bitcoin grep -n MAX_OP_RETURN_RELAY <branch> -- src/policy/policy.h`. Read the PR discussion behind that change before forming an opinion. A reviewer separates "what the code does" from "what I think policy should be".
+4. **BIP21.** `bitcoin:<address>?amount=<BTC>&label=…&message=…`. Parameters are percent-encoded per RFC 3986. Unknown parameters are ignored, but an unknown `req-` parameter makes the whole URI invalid.
+5. **JSON-RPC.** Auth uses the `.cookie` file (`__cookie__:<random>`) or `rpcauth`. Wallet calls go to `/wallet/<name>`. bitcoind returns **HTTP 401 with an empty body** on bad auth. For some RPC errors it returns 404/500 **with** a JSON error body (see `JSONErrorReply` in [`src/httprpc.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/httprpc.cpp)), so a client must read the body even when the status is not 200.
 
-## Setup
-
-```bash
-go -C ./08-builder-starter-kit test ./...
+## Exercises
 ```
-
-Expected output:
-
-```text
-ok  	github.com/altradits/bitcoin-core-lab/08-builder-starter-kit	0.445s
+./lab.sh blank 08                 # copies exercises/kit.go to ./kit.go (your old file is backed up)
+./lab.sh check 08                 # go test ./... — fails until you implement everything
+go test -run TestDust ./...       # one area at a time: TestAmounts, TestDust, TestOPReturn, TestBIP21, TestRPC
 ```
+<details><summary>Hint 1 (concept)</summary>For <code>ParseBTC</code>, split on "." and pad the fraction to 8 digits. For <code>DustThreshold</code>, first compute the serialized size of the output, then add the size of the input that would spend it.</details>
+<details><summary>Hint 2 (where)</summary><code>GetDustThreshold</code> (policy.cpp) and <code>CFeeRate::GetFee</code> (src/policy/feerate.cpp, which rounds up). For the RPC client, <code>net/http/httptest</code> in the tests shows you exactly what the server sees.</details>
 
-If your node uses a custom datadir or RPC port, export the same
-overrides as Stage 07 before the live steps:
-
-```bash
-export BITCOIND_RPC_URL="http://127.0.0.1:18443"
-export BITCOIN_COOKIE="$HOME/Library/Application Support/Bitcoin/regtest/.cookie"
+**Live run (after the tests pass).** Start your own regtest node, then:
 ```
-
-## Steps
-
-### Step 1: Run the unit tests verbosely
-
-```bash
-go -C ./08-builder-starter-kit test -v ./...
+go run ./cmd/kit -check
+go run ./cmd/kit -wallet w07_watch
 ```
+In another terminal, write your own `curl` calls against `POST /api/invoice` (body `{"amount_btc":"0.0005","label":"…"}`) and `POST /api/opreturn` (body `{"data_hex":"…"}`). Save them in `my-work/08/journal.md`.
 
-Expected output:
+### Builder challenges (no tests given: write the test first, then the code)
+- **A. Taproot invoices:** accept `"address_type":"bech32m"` and pass it to `getnewaddress`. Add a test in `kit_test.go` that the dust threshold for `5120<32 bytes>` is 330 at 3000 sat/kvB.
+- **B. Fee bump endpoint:** `POST /api/bumpfee {txid}` calls `bumpfee` on the watch-only wallet. What error does Core give, and why? Find the answer in `src/wallet/rpc/spend.cpp`, then use `psbtbumpfee` instead and finish the bump with the Stage 07 PSBT flow.
+- **C. OP_RETURN verifier:** `GET /api/verify?txid=…&data_hex=…` uses `getrawtransaction <txid> true` and compares the `nulldata` output's script hex with your `BuildOPReturnScript`.
 
-```text
-=== RUN   TestSatsToBTCAndBIP21
---- PASS: TestSatsToBTCAndBIP21 (0.00s)
-=== RUN   TestBuildOPReturnScriptHex
---- PASS: TestBuildOPReturnScriptHex (0.00s)
-=== RUN   TestRPCBaseURLDefaultAndOverride
---- PASS: TestRPCBaseURLDefaultAndOverride (0.00s)
-=== RUN   TestLoadRegtestAuthExplicitCookie
---- PASS: TestLoadRegtestAuthExplicitCookie (0.00s)
-PASS
-```
+## Self-check quiz (answers: [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Why is P2WPKH dust 294 sat while P2PKH is 546 sat? Show the byte arithmetic.
+2. Why does a P2TR output have the same dust threshold as P2WSH even though spending it is cheaper?
+3. What does `ParseBTC("0.1")` return, and what goes wrong if you compute `0.1 * 1e8` in float64 and truncate?
+4. A 40-byte payload: what is the full OP_RETURN script length? A 76-byte payload?
+5. Why must a BIP21 parser reject `req-foo=1` but ignore `foo=1`?
+6. Your client gets HTTP 500. Is the RPC call necessarily a transport failure?
+7. Why path-escape the wallet name in `/wallet/<name>`?
 
-The tests cover sat to BTC conversion with dust and MAX_MONEY
-bounds, BIP21 URI building, and the `6a20` OP_RETURN script shape.
+## Review lens: reading a policy/RPC PR
+- **Files:** `src/policy/policy.{h,cpp}`, `src/policy/feerate.cpp`, `src/httprpc.cpp`, `src/rpc/util.cpp`, `src/wallet/rpc/*.cpp`.
+- **Tests:** `test/functional/mempool_dust.py`, `test/functional/mempool_datacarrier.py`, `test/functional/interface_rpc.py`, `src/test/amount_tests.cpp`, `src/test/transaction_tests.cpp` (search `IsDust`).
+- **Questions:** Does the change alter what my node *relays* (policy) or what is *valid* (consensus)? Are default values documented in `-help` and release notes? Does an RPC change keep backward compatibility (deprecation flags)? Are amounts ever routed through `double`?
 
-### Step 2: Run the demo against the live node
-
-```bash
-go -C ./08-builder-starter-kit run . --demo
-```
-
-Expected output (address differs):
-
-```text
-1. Computed OP_RETURN Commitment:
-   SHA256: 57d9cdf179244a222253bc0883d3e64e8c48f97a332640f75bdbd7cb17e127f8
-   Script: 6a2057d9cdf179244a222253bc0883d3e64e8c48f97a332640f75bdbd7cb17e127f8
-2. Generated Watch-Only BIP21 Invoice (50,000 sats):
-   bitcoin:bcrt1qq8quyc99k906unpplzcaq6u2ckw4ev4zf9e04z?amount=0.00050000&label=Builder+Demo
-```
-
-Line 1 hashes a document and shows the `OP_RETURN` script that would
-commit to it (`6a` is OP_RETURN, `20` pushes 32 bytes). Line 2 derives
-a fresh watch only address and formats a BIP21 URI for 50,000 sats.
-If line 2 fails, rerun Stage 07 Step 2 first.
-
-### Step 3: Start the server and call it
-
-In one terminal:
-
-```bash
-go -C ./08-builder-starter-kit run .
-```
-
-Expected output:
-
-```text
-Bitcoin builder server listening on http://127.0.0.1:8080
-```
-
-In a second terminal:
-
-```bash
-curl -s http://127.0.0.1:8080/api/node | python3 -c "import sys,json; d=json.load(sys.stdin); print('height:', d['chain']['blocks'], 'mempool:', d['mempool']['size'])"
-curl -s -X POST http://127.0.0.1:8080/api/invoice -d '{"amount_sats": 50000, "label": "probe invoice"}'
-echo
-curl -s -X POST http://127.0.0.1:8080/api/notarize -d '{"document_text": "probe doc 001"}'
-```
-
-Expected output (values differ):
-
-```text
-height: 995 mempool: 0
-{"address":"bcrt1q0pl2lqvrp9s725r8uhelpt58atvxlc2cg9cxy9","amount_btc":"0.00050000","amount_sats":50000,"bip21_uri":"bitcoin:bcrt1q0pl2lqvrp9s725r8uhelpt58atvxlc2cg9cxy9?amount=0.00050000\u0026label=probe+invoice","watch_only":true}
-{"document_sha256":"da730f019f474e06cd4314037ad6da8dfb282a763a6c5219e2996d0ebf719de4","op_return_hex":"6a20da730f019f474e06cd4314037ad6da8dfb282a763a6c5219e2996d0ebf719de4","txid":"87f15f24abf95165273832fec1ff1ae7dd4fb1ea21ef17d6df6f4c760268544e"}
-```
-
-Notes: Go escapes `&` as `\u0026` in JSON strings. Any JSON parser
-decodes it back to `&`. The notarize call broadcasts a real regtest
-transaction with a zero value `nulldata` output plus change. Stop the
-server with Ctrl-C when done.
-
-## Checkpoint
-
-```bash
-./lab.sh check 08
-```
-
-Expected output:
-
-```text
-PASS: stage 08. unit tests passed; invoice and notarize endpoints live.
-```
-
-The check runs the unit tests, starts the server on a test port,
-calls all three endpoints, and stops the server. You can also rerun
-Steps 1 to 3 by hand.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `regtest .cookie or bitcoin.conf credentials not found` | Custom datadir | Export `BITCOIN_COOKIE` as in Setup |
-| `getnewaddress failed` in the demo | Watch only wallet missing | Run Stage 07 Step 2, then retry |
-| `bind: address already in use` on :8080 | Another server holds the port | Set `BUILDER_LISTEN_ADDR=127.0.0.1:18081` and retry |
-| `Fee estimation failed` on notarize | Node without `-fallbackfee` | Restart the node with `-fallbackfee=0.00001` |
-| Invoice below 546 sats rejected | Dust guard in `SatsToBTC` | Raise `amount_sats` to at least 546 |
-
-## Going further
-
-1. Add a Taproot invoice option. Accept `"address_type": "bech32m"`
-   in `/api/invoice` and pass it to `getnewaddress`. Before
-   changing the dust limit, read `GetDustThreshold` in
-   `src/policy/policy.cpp`: Taproot keeps the P2WPKH dust
-   computation, so 546 stays safe. Done when a `bcrt1p` invoice
-   returns.
-2. Add a fee bump endpoint. Call `bumpfee` on an unconfirmed wallet
-   transaction and return both txids. Done when RBF replacement
-   works through your endpoint.
-3. Cap the notarize size. Reject `document_text` over 1 KB with a
-   400 status and a clear message. Done when a large document is
-   refused before any RPC call.
-
-## Contribution task
-
-Review a small open upstream RPC pull request the way a maintainer
-would: read the diff, check out the branch, run the affected RPC by
-hand on regtest, and leave a short Tested ACK or a question. A good
-candidate is `bitcoin/bitcoin#36555` (`rpc: return error when
-invalidateblock fails`), which is small and RPC focused. Never invent
-results. Report only what you ran.
-
-## Sources
-
-* BIP21 (URI Scheme): the `bitcoin:` invoice format.
-* `doc/REST-interface.md` and `doc/JSON-RPC-interface.md` in
-  bitcoin/bitcoin: node interfaces.
-* `src/policy/policy.cpp` (`GetDustThreshold`): dust math.
-* `src/rpc/rawtransaction.cpp` (`walletcreatefundedpsbt` with a
-  `data` output): OP_RETURN funding.
+## Proof of work
+A passing `./lab.sh check 08`, plus a short write-up in your own words: "How Core decides an output is dust", with the arithmetic for three script types.

@@ -1,203 +1,131 @@
-# Stage 01: Node basics
+# Stage 01: Node Foundations — your own `bitcoin.conf`, start/stop, coinbase rules and the UTXO set
 
-You run `bitcoind` on regtest, create a wallet, mine blocks, and watch
-new coins stay unspendable for exactly 100 blocks. You also verify that
-the regtest block subsidy halves every 150 blocks.
+> Source checked: Bitcoin Core `v29.0` (`git -C ~/bitcoin log -1 --oneline` →
+> `f490f5562d`). Where `master` differs it is noted.
 
-## Goal
+**No-Shortcuts Rule.** You write the config file, the start/stop script, and every RPC call.
+Worksheets give goals and layered hints, never the finished command. Checkers inspect your files
+and your node and print PASS/FAIL. Reference answers are in [`solutions/`](./solutions/) — open
+them only after a check passes or after **3 honest attempts**. Record every command you type in
+`my-work/01-node-foundations/journal.md`.
 
-After this stage you can explain coinbase maturity and the halving
-schedule, and point to the C++ code that enforces them.
+The old automation script (`verify_coinbase_maturity.sh`) now lives in
+[`solutions/`](./solutions/verify_coinbase_maturity.sh) as a reference only.
 
-## Why it matters
+---
 
-The whitepaper (section 6) pays miners with new coins, but a miner
-that spends those coins at once would break everyone downstream if its
-block loses a chain race. Unlike normal transactions, a coinbase has no
-parent to return to the mempool, so consensus forces a 100 block wait
-(`COINBASE_MATURITY`). The halving schedule caps supply at 21 million
-BTC. On regtest the interval is 150 blocks instead of 210,000 so you
-can watch a halving happen in seconds.
+## Objectives
+
+| ID | You can... |
+|----|------------|
+| C-CONS-1 | state and test the coinbase rules: maturity (100), subsidy schedule and halving, coinbase value ≤ subsidy + fees, BIP34 height; compute the UTXO-set total by hand |
+| C-VAL-5 (intro) | explain what a datadir holds (blocks, chainstate, indexes, wallets, `debug.log`, `.cookie`) and what happens on clean vs unclean shutdown |
+| C-TX-1 (intro) | read a coinbase input (null prevout, scriptSig) and decode a little-endian script number |
+| C-COMMS-1 | explain each config option in your own words (comment lines in your `bitcoin.conf`) |
 
 ## Prerequisites
+Stage 00 done (you can create wallets, mine, send). `bitcoind -version` prints v29.0.
 
-* Stage 00 (a running node, the `kisumu_miner` wallet).
-* A Bitcoin Core source checkout to read the quoted files (optional
-  but recommended). The lab default is `~/bitcoin`.
+---
 
-## Setup
+## Theory
 
-Load the lab wallets. If the node is not running, start it as in
-Stage 00 with `-fallbackfee=0.00001`.
+### 1. The datadir and the config file
+`bitcoind` keeps everything in one data directory. On macOS the default is
+`~/Library/Application Support/Bitcoin/` (`doc/files.md`). Regtest data goes into a `regtest/`
+sub-folder: `blocks/`, `chainstate/` (the UTXO set, LevelDB), `indexes/` (e.g. `txindex`),
+`wallets/`, `debug.log`, and `.cookie` while the node runs.
+The config file is `bitcoin.conf` in the datadir (`doc/bitcoin-conf.md`). It has a default section
+and per-network sections `[main] [test] [testnet4] [signet] [regtest]`. Some options are
+**network-only** (`-port -rpcport -bind -rpcbind -addnode -connect -wallet -walletdir`; registered
+with `ArgsManager::NETWORK_ONLY` in `src/init.cpp`, `src/wallet/init.cpp`). Putting them in the
+default section while running regtest is an init error (search `init.cpp` for `only applied on`).
 
-```bash
-bitcoin-cli -regtest loadwallet "kisumu_miner"
-bitcoin-cli -regtest getblockcount
-```
+### 2. RPC authentication
+No credentials configured → `bitcoind` writes a random cookie (`.cookie`) at start-up and deletes
+it at shutdown; `bitcoin-cli` reads it. Or use `-rpcauth` (salted HMAC-SHA256;
+`share/rpcauth/rpcauth.py`). Never store `rpcpassword=` in plain text on a machine you care about.
 
-Expected output:
+### 3. The UTXO model
+State = the set of unspent outputs (`chainstate/`). A transaction consumes outputs (inputs refer to
+`txid:vout`) and creates outputs. Validity of spending depends only on the UTXO being present and
+the script being satisfied — there are no accounts. Every full node holds the same UTXO set at the
+same block. `gettxoutsetinfo` summarises it (count, total amount, a hash of the set).
 
-```text
-{
-  "name": "kisumu_miner"
-}
-101
-```
+### 4. Coinbase rules (consensus, `C-CONS-1`)
+| Rule | Where |
+|------|-------|
+| exactly one input with a null prevout; scriptSig length 2..100 bytes | `CheckTransaction`, `src/consensus/tx_check.cpp` (`bad-cb-length`) |
+| scriptSig starts with the block height (BIP34) | `ContextualCheckBlock`, `src/validation.cpp` (`bad-cb-height`) |
+| outputs ≤ subsidy + fees | `ConnectBlock`, `src/validation.cpp` (`bad-cb-amount`) |
+| spendable only after `COINBASE_MATURITY = 100` | `Consensus::CheckTxInputs`, `src/consensus/tx_verify.cpp` (`bad-txns-premature-spend-of-coinbase`) |
+| subsidy = 50 BTC >> (height / interval) | `GetBlockSubsidy`, `src/validation.cpp`; interval 210,000 on mainnet, 150 on regtest (`src/kernel/chainparams.cpp`) |
+| witness commitment in an `OP_RETURN` coinbase output (BIP141) | `GetWitnessCommitmentIndex`, `src/consensus/validation.h` |
 
-Your height differs if you mined more blocks. Any height works.
+`COINBASE_MATURITY` is declared as `static const int COINBASE_MATURITY = 100;` in
+`src/consensus/consensus.h`.
 
-## Steps
+**A subtle off-by-one you will measure yourself (Worksheet 3):** consensus checks a spend at
+`nSpendHeight` = the height of the block the spend would be mined in, so the *mempool* accepts the
+spend one block before the *wallet* (`GetTxBlocksToMaturity` in `src/wallet/wallet.cpp` uses
+`COINBASE_MATURITY + 1`) reports the coins as `trusted`. Earlier versions of this lab's README
+mixed the two up; your experiment settles it.
 
-### Step 1: Read the consensus constant
+**Why maturity exists:** a coinbase belongs to one specific block. If that block is reorganised
+away, the coinbase disappears entirely (it cannot be re-mined into another block, unlike a normal
+transaction that goes back to the mempool). The 100-block wait makes such reorgs unrealistic before
+the coins can move.
 
-```bash
-grep -n "COINBASE_MATURITY" ~/bitcoin/src/consensus/consensus.h | head -3
-```
+### 5. The genesis output is not spendable
+`ConnectBlock` has a special case for the genesis block that skips adding its transactions to the
+UTXO set (search `validation.cpp` for "Special case for the genesis block"). This is why the
+UTXO-set total starts at block 1.
 
-Expected output:
+---
 
-```text
-19:static const int COINBASE_MATURITY = 100;
-```
+## Exercises (in order)
 
-The comment above it says coinbase outputs can only be spent after
-this many new blocks. This is a network rule, not a wallet policy.
+| # | Worksheet | Your output | Checker |
+|---|-----------|-------------|---------|
+| 1 | [`exercises/01-write-your-bitcoin-conf.md`](./exercises/01-write-your-bitcoin-conf.md) | `my-work/01-node-foundations/bitcoin.conf` | `./01-node-foundations/check_conf.sh` |
+| 2 | [`exercises/02-start-stop-procedure.md`](./exercises/02-start-stop-procedure.md) | `my-work/01-node-foundations/node.sh` | `./01-node-foundations/check_node_procedure.sh [--cycle]` |
+| 3 | [`exercises/03-coinbase-maturity-and-subsidy.md`](./exercises/03-coinbase-maturity-and-subsidy.md) | `answers.env`, wallet `maturity_lab` | `./01-node-foundations/check_coinbase.sh` |
+| 4 | [`exercises/04-coinbase-anatomy.md`](./exercises/04-coinbase-anatomy.md) | `answers.env` | `./01-node-foundations/check_coinbase.sh` |
 
-### Step 2: Watch a coin mature
+Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
+`my-work/01-node-foundations/answers.env`. From this stage on, export `BTC_CLI` to point at
+your own node (Worksheet 1, Task 4), and start/stop it only with your `node.sh`.
 
-```bash
-./01-node-foundations/verify_coinbase_maturity.sh
-```
+---
 
-Expected output (addresses differ; amounts are 50 on a fresh chain
-and halve every 150 blocks after that):
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Name four options that must go in the `[regtest]` section, and what happens if one is in the top section.
+2. What does the `.cookie` file contain, and when does it exist?
+3. Regtest block 300: what is its subsidy in satoshis, and why?
+4. A coinbase is mined at height 500. At which tip does the mempool first accept a spend of it? At which tip does the wallet call it `trusted`?
+5. Why is the genesis block's 50 BTC not part of the UTXO set?
+6. Decode the BIP34 height pushed by `03a0bb0d`.
+7. Which consensus rule stops a miner paying itself more than subsidy + fees, and what is its reject reason?
+8. Why is the subsidy computed with a right shift, and why is there a special case for 64 or more halvings?
+9. What does `-txindex` add, and which RPC needs it?
 
-```text
-Mining to Regtest Bech32 address: bcrt1qqt0a5nsjd3aqxq8hkpmxcnt3mz33lpyz6ejwda
-[1/3] Mining initial coinbase block...
-Spendable balance after 1 block: 0.00000000 (immature coin: 50.0)
-[2/3] Mining 99 confirmation blocks (100 total, still 1 short of COINBASE_MATURITY=100)...
-Spendable balance after 100 total blocks: 0.00000000
-[3/3] Mining 100th confirmation block (101st total block)...
-Spendable balance after 101 total blocks: 50.00000000
-PASS: coinbase unspendable for 100 blocks, spendable after 101 (subsidy 50.0).
-```
+## Review lens
+When reviewing a PR that touches node start-up, config parsing, or coinbase/subsidy logic:
+- **Config/args:** `src/common/args.cpp` (`ArgsManager`), `src/init.cpp` (`AddArg`, network-only
+  checks), `doc/bitcoin-conf.md`. Ask: does a new option need `NETWORK_ONLY`? Is it `SENSITIVE`
+  (must not be logged)? Is the default documented in the help string? Is there a functional test
+  (`test/functional/feature_config_args.py`)?
+- **Coinbase/subsidy:** `GetBlockSubsidy`, `ConnectBlock` (`bad-cb-amount`),
+  `ContextualCheckBlock` (`bad-cb-height`), `Consensus::CheckTxInputs` (maturity). Invariant: the
+  money supply never exceeds the schedule (`MAX_MONEY` in `src/consensus/amount.h` is a sanity
+  bound, not the schedule). Tests to read: `test/functional/mempool_spend_coinbase.py`,
+  `feature_block.py` (search `bad-cb-amount`), `src/test/validation_tests.cpp` (subsidy tests).
+- **Shutdown safety:** anything that changes flushing (`FlushStateToDisk`) or `-persistmempool`
+  needs testing with a clean stop *and* an unclean one.
 
-The script mines to a fresh wallet on every run, so these lines look
-the same on any machine. The first coin becomes spendable only when
-100 blocks sit on top of it. The amount equals the block subsidy at
-your height (50 below height 150, 25 below 300, and so on). If pending
-transactions sit in your mempool, the first block also collects their
-fees, and the final line shows subsidy plus fees.
+## Proof-of-work output
+- Your commented `bitcoin.conf` and `node.sh` (publish them as a gist if you like; they contain no secrets when you use cookie auth).
+- A short write-up in your own words: "The coinbase maturity off-by-one between wallet and consensus, measured on regtest" with your journal numbers.
 
-### Step 3: Read the enforcement code
-
-The check lives in `Consensus::CheckTxInputs` in
-`src/consensus/tx_verify.cpp`:
-
-```cpp
-// If prev is coinbase, check that it's matured
-if (coin.IsCoinBase() && nSpendHeight - coin.nHeight < COINBASE_MATURITY) {
-    return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "bad-txns-premature-spend-of-coinbase",
-        strprintf("tried to spend coinbase at depth %d", nSpendHeight - coin.nHeight));
-}
-```
-
-Spend at depth 99 and the node rejects the transaction with
-`bad-txns-premature-spend-of-coinbase`. Spend at depth 100 and it
-passes.
-
-### Step 4: Watch a halving
-
-Regtest halves every 150 blocks (`CRegTestParams` in
-`src/kernel/chainparams.cpp`, line 535):
-
-```cpp
-consensus.nSubsidyHalvingInterval = 150;
-```
-
-Mine past height 150 if you are below it, then compare the coinbase
-value just below and above the boundary:
-
-```bash
-ADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" getnewaddress)
-bitcoin-cli -regtest generatetoaddress 60 "$ADDR" > /dev/null
-for H in 149 150 151; do
-  HB=$(bitcoin-cli -regtest getblockhash $H)
-  echo -n "height $H subsidy: "
-  bitcoin-cli -regtest getblock $HB 2 | python3 -c "import sys,json; print(json.load(sys.stdin)['tx'][0]['vout'][0]['value'])"
-done
-```
-
-Expected output:
-
-```text
-height 149 subsidy: 50.0
-height 150 subsidy: 25.0
-height 151 subsidy: 25.0
-```
-
-Blocks 0 to 149 pay 50 BTC. Blocks 150 to 299 pay 25 BTC. The next
-halving is at height 300.
-
-## Checkpoint
-
-```bash
-./lab.sh check 01
-```
-
-Expected output:
-
-```text
-PASS: stage 01. coinbase matured after 100 blocks; regtest halves at height 150.
-```
-
-The check runs the script from Step 2 and asserts the three balances
-(0, 0, then subsidy). You can also run the script directly as in
-Step 2.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `Could not connect to the server` | Node is not running | Start it as in Stage 00 Setup |
-| `Wallet kisumu_miner not found` | Wallet was never created | Run `bitcoin-cli -regtest createwallet "kisumu_miner"` |
-| `Block height out of range` on `getblockhash 150` | Chain is shorter than 150 blocks | Mine more: `generatetoaddress 60` as in Step 4 |
-| Many `stage01_run_*` wallets in the datadir | Each script run creates one wallet | Harmless on regtest. To reset, stop the node and delete the `regtest` datadir |
-
-## Going further
-
-1. Trigger the premature spend error by hand. Mine 1 block to a fresh
-   address, build a transaction that spends that coinbase at once with
-   `createrawtransaction`, and confirm `sendrawtransaction` fails with
-   `bad-txns-premature-spend-of-coinbase`. Done when you see that
-   exact string.
-2. Find the mainnet interval. Open `src/kernel/chainparams.cpp` and
-   find `nSubsidyHalvingInterval` for mainnet. Done when you can say
-   its value (210,000) and the file line.
-3. Check the subsidy math. Use `getblock` at heights 299 and 300 and
-   confirm the second halving (25 to 12.5). Done when both values are
-   on your screen.
-
-## Contribution task
-
-Run the upstream unit test that covers money ranges and report the
-result. From your `bitcoin` checkout:
-
-```bash
-cmake --build build -j4 --target test_bitcoin
-./build/bin/test_bitcoin --run_test=amount_tests
-```
-
-If it passes, you have verified consensus amount code on your machine.
-If it fails, open a lab bug issue with the output. Do not file upstream
-until a maintainer confirms the failure.
-
-## Sources
-
-* `src/consensus/consensus.h` (line 19): `COINBASE_MATURITY = 100`.
-* `src/consensus/tx_verify.cpp` (`Consensus::CheckTxInputs`): the
-  `bad-txns-premature-spend-of-coinbase` check.
-* `src/kernel/chainparams.cpp` (`CRegTestParams`, line 535): regtest
-  `nSubsidyHalvingInterval = 150`.
-* Whitepaper section 6 (Incentive): why miners are paid in new coins.
+## Next
+Stage 02 ([`../02-raw-tx-and-mempool/README.md`](../02-raw-tx-and-mempool/README.md)).

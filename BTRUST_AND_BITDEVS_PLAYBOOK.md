@@ -1,88 +1,126 @@
-# Btrust Grants, BitDevs Operations & Open-Source Community Blueprint
+# Btrust Programs & BitDevs Kisumu Playbook (verified)
 
-This playbook summarizes how to stay **100% compliant with Btrust (`btrust.tech`) regulations** while:
-1. Earning a **Btrust Grant** (paid in Bitcoin) as an open-source contributor,
-2. Operating a **Btrust-compliant BitDevs Socratic Seminar**, and
-3. Training local developers in your community using [`bitcoin-core-lab`](./README.md) so they can also earn from Bitcoin Free and Open-Source Software (FOSS).
+This playbook covers two things:
+1. Which Btrust program to aim for, and what each one actually asks for.
+2. How to run BitDevs Kisumu within Btrust's sponsorship terms.
 
----
+Every claim below is either quoted from a source in
+[Sources checked](#sources-checked-date-2026-11-09) or marked **UNVERIFIED**.
+Earlier versions of this file stated requirements that the sources do not support
+(see [Corrections](#corrections-made-on-2026-11-09)).
+Btrust pages change, so re-read them before you apply.
 
-## Part 1: Btrust's Core Non-Negotiable Rules (The "Red Lines")
-
-Whether you are applying for a personal developer grant or a BitDevs meetup sponsorship, Btrust enforces strict rules:
-
-1. **100% Bitcoin-Only (Zero Altcoins / Zero Web3 / Zero Tokens):**
-   - All code, repositories, meetups, and public developer profiles must focus strictly on **Bitcoin** (Layer 1: Bitcoin Core, libsecp256k1, BDK, Floresta, Stratum V2; Layer 2: LND, Core Lightning, LDK, Eclair, Fedimint/Cashu).
-   - Promoting altcoins, "blockchain/Web3" tokens, or closed-source commercial products disqualifies an application immediately.
-2. **100% Free and Open-Source Software (FOSS):**
-   - Every line of code and educational tool must be public under an open-source license (MIT / BSD / Apache 2.0) on GitHub/GitLab.
-3. **Public Proof of Work (No Ghost Work, No AI Spam):**
-   - Upstream Bitcoin projects (`bitcoin/bitcoin`, `lightningnetwork/lnd`, `lightningdevkit/rust-lightning`, `bitcoindevkit/bdk`) enforce strict human-in-the-loop policies (`doc/AI_POLICY.md`).
-   - Btrust evaluates **verifiable public links**: merged PRs, meaningful code reviews (`tACK` / `crACK` / bug catches), issue reproductions, and public monthly progress reports.
+Your evidence lives in [BTRUST_READINESS_TRACKER.md](./BTRUST_READINESS_TRACKER.md).
+The route to it is in [CURRICULUM.md](./CURRICULUM.md).
 
 ---
 
-## Part 2: How to Qualify for a Btrust Developer Grant (Your Personal Track)
+## Part 1: What Btrust funds (btrust.tech/grants)
 
-Btrust offers three main developer pathways for builders in Africa and the Global South:
+- Btrust funds "open-source Bitcoin developers working to improve the Bitcoin ecosystem".
+  Its focus areas are "Bitcoin protocol improvements, Layer 2 solutions, security enhancements, and other critical open-source projects".
+- Grant categories listed: **Developer**, **Education** and **Event** grants.
+- Geography: "Africa, India, Latin America, MENA, and Southeast Asia". Other Global South applicants are considered "contingent on their Proof of Work".
+- Payment: "paid monthly or one-time (depending on the grant) in Bitcoin (BTC)".
+- Applications are "reviewed on a rolling basis".
+- Grant amounts are **not stated** on the page.
+- Reporting obligations for developer grants are **not stated** on the page. **UNVERIFIED:** expect monthly reports, and ask Btrust when you are accepted.
 
-### 1. Btrust Builders (Pathway Program)
-- **Who it is for:** Experienced software engineers transitioning into Bitcoin & Lightning open-source development.
-- **How your lab gives you an edge:** You already have Polar (`Addis Ababa Bootcamp` & `Bitrust Bootcamp 2026`), a compiled `bitcoind` + `test_bitcoin` environment, and 13 stages of pure Bitcoin & Lightning code in [`bitcoin-core-lab`](./README.md).
+## Part 2: The three developer routes
 
-### 2. Btrust Starter Grant (6 Months Full-Time, Paid in BTC)
-To win a **Btrust Starter Grant**, you must show that you have already started contributing *before* asking for funding. Specifically, Btrust requires:
-- **1 Target Project Chosen:** Pick one primary upstream project (e.g., `bitcoin/bitcoin`, `btcsuite/btcd`, `lightningnetwork/lnd`, or `bitcoindevkit/bdk`).
-- **Non-Trivial Merged Code PR(s):** At least **one merged code-based PR** (not just typo/doc fixes, and beyond trivial `good first issue` labels).
-- **High-Signal Code Reviews (Your Fastest Entry Point):**
-  - Btrust explicitly looks for *"evidence of contributing helpful technical insights on other people's work (code reviews)"*.
-  - Reviewing 1–2 open PRs per week using [`./lab.sh pr-audit`](./lab.sh) and the 7 Maintainer Patterns in [`pr-reviews/merged-journeys/README.md`](./pr-reviews/merged-journeys/README.md) builds a public track record of `tACK`s and bug catches on GitHub.
-- **A Clear 6-Month Scope of Work:** A concrete proposal listing what PRs, test coverage, or subsystem improvements you will deliver full-time over 6 months.
-- **1 Peer/Contributor Reference:** Once you consistently review a maintainer's or regular contributor's PRs (and fix issues they care about), they know your work and can vouch for you.
+### A. Btrust Builders (training program, Africa)
+From btrust.tech/builders and /builders/apply:
+- "a comprehensive engineering program designed to train experienced software developers in Africa".
+- Criteria: "3+ years of experience as a software developer in a production environment"; "an active GitHub/GitLab account"; "Demonstrate your ability to engage with the technical content"; "a minimum of 20 hours per week"; "willingness to learn and grow".
+- The application includes a **code challenge**.
+- Applications are "open all year round", and you hear back "within two weeks".
+- Participants are paid during a "training period". The length of that period is **not stated**.
+- **Fit for you:** this is the realistic first application while you work through
+  Gates 1–2. Before applying, check honestly that you meet the 3+ years of production experience.
 
-### 3. Btrust Open-Source Cohort / Developer Grants (12+ Months, Paid in BTC)
-- For established contributors with an ongoing track record of merged PRs and reviews who commit full-time to maintaining and advancing critical Bitcoin infrastructure.
+### B. Btrust Starter Grant (six months, full-time)
+From btrust.homerun.co/starter-grants. The page showed "**Applications closed**" on 2026-11-09.
+- Ideal applicant: "made the jump from 'good first issues' to contribute more meaningful PRs and Reviews".
+- "Have chosen a specific Bitcoin open-source project … and made several non-trivial code contributions". The page defines these as:
+  - Reviews: "contributed multiple helpful insights on others' work and helped to move code that is not their own forward".
+  - PRs: "**at least five merged code-based PR** (excluding documentation changes) that is not labelled as a 'good first issue'".
+  - Other: "multiple helpful responses on issues, input on discussions, participation in community (project or otherwise, like BitDevs)".
+- "Have a clear plan outlining what you want to work on over the next six months".
+- "Be willing to commit full-time … during the six-month grant period".
+- "Positive reviews from **at least two** mentors or contributors on the project".
+- These map one-to-one onto **Gate 3** in [CURRICULUM.md](./CURRICULUM.md#gate-3-btrust-application-ready-no-fixed-week-it-depends-on-merges).
+
+### C. Btrust Open Source Cohort (established contributors)
+From btrust.homerun.co/open-source-cohort. The page showed "Applications closed" on 2026-11-09.
+- You meet the starter-grant criteria, plus: "at least 2 year's worth of proof of work", a "non-trivial portfolio", "a clear vision … for the next year", a mentor or contributor willing to support you, a record of effective collaboration, and readiness to "support a mentee from the starter grantees".
+- This route is out of scope for this lab's timeline. It is listed so you know where the path leads.
+
+## Part 3: Bitcoin Core's own rules (they apply to every public action)
+
+Checked in `~/bitcoin`, branch `master` at `e75b76b12c`:
+- **`doc/AI_POLICY.md` exists on master.** It was added in 2026 and was last changed in
+  `f5d7cc66ec` "doc: Discourage adding AI agents as commit authors". It is **not** in
+  the 29.x checkout, so read it with `git show master:doc/AI_POLICY.md`. Its key points:
+  - Comments must be written by humans. Comments believed to be AI-written "may be moderated".
+  - Open a PR only if you know the language, "could have written the code yourself", and understand the surrounding code.
+  - Explain the change in your own words. "Do not copy responses from the AI when replying to questions from reviewers."
+  - PRs must not be "opened or driven by autonomous agents", and agents must not be listed as authors or co-authors of commits.
+  - Any AI context you quote must be disclosed and accompanied by your own commentary.
+- `CONTRIBUTING.md` (Getting Started): "In-depth reviewing and testing are the bottleneck of the project, and are the most effective way anyone can start to contribute". It also points to PR Review Club (bitcoincore.reviews).
+- `CONTRIBUTING.md` (Peer Review): Concept (N)ACK and Approach (N)ACK are defined there. A code review "begins with `ACK BRANCH_COMMIT`" followed by how you reviewed it, and any testing beyond the existing tests should be described. A NACK needs a rationale.
+
+What this means for the lab: nothing in this repo is a comment or PR text for you to post.
+You write every public word from your own testing.
+
+## Part 4: Running BitDevs Kisumu
+
+From btrust.tech/bitdevs (verified):
+- Sponsorship requires "at least two reliable and committed organizers, including a Bitcoin developer". Solo organizers are not eligible.
+- Meetups are "technical, developer-focused discussions that follow a Socratic Seminar format". Topics must be "strictly related to Bitcoin".
+- "BitDevs discussions are never recorded or live-streamed." Photos are at the organizers' discretion.
+- Sponsorship covers essential costs ("venue, logistics, and operational support") and does not make the meetup a promotional platform.
+- Cities already on Btrust's list are not sponsored twice. Btrust aims to respond within 2–4 weeks. New groups usually start with a **3-month probation**, and sponsorship can stop if meetups are inconsistent or drift off Bitcoin.
+- The page expects regular **monthly** meetups.
+
+**UNVERIFIED** (not on the Btrust or bitdevs.org pages checked; confirm with Btrust):
+- Chatham House Rule. It is a widespread BitDevs convention but not a stated Btrust requirement.
+- A budget template, a "10th of the month" reporting deadline, or any specific report format.
+
+**Session design.** This is your work. Use these as prompts, not a script.
+- At least one week before: publish a reading list. Sources you can draw from are Optech newsletters, PRs you reviewed, Delving Bitcoin threads, and BOLT changes. Which 5–8 items would make engineers argue usefully?
+- During the session: for each item, what is the one question that exposes the trade-off? Write your own questions. Don't reuse examples from this file.
+- After the session: log the date, topic list link and attendance count in the tracker (Gate 2 asks for 3 sessions).
+
+## Part 5: Other funders (pointers only, not verified in this pass)
+
+Summer of Bitcoin, Spiral, OpenSats, Brink and others fund Bitcoin FOSS work. Their
+criteria were **not checked** on 2026-11-09. Read each funder's own site before
+advising anyone in your community.
 
 ---
 
-## Part 3: How to Operate a Btrust-Sponsored BitDevs Chapter
+## Corrections made on 2026-11-09
 
-Btrust sponsors local **BitDevs** chapters across Africa (covering venue, refreshments, and logistics) provided you follow the official **BitDevs Africa / Btrust Meetup Regulations**:
+| Previous claim | Status |
+|---|---|
+| Starter Grant needs "at least one merged code-based PR" | **Wrong.** The page says **at least five**. |
+| Starter Grant needs "1 peer/contributor reference" | **Wrong.** The page says **at least two**. |
+| "Btrust Builders: experienced engineers transitioning" | Partly true. The page specifies Africa, 3+ years production experience, 20 h/week and a code challenge. |
+| Upstream projects enforce `doc/AI_POLICY.md` | **True for `bitcoin/bitcoin` master** (not the 29.x checkout). Not checked for lnd/LDK/BDK. |
+| BitDevs: "at least one co-organizer must be a technical developer" | Close. The page says "including a Bitcoin developer". |
+| BitDevs: Chatham House Rule is a Btrust rule | **UNVERIFIED.** Not stated on the Btrust page. |
+| BitDevs: monthly budget/report due by the 10th | **UNVERIFIED.** Removed as a rule. |
+| BitDevs: photography restricted | **Wrong.** The page leaves photos to organizers' discretion. Recording and streaming are banned. |
+| "Promoting altcoins disqualifies immediately"; mandatory MIT/BSD/Apache | **UNVERIFIED** as wording. The pages do say "Bitcoin-only" and "strictly related to Bitcoin" (BitDevs) and "open-source Bitcoin" (grants). |
+| "Btrust evaluates monthly progress reports" | **UNVERIFIED.** |
+| Lab-specific "Bitrust Bootcamp 2026" | **UNVERIFIED.** Removed. |
 
-### Rule 1: Co-Organizer Requirement (Never Solo)
-- Btrust **does not award BitDevs grants to a solo organizer**.
-- You must have **at least 2 committed co-organizers** in your city/location, and **at least one must be an active technical Bitcoin developer** (which is your role).
+## Sources checked (date 2026-11-09)
 
-### Rule 2: Mandatory "Socratic Seminar" Format (No Sales Pitches or Lectures)
-- A BitDevs meetup is **not** a beginner "What is Bitcoin?" lecture or a company pitch.
-- It must follow the **Socratic Seminar** format:
-  1. **1–2 Weeks Before the Meetup:** Publish a public reading list on your BitDevs website/GitHub containing recent **Bitcoin Optech Newsletter** items, **merged & open `bitcoin/bitcoin` PRs** (from your [`pr-reviews/merged-journeys/`](./pr-reviews/merged-journeys/README.md)), **Delving Bitcoin** threads, and **Lightning BOLT** updates.
-  2. **During the Meetup:** As moderator, you briefly introduce each PR or protocol topic in 2 minutes, then ask the room open technical questions (*"Why did `@maflcko` need `sync_mempools()` between `tx1`, `tx2`, and `tx3` in PR #36553?"*, *"What happens if two miners broadcast conflicting compact blocks?"*).
-
-### Rule 3: Strict Chatham House Rule & Zero Recording
-- **Chatham House Rule:** Attendees are free to use the technical knowledge shared, but **never attribute who said what** outside the room.
-- **No Video Recording / No Live Streaming:** BitDevs Socratic Seminars are **never recorded or live-streamed**, and photography during technical discussions is restricted so developers can speak freely and ask questions without fear.
-
-### Rule 4: Monthly Budget & Attendance Reporting (By the 10th of Each Month)
-- Submit your budget prior to the meetup using Btrust's template, track attendance, publish the Socratic Seminar topic list publicly, and submit your Meetup & Finance Report on time every month (typically before the 10th of the following month).
-
----
-
-## Part 4: How to Build a Local Community of Contributors Who Earn From Open Source
-
-You can use your own [`bitcoin-core-lab`](./README.md) repository as a **4-Step Incubator** after each monthly BitDevs Socratic Seminar (e.g., running a 2-hour "PR Review Club & Builder Workshop" alongside BitDevs):
-
-```mermaid
-flowchart LR
-    A["Month 1: Foundations\nClone bitcoin-core-lab\nRun Stages 00..04 & Drills 1..4"] --> B["Month 2: Bug Dojo & L2\nSolve 5 Real CVEs in Dojo\nRun Stage 12 & Polar LND"]
-    B --> C["Month 3: PR Review Club\nStudy 8 Merged PR Journeys\nPost 4 Real Human tACKs"]
-    C --> D["Month 4-6: First Merged PRs\nApply to Btrust Builders,\nSummer of Bitcoin & Starter Grants"]
-```
-
-### Other Bitcoin Open-Source Grants Your Community Members Can Earn From:
-As your BitDevs members build a portfolio of real GitHub reviews and PRs, guide them to apply to:
-1. **Btrust Builders & Btrust Starter Grants** (`btrust.tech`) — For African & Global South engineers moving into full-time Bitcoin FOSS.
-2. **Summer of Bitcoin** (`summerofbitcoin.org`) — Paid summer internships (in BTC) for university students contributing to Bitcoin Core, LND, BDK, LDK, and Polar.
-3. **Spiral Grants** (`spiral.xyz`) — Grants from Block's Bitcoin open-source arm for developers and designers improving Bitcoin usability, LDK, and BDK.
-4. **OpenSats** (`opensats.org`) — 100% pass-through Bitcoin grants for open-source contributors working on Bitcoin Core, Nostr, and Lightning infrastructure.
-5. **Brink** (`brink.dev`) & **Maelstrom Bitcoin Grant Program** — Fellowships and grants for Bitcoin Core protocol developers and reviewers.
+- https://www.btrust.tech/grants
+- https://www.btrust.tech/builders and https://www.btrust.tech/builders/apply
+- https://btrust.homerun.co/starter-grants
+- https://btrust.homerun.co/open-source-cohort
+- https://www.btrust.tech/bitdevs
+- https://bitdevs.org/ (no Chatham House or recording policy stated)
+- Local: Bitcoin Core checkout (`$BITCOIN_ROOT`) `master` (`e75b76b12c`): `doc/AI_POLICY.md`, `CONTRIBUTING.md`

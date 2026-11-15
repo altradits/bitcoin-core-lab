@@ -7,6 +7,11 @@
 * Checked: 2026-11-06
 * Risk: test only. No consensus, P2P, or wallet behavior change.
 
+> **Study notes.** Header and review notes were checked by hand against GitHub on the date shown;
+> recheck open PRs before citing them. Sections 5–6 are blank for you to complete after your own review.
+> See [`README.md`](./README.md) for known issues.
+
+
 ## What the PR does
 
 `test_mempool_conflict` in `wallet_conflicts.py` broadcasts three
@@ -39,6 +44,26 @@ redundant `self.sync_blocks()` calls in `test_block_conflicts`.
   exercise: check out the parent commit, run the test in a loop, and
   confirm the flake the PR describes.
 
-## Verdict
+## 5. Review checklist (YOURS to tick — nothing below was checked for you)
+- [ ] **1. Risk area:** Which subsystem and invariant does this PR touch? Is any consensus behaviour affected? (Decide yourself.)
+- [ ] **2. Invariants:** Which invariants must hold (supply, UTXO conservation, policy limits, determinism)? How did you check them?
+- [ ] **3. Bounds:** Integer overflow/underflow, unbounded containers or loops reachable by a peer or RPC caller?
+- [ ] **4. Locking:** Which mutexes are taken; do the annotations (`EXCLUSIVE_LOCKS_REQUIRED`, `GUARDED_BY`) still hold?
+- [ ] **5. Adversarial input:** Can an untrusted peer or caller make the node do expensive work?
+- [ ] **6. Tests:** Do the PR's tests fail without the change (mutation)? What did you run, on which commit?
+
+## 6. Your conclusion (fill in from YOUR OWN testing; never post text you did not write)
+- Commit I reviewed: `________`
+- What I built and ran (exact commands): ________
+- What I tested manually beyond the PR's tests: ________
+- Questions / concerns for the author: ________
+- My conclusion (Concept/Approach/Code review, or none yet): ________
+
+> Bitcoin Core's `doc/AI_POLICY.md` (master) and `CONTRIBUTING.md` expect review comments to be your
+> own work. This file is study material, not a comment to paste.
+
+<details><summary>Lab notes (spoiler: open only after your own review)</summary>
 
 Correct test stability fix. No further action.
+
+</details>

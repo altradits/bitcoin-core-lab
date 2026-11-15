@@ -1,0 +1,10 @@
+# Stage 05 quiz answers (spoilers)
+
+1. Mempool admission is per transaction: the 0-fee parent fails `min relay fee not met`, so it is not in the mempool, so the child is an orphan whose parent is missing. Only evaluating parent + child together (package validation) can see that the pair pays enough.
+2. `TRUC_ANCESTOR_LIMIT` = 2 and `TRUC_DESCENDANT_LIMIT` = 2 (one parent, one child: keeps clusters tiny and replacement cost predictable); `TRUC_MAX_VSIZE` = 10,000 vB (bounds the cost of replacing any TRUC tx); `TRUC_CHILD_MAX_VSIZE` = 1,000 vB (bounds what a pinning child can make the honest party pay under rule 3).
+3. A new child may replace the existing child of the same parent even though they spend different outputs (no direct conflict), if it pays rules 3/4. Safe because the sibling is at most 1,000 vB and the topology guarantees only one sibling exists; for v2, a sibling could be large and have descendants, so eviction would be a DoS / incentive problem.
+4. The first 4 bytes (nVersion, little-endian): `02000000` → `03000000`. (Then re-sign: the version is covered by every sighash.)
+5. Only one dust output, only in a 0-fee tx, and only if a child in the same package spends it (`PreCheckEphemeralTx`, `CheckEphemeralSpends`). If the child never comes, the parent cannot enter the mempool alone (0 fee), so the dust never reaches the UTXO set through normal relay.
+6. Receiving a low-feerate child whose parent is missing (orphan) after the parent was rejected for low fee (`TX_RECONSIDERABLE`): the node tries parent+child together as a 1P1C package.
+7. Concept: "pinning is a real problem for LN and policy should address it" → Concept ACK. Approach: "an opt-in version with topology limits is better than changing RBF for all txs" → Approach ACK (or NACK if you think cluster mempool should come first).
+8. With v2 + carve-out, the attacker could attach up to ~101 kvB of low-feerate descendants and force the victim to outbid all of their fees. Under TRUC the child is ≤ 1,000 vB, so the extra cost is bounded and small.

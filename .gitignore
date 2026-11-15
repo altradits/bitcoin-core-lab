@@ -2,3 +2,9 @@ cache/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Learner work stays private unless you choose to publish it
+my-work/*
+!my-work/README.md
+# Stage 09 Mission 6: your own regression test
+09-bug-dojo-and-pr-mastery/mission6_test.go

@@ -1,0 +1,265 @@
+// Stage 12 — YOUR WORKING FILE. `./lab.sh blank 12` copies this skeleton to ../lightning_readiness.go.
+// Write the two TODO bodies, then `./lab.sh check 12`. Reference: ../solutions/ (spoiler).
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// ============================================================================
+// STAGE 12: BITCOIN CORE TO LIGHTNING READINESS, POLAR AND DOCKER BRIDGE
+// ============================================================================
+// Every Lightning channel open, off-chain payment, HTLC, and channel close is
+// built out of standard Bitcoin layer 1 transactions. This program lists the
+// 6 layer 1 skills the lab teaches, simulates channel state updates, and
+// inspects local Polar networks in ~/.polar when present.
+// ============================================================================
+
+type L1Prerequisite struct {
+	Number           int
+	BitcoinCoreSkill string
+	LabStage         string
+	LightningRole    string
+	WhatBreaksIfLost string
+}
+
+func RequiredBitcoinSkillsForLightning() []L1Prerequisite {
+	return []L1Prerequisite{
+		{
+			Number:           1,
+			BitcoinCoreSkill: "UTXO Conservation & 2-of-2 Multisig (P2WSH / MuSig2)",
+			LabStage:         "Stages 01 & 02",
+			LightningRole:    "BOLT #3 Funding Transaction (anchors the channel on-chain)",
+			WhatBreaksIfLost: "Without 2-of-2 multisig UTXOs, one party could run away with the channel funds.",
+		},
+		{
+			Number:           2,
+			BitcoinCoreSkill: "SegWit Transaction Malleability Fix (txid vs wtxid, BIP141)",
+			LabStage:         "Stage 02",
+			LightningRole:    "Signing Refund/Commitment txs BEFORE the Funding tx is broadcast",
+			WhatBreaksIfLost: "If txid could be mutated by a third party, your pre-signed Commitment tx would point to a non-existent txid and your funds would be locked forever!",
+		},
+		{
+			Number:           3,
+			BitcoinCoreSkill: "Unbroadcast Signed Transactions & Asymmetric Revocation",
+			LabStage:         "Stages 02 & 07",
+			LightningRole:    "BOLT #3 Commitment Transactions (instant off-chain balance updates)",
+			WhatBreaksIfLost: "You would have to broadcast every payment to bitcoind and wait 10 minutes per block.",
+		},
+		{
+			Number:           4,
+			BitcoinCoreSkill: "Relative Timelocks (nSequence BIP68 & OP_CHECKSEQUENCEVERIFY BIP112)",
+			LabStage:         "Stage 06",
+			LightningRole:    "LN-Penalty (to_self_delay gives Watchtowers/Bob time to punish old state cheats)",
+			WhatBreaksIfLost: "A cheating peer could broadcast an old channel state from 2 weeks ago where they had more sats, and spend the money immediately before you could punish them!",
+		},
+		{
+			Number:           5,
+			BitcoinCoreSkill: "Hashlocks (OP_SHA256) + Absolute Timelocks (OP_CLTV BIP65)",
+			LabStage:         "Stage 06",
+			LightningRole:    "BOLT #2/#3/#4 HTLCs (trustless multi-hop routing across nodes)",
+			WhatBreaksIfLost: "Intermediate routing nodes could steal your payment on the way to the destination.",
+		},
+		{
+			Number:           6,
+			BitcoinCoreSkill: "Mempool Fee Bumping (BIP125 RBF, CPFP & BIP431 TRUC v3 Package Relay)",
+			LabStage:         "Stages 03 & 05",
+			LightningRole:    "Anchor Outputs & v3 Commitment Tx Fee Bumping during mempool fee spikes",
+			WhatBreaksIfLost: "If mempool fees spike to 100 sat/vB, your pre-signed force-close tx gets stuck in the mempool past the HTLC timeout and you lose your funds!",
+		},
+	}
+}
+
+// ChannelState represents the off-chain satoshi balances inside a single Bitcoin Core
+// 2-of-2 multisig Funding UTXO between Alice (Local) and Bob (Remote).
+type ChannelState struct {
+	StateNum        uint64
+	CapacitySats    int64
+	AliceSats       int64
+	BobSats         int64
+	RevokedPreimage [32]byte
+	IsRevoked       bool
+}
+
+// UpdateChannelBalance moves payToBobSats from Alice to Bob and returns the NEXT state.
+// Spec (YOU implement):
+//   - payToBobSats <= 0                          -> error
+//   - Alice cannot pay more than she has          -> error (outbound liquidity)
+//   - prev must satisfy Alice+Bob == Capacity     -> otherwise error (conservation invariant)
+//   - on success: prev is marked revoked and stores oldStateRevocationSecret (Alice hands Bob the
+//     secret for the OLD state, BOLT 2 revoke_and_ack), and the new state has StateNum+1, same
+//     capacity, updated balances, IsRevoked=false.
+//   - on any error: prev must be left UNCHANGED.
+func UpdateChannelBalance(prev *ChannelState, payToBobSats int64, oldStateRevocationSecret [32]byte) (*ChannelState, error) {
+	// TODO
+	return nil, errors.New("TODO")
+}
+
+// EvaluateBroadcastedCommitment: Alice broadcast `state` at broadcastHeight; it is now currentBlockHeight.
+// Alice's to_local output is CSV-locked for toSelfDelayCSV blocks (BOLT 3 to_local); Bob's to_remote is not.
+// Spec (YOU implement), with age = currentBlockHeight - broadcastHeight:
+//   - revoked state and age <  delay -> Bob sweeps EVERYTHING via the revocation key: (0, Capacity, "JUSTICE_PENALTY_APPLIED...")
+//   - revoked state and age >= delay -> Bob was too late: (Alice, Bob, "BREACH_MISSED...")
+//   - current state and age <  delay -> only Bob can claim yet: (0, Bob, "TIMELOCK_ACTIVE...")
+//   - current state and age >= delay -> (Alice, Bob, "FORCE_CLOSE_MATURED...")
+//
+// The outcome string must START with the uppercase tag shown.
+func EvaluateBroadcastedCommitment(state *ChannelState, currentBlockHeight int, broadcastHeight int, toSelfDelayCSV int) (alicePayout int64, bobPayout int64, outcome string) {
+	// TODO
+	return 0, 0, "TODO"
+}
+
+// PolarNetworkSummary holds the parsed topology of one entry in
+// ~/.polar/networks/networks.json.
+type PolarNetworkSummary struct {
+	ID             int
+	Name           string
+	Path           string
+	BitcoinNodes   []string
+	LightningNodes []string
+	AliceMacaroon  string
+	AliceTLSCert   string
+}
+
+func InspectLocalPolarNetworks(polarDir string) ([]PolarNetworkSummary, error) {
+	netFile := filepath.Join(polarDir, "networks", "networks.json")
+	raw, err := os.ReadFile(netFile)
+	if err != nil {
+		return nil, err
+	}
+	var parsed struct {
+		Networks []struct {
+			ID    int    `json:"id"`
+			Name  string `json:"name"`
+			Path  string `json:"path"`
+			Nodes struct {
+				Bitcoin []struct {
+					Name    string `json:"name"`
+					Version string `json:"version"`
+				} `json:"bitcoin"`
+				Lightning []struct {
+					Name           string `json:"name"`
+					Implementation string `json:"implementation"`
+					Version        string `json:"version"`
+					Ports          struct {
+						REST int `json:"rest"`
+						GRPC int `json:"grpc"`
+					} `json:"ports"`
+				} `json:"lightning"`
+			} `json:"nodes"`
+		} `json:"networks"`
+	}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return nil, err
+	}
+
+	var out []PolarNetworkSummary
+	for _, n := range parsed.Networks {
+		sum := PolarNetworkSummary{
+			ID:            n.ID,
+			Name:          n.Name,
+			Path:          n.Path,
+			AliceMacaroon: filepath.Join(n.Path, "volumes", "lnd", "alice", "data", "chain", "bitcoin", "regtest", "admin.macaroon"),
+			AliceTLSCert:  filepath.Join(n.Path, "volumes", "lnd", "alice", "tls.cert"),
+		}
+		for _, b := range n.Nodes.Bitcoin {
+			sum.BitcoinNodes = append(sum.BitcoinNodes, fmt.Sprintf("%s (bitcoind v%s)", b.Name, b.Version))
+		}
+		for _, l := range n.Nodes.Lightning {
+			ports := fmt.Sprintf("REST:%d", l.Ports.REST)
+			if l.Ports.GRPC != 0 {
+				ports += fmt.Sprintf(" gRPC:%d", l.Ports.GRPC)
+			}
+			sum.LightningNodes = append(sum.LightningNodes, fmt.Sprintf("%s (%s v%s | %s)",
+				l.Name, l.Implementation, l.Version, ports))
+		}
+		out = append(out, sum)
+	}
+	return out, nil
+}
+
+func runBitcoinCLI(args ...string) (string, error) {
+	if override := os.Getenv("BITCOIN_CLI"); override != "" {
+		full := append(strings.Fields(override), args...)
+		out, err := exec.Command(full[0], full[1:]...).CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		}
+		return strings.TrimSpace(string(out)), nil
+	}
+	cmdArgs := append([]string{"-regtest"}, args...)
+	out, err := exec.Command("bitcoin-cli", cmdArgs...).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func main() {
+	fmt.Println("======================================================================")
+	fmt.Println("STAGE 12: BITCOIN CORE TO LIGHTNING READINESS, POLAR AND DOCKER LAB")
+	fmt.Println("======================================================================")
+
+	fmt.Println("\n[1] THE 6 BITCOIN CORE SKILLS YOU MUST HAVE BEFORE LIGHTNING:")
+	for _, p := range RequiredBitcoinSkillsForLightning() {
+		fmt.Printf("  %d. %-66s [%s]\n     • In Lightning : %s\n     • Why Required : %s\n",
+			p.Number, p.BitcoinCoreSkill, p.LabStage, p.LightningRole, p.WhatBreaksIfLost)
+	}
+
+	fmt.Println("\n[2] SIMULATING A LIGHTNING CHANNEL ON TOP OF BITCOIN CORE:")
+	state0 := &ChannelState{
+		StateNum:     0,
+		CapacitySats: 1_000_000,
+		AliceSats:    1_000_000,
+		BobSats:      0,
+	}
+	fmt.Printf("  • Channel Opened (State #0, 1 on-chain tx)  : Alice = %d sats | Bob = %d sats\n", state0.AliceSats, state0.BobSats)
+
+	revSecret0 := sha256.Sum256([]byte("alice_state_0_revocation_secret"))
+	state1, _ := UpdateChannelBalance(state0, 250_000, revSecret0)
+	fmt.Printf("  • Off-Chain Payment #1 (State #1, 0 L1 txs) : Alice = %d sats | Bob = %d sats (State #0 Revoked!)\n", state1.AliceSats, state1.BobSats)
+
+	revSecret1 := sha256.Sum256([]byte("alice_state_1_revocation_secret"))
+	state2, _ := UpdateChannelBalance(state1, 150_000, revSecret1)
+	fmt.Printf("  • Off-Chain Payment #2 (State #2, 0 L1 txs) : Alice = %d sats | Bob = %d sats (State #1 Revoked!)\n", state2.AliceSats, state2.BobSats)
+
+	_, bobSweep, msg := EvaluateBroadcastedCommitment(state0, 325, 324, 144)
+	fmt.Printf("  • Cheat Attempt on bitcoind (State #0)      : %s (Bob gets %d sats, revKey=%s...)\n",
+		msg, bobSweep, hex.EncodeToString(state0.RevokedPreimage[:6]))
+
+	aliceFinal, bobFinal, honestMsg := EvaluateBroadcastedCommitment(state2, 470, 324, 144)
+	fmt.Printf("  • Honest Settlement on bitcoind (State #2)  : %s (Alice=%d, Bob=%d)\n",
+		honestMsg, aliceFinal, bobFinal)
+
+	fmt.Println("\n[3] POLAR AND DOCKER LIGHTNING NETWORKS IN ~/.polar:")
+	home, _ := os.UserHomeDir()
+	if nets, err := InspectLocalPolarNetworks(filepath.Join(home, ".polar")); err == nil {
+		for _, n := range nets {
+			fmt.Printf("  • Polar Network #%d: %q (%s)\n", n.ID, n.Name, n.Path)
+			fmt.Printf("    - Bitcoin L1 Backend : %s\n", strings.Join(n.BitcoinNodes, ", "))
+			fmt.Printf("    - Lightning L2 Nodes : %s\n", strings.Join(n.LightningNodes, ", "))
+			if _, err := os.Stat(n.AliceMacaroon); err == nil {
+				fmt.Printf("    - Alice Admin Macaroon Present: %s\n", n.AliceMacaroon)
+			}
+		}
+	} else {
+		fmt.Println("  • None found. Install Polar (https://lightningpolar.com) to add some,")
+		fmt.Println("    then create a network with at least one LND node.")
+	}
+
+	if height, err := runBitcoinCLI("getblockcount"); err == nil {
+		fmt.Printf("\n[4] LOCAL BITCOIND REACHABLE (CURRENT REGTEST HEIGHT: #%s)\n", height)
+		fmt.Println("    An LND node uses this RPC plus ZMQ block events to track channels.")
+	} else {
+		fmt.Printf("\n[4] No local bitcoind on regtest (%v). Start it to finish the bridge check.\n", err)
+	}
+	fmt.Println("======================================================================")
+}

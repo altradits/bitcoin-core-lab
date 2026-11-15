@@ -1,237 +1,161 @@
-# Stage 02: Raw transactions and mempool
+# Stage 02: Raw Transactions, Serialization by Hand, and Mempool Admission
 
-You spend a coin by hand with the low level RPCs: build the bytes,
-sign them, send them. You learn that a transaction has no fee field
-(the fee is inputs minus outputs), that forgetting change triggers a
-fee guardrail, and how SegWit weight math works.
+> Source checked: Bitcoin Core `v29.0` (`f490f5562d`). All reject strings below were observed on a
+> v29.0 regtest node while writing this stage.
 
-## Goal
+**No-Shortcuts Rule.** From this stage on you own the environment: you write your own
+`setup.sh`, decode transactions byte by byte on paper, and type every raw-transaction RPC.
+Worksheets give goals and layered hints, never the finished command. Checkers inspect your node
+and files. Reference answers are in [`solutions/`](./solutions/) — open them only after a check
+passes or after **3 honest attempts**. Keep your command journal in
+`my-work/02-raw-tx-and-mempool/journal.md`.
 
-After this stage you can build, sign, and broadcast a raw SegWit
-transaction and read its weight, fee, and mempool entry.
+The old automation script (`raw_tx_mempool.sh`) now lives in
+[`solutions/`](./solutions/raw_tx_mempool.sh) as the reference for Worksheet 3.
 
-## Why it matters
+---
 
-Wallets hide transaction building, but contributors debug it. Consensus
-computes the miner fee as `nValueIn - value_out` in
-`Consensus::CheckTxInputs` (`src/consensus/tx_verify.cpp`). There is no
-`fee` field to set. BIP141 (SegWit) moved signatures to the witness so
-the txid no longer changes when a signature changes. That fix is what
-lets Lightning chain unconfirmed transactions safely.
+## Objectives
+
+| ID | You can... |
+|----|------------|
+| C-TX-1 | decode a segwit transaction byte by byte; compute base size, total size, weight, vsize, txid and wtxid by hand (including byte order) |
+| C-TX-2 | build, sign, test (`testmempoolaccept`) and broadcast a raw transaction with RPCs only, with exact fee arithmetic |
+| C-SCRIPT-2 | explain P2WPKH spending vs legacy P2PKH, the DER signature + sighash byte, and what BIP143 commits to |
+| C-MEMPOOL-1 | name the stages of `AcceptToMemoryPool` and sort any reject reason into consensus, policy or RPC guard |
+| C-TX-3 (intro) | explain `nLockTime` finality (height vs time, BIP113 median-time-past) and observe `non-final` |
 
 ## Prerequisites
+Stage 01: your own `bitcoin.conf` (with `txindex=1`, `fallbackfee`), your `node.sh`, and
+`BTC_CLI` exported.
 
-* Stage 00 (a running node with mature coins in `kisumu_miner`).
-* Stage 01 (you know what a mature coin is).
+---
 
-## Setup
+## Theory
 
-Confirm the miner wallet has at least one spendable coin:
-
-```bash
-bitcoin-cli -regtest -rpcwallet="kisumu_miner" getbalance
+### 1. Transaction serialization (BIP144 wire format)
 ```
-
-Expected output (any positive value works):
-
-```text
-50.00000000
+version (4, LE)
+[marker 0x00, flag 0x01]                 ← only if any input has witness data
+vin count (CompactSize)
+  prev txid (32, internal byte order) | prev vout (4, LE) | scriptSig len | scriptSig | nSequence (4, LE)
+vout count (CompactSize)
+  value (8, LE, satoshis) | scriptPubKey len | scriptPubKey
+[witness: per input: item count | (len | item)*]
+nLockTime (4, LE)
 ```
+Code: `SerializeTransaction` / `UnserializeTransaction` in `src/primitives/transaction.h`;
+CompactSize in `src/serialize.h`.
 
-If the balance is zero, run `./lab.sh step 1` and wait for 101 blocks.
+**Byte order.** Hashes are computed and stored as 32 raw bytes; RPCs and explorers print them
+**reversed** (a historical convention from treating them as little-endian 256-bit integers,
+`uint256::GetHex`). Every time you copy a txid into raw hex, reverse it.
 
-## Steps
+**txid vs wtxid.** `txid = SHA256d(serialization without marker/flag/witness)`; `wtxid =
+SHA256d(full serialization)`. Because the txid does not cover signatures, a third party cannot
+change a segwit tx's txid by tweaking its signature (malleability fix, BIP141). This is what makes
+chains of unconfirmed transactions — e.g. Lightning funding + commitment — safe.
 
-### Step 1: Send a proper transaction with change
+### 2. Weight, vsize, feerate
+`weight = base_size × 3 + total_size` (`GetTransactionWeight`, `src/consensus/validation.h`;
+`WITNESS_SCALE_FACTOR = 4`). `vsize = ceil(weight / 4)`. In policy, "vsize" means
+*sigops-adjusted* vsize (`GetVirtualTransactionSize`, `src/policy/policy.cpp`), which equals the
+plain vsize for normal transactions. Feerate = fee / vsize (sat/vB). RPCs often use BTC/kvB:
+1 sat/vB = 0.00001 BTC/kvB.
 
-```bash
-./02-raw-tx-and-mempool/raw_tx_mempool.sh
-```
+### 3. Legacy vs SegWit v0
+| | Legacy P2PKH | SegWit v0 P2WPKH | SegWit v0 P2WSH |
+|-|--------------|------------------|-----------------|
+| scriptPubKey | `OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG` (25 B) | `OP_0 <20-byte HASH160(pubkey)>` (22 B) | `OP_0 <32-byte SHA256(script)>` (34 B) |
+| signature lives in | scriptSig (counts ×4) | witness (counts ×1) | witness |
+| sighash algorithm | legacy (`SigVersion::BASE`) | BIP143 (`SigVersion::WITNESS_V0`) | BIP143 |
+| txid malleable by third parties | yes | no | no |
 
-Expected output (ids and addresses differ on your machine):
+Both go through `VerifyScript` → `VerifyWitnessProgram` (`src/script/interpreter.cpp`).
 
-```text
-Spending UTXO 1d190e14d59525f7ddb61d1858096f1e93795a67e0d667c1ca709d41849cfd11:0 (50.0 BTC)
- -> 1.00000000 BTC to bcrt1qujj42d8hjmpu4u5a324zwcsynw3cp9gr2wdry7
- -> 48.99990000 BTC change to bcrt1qtqz3zm7harckx6juj0t2gsv3qvlsf2n906v0fs (0.00010000 BTC fee)
-Broadcasted TXID: 0c90064a94bd41822f7feee77b231f92f7fc1aa03722d6ac8fce1764f8ed9758
-```
+### 4. Signatures and sighash types
+An ECDSA signature in a witness is DER (`30 len 02 rlen R 02 slen S`) plus **one sighash byte**.
+`SIGHASH_ALL (0x01)` commits to all inputs and outputs; `NONE (0x02)` to no outputs; `SINGLE (0x03)`
+to the output with the same index; `| ANYONECANPAY (0x80)` commits to only this input. BIP143
+also commits to the **amount** of the spent output, so a signer cannot be lied to about the fee
+(legacy signers had to see whole previous transactions). Code: `SignatureHash` in
+`src/script/interpreter.cpp`. Core grinds for low-R signatures, so they are usually 71 bytes
+(`CKey::Sign`, `src/key.cpp`).
 
-The script picks a miner coin, pays 1 BTC to the merchant, returns the
-rest to a fresh change address, and leaves 0.0001 BTC (10,000 sats) as
-the miner fee. Keep the printed TXID. The next steps use it.
+### 5. Consensus vs policy vs RPC guards
+- **Consensus**: rules every node applies to blocks. Breaking one makes a block invalid
+  (`src/consensus/`, `CheckTxInputs`, `IsFinalTx`, script verification with consensus flags).
+- **Policy (standardness)**: what *your* node relays and mines by default (`src/policy/`:
+  `IsStandardTx`, dust, `MAX_STANDARD_TX_WEIGHT`, min relay feerate, mempool limits, RBF rules).
+  A valid block may contain a non-standard tx.
+- **RPC guards**: client-safety checks such as `maxfeerate` in `sendrawtransaction`
+  (`BroadcastTransaction`, `src/node/transaction.cpp`) — they protect *you* and are not rules of
+  the network.
 
-### Step 2: Spring the fee trap (no change output)
+### 6. How the mempool admits a transaction (`src/validation.cpp`)
+`AcceptToMemoryPool` → `MemPoolAccept::AcceptSingleTransaction` →
+`PreChecks` (standardness, finality, inputs exist, `CheckTxInputs`, fees, limits) →
+`ReplacementChecks` (if it conflicts; Stage 03) → `PolicyScriptChecks` (standard script flags) →
+`ConsensusScriptChecks` (consensus flags, fills the script cache) → submit.
+`testmempoolaccept` runs this without adding the tx.
 
-Spend a different coin and pay 1 BTC with no change output. The missing
-49 BTC silently becomes the fee, and the node refuses to broadcast:
+### 7. Absolute timelocks (intro to C-TX-3)
+`nLockTime` < 500,000,000 is a block height, otherwise a UNIX time. A tx is final if
+`nLockTime < (height or time)` of the block it would be in, or if every input has
+`nSequence = 0xffffffff` (`IsFinalTx`, `src/consensus/tx_verify.cpp`). The mempool tests against
+tip height + 1 (`CheckFinalTxAtTip`). Time locks compare with the **median time past** of the
+previous 11 blocks (BIP113), not the block's own timestamp. Relative locks (BIP68/112) come in
+Stage 06.
 
-```bash
-UTXO=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" listunspent | python3 -c "import sys,json; u=[x for x in json.load(sys.stdin) if x['amount']>=2.0][0]; print(u['txid'], u['vout'])")
-read TXID VOUT <<< "$UTXO"
-MADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_merchant" getnewaddress)
-RAW=$(bitcoin-cli -regtest createrawtransaction "[{\"txid\":\"$TXID\",\"vout\":$VOUT}]" "[{\"$MADDR\":1.0}]")
-SIGNED=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" signrawtransactionwithwallet "$RAW" | python3 -c "import sys,json; print(json.load(sys.stdin)['hex'])")
-bitcoin-cli -regtest sendrawtransaction "$SIGNED"
-```
+---
 
-Expected output:
+## Exercises (in order)
 
-```text
-error code: -25
-error message:
-Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)
-```
+| # | Worksheet | Checker |
+|---|-----------|---------|
+| 1 | [`exercises/01-your-own-setup.md`](./exercises/01-your-own-setup.md) — your `setup.sh` | `./02-raw-tx-and-mempool/check_setup.sh` |
+| 2 | [`exercises/02-decode-a-tx-by-hand.md`](./exercises/02-decode-a-tx-by-hand.md) — bytes, weight, txid on paper | `./02-raw-tx-and-mempool/check_decode.sh` (offline) |
+| 3 | [`exercises/03-build-sign-broadcast.md`](./exercises/03-build-sign-broadcast.md) — your raw tx, exact fee | `./02-raw-tx-and-mempool/check_raw_tx.sh` |
+| 4 | [`exercises/04-policy-vs-consensus.md`](./exercises/04-policy-vs-consensus.md) — five rejections, classified | `./02-raw-tx-and-mempool/check_policy.sh` |
 
-The wallet meant to pay 1 BTC but offered about 49 BTC as fee. The
-`maxfeerate` guardrail (default 0.10 BTC/kvB on `sendrawtransaction`)
-stops the broadcast before the transaction reaches the network. Real
-money has been lost this way. Always check your change output.
+Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
+`my-work/02-raw-tx-and-mempool/answers.env`.
 
-### Step 3: Decode the transaction from Step 1
+---
 
-Rebuild and decode a signed 1 input, 2 output transaction to see where
-the fee and signatures live:
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. A tx has base size 113 and total size 222. Weight? vsize?
+2. Why does the 32-byte prev-txid in raw hex look different from the txid `listunspent` prints?
+3. What exactly is hashed to get the txid of a segwit tx, and why does that matter for Lightning?
+4. Where does the fee of a transaction appear in its serialization?
+5. What is the P2WPKH dust threshold at the default dust relay feerate, and how is it computed?
+6. Classify: `bad-txns-in-belowout`, `dust`, `non-final`, `version`, `max-fee-exceeded`.
+7. What does `SIGHASH_SINGLE | ANYONECANPAY` sign?
+8. Why did BIP143 add the input amount to the signature hash?
+9. A tx has `nLockTime = 1000` and one input with `nSequence = 0xfffffffd`. At which chain tip does the mempool first accept it?
+10. Name the `MemPoolAccept` methods a transaction passes through, in order.
 
-```bash
-TXID=$(bitcoin-cli -regtest getrawmempool | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
-bitcoin-cli -regtest getrawtransaction "$TXID" true
-```
+## Review lens
+For PRs touching transaction serialization, RPCs that build transactions, or mempool admission:
+- **Files:** `src/primitives/transaction.{h,cpp}`, `src/core_read.cpp`/`core_write.cpp`
+  (hex/JSON), `src/rpc/rawtransaction.cpp`, `src/rpc/rawtransaction_util.cpp`,
+  `src/rpc/mempool.cpp` (`testmempoolaccept`, `getmempoolentry`), `src/node/transaction.cpp`,
+  `src/validation.cpp` (`MemPoolAccept`), `src/policy/policy.{h,cpp}`.
+- **Invariants to ask about:** Does the change alter what is *consensus* (needs a soft fork — almost
+  never acceptable in a normal PR) or only *policy*? Does a policy change open a DoS vector or a
+  pinning vector? Does serialization stay byte-for-byte compatible (old nodes, PSBT, wallets)? Are
+  fee/amount conversions done in integer satoshis (`CAmount`) and never in floating point?
+- **Tests to read and run:** `test/functional/mempool_accept.py`, `rpc_rawtransaction.py`,
+  `mempool_dust.py`, `feature_segwit.py`; unit tests `src/test/transaction_tests.cpp`,
+  `src/test/sighash_tests.cpp`, data in `src/test/data/tx_valid.json`.
+- **Master note:** on `master` (cluster mempool) the admission flow gains cluster-limit checks
+  (`too-large-cluster`) and the default `-minrelaytxfee`/`-incrementalrelayfee` is 0.1 sat/vB
+  (100 sat/kvB) instead of 1 sat/vB on 29.x. Your 29.x node's numbers are the 29.x ones.
 
-Expected output (abbreviated; hashes differ on your machine):
+## Proof-of-work output
+A public write-up in your own words: "Decoding a segwit transaction by hand" — your annotated
+byte split, your weight and txid calculations, and what `decoderawtransaction` confirmed.
 
-```json
-{
-  "txid": "2cd98ec18b1c68f535dacb8570df2e96ae11e8767082c12474009853f29ac591",
-  "hash": "084c383b3d994ea8951647a3c7d00d877fa63fca9cf8130e8fef365717daf03e",
-  "version": 2,
-  "size": 222,
-  "vsize": 141,
-  "weight": 561,
-  "vin": [
-    {
-      "scriptSig": { "asm": "", "hex": "" },
-      "txinwitness": ["30440220...", "03d8f427..."],
-      "sequence": 4294967293
-    }
-  ]
-}
-```
-
-Three things to notice. First, `scriptSig` is empty and the signature
-plus public key sit in `txinwitness`. Second, `txid` and `hash`
-(`wtxid`) differ, because the txid excludes witness data. Forging a new
-signature changes the wtxid but not the txid. Third, `sequence` is
-4294967293 (0xfffffffd), which signals BIP125 replaceability. Stage 03
-uses that.
-
-Weight math: base size 113 bytes, total size 222 bytes.
-`weight = 113 * 3 + 222 = 561`, `vsize = ceil(561 / 4) = 141`.
-
-### Step 4: Inspect the mempool entry
-
-```bash
-TXID=$(bitcoin-cli -regtest getrawmempool | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
-bitcoin-cli -regtest getmempoolentry "$TXID"
-```
-
-Expected output (abbreviated):
-
-```json
-{
-  "vsize": 141,
-  "weight": 561,
-  "fees": {
-    "base": 0.00010000
-  },
-  "bip125-replaceable": true
-}
-```
-
-The mempool agrees with the decode: 141 vB, 0.0001 BTC fee,
-replaceable.
-
-### Step 5: Confirm the block and check the miner got paid
-
-```bash
-ADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" getnewaddress)
-bitcoin-cli -regtest generatetoaddress 1 "$ADDR" > /dev/null
-H=$(bitcoin-cli -regtest getblockcount)
-bitcoin-cli -regtest getblock $(bitcoin-cli -regtest getblockhash $H) 2 | python3 -c "
-import sys, json
-cb = json.load(sys.stdin)['tx'][0]
-for o in cb['vout']:
-    print(o['value'], o['scriptPubKey'].get('type'), o['scriptPubKey'].get('hex', '')[:16])
-"
-```
-
-Expected output (subsidy 50, 25, or 12.5 depending on your height;
-plus the 0.0001 fee):
-
-```text
-25.00010000 witness_v0_keyhash 00147243346bae72
-0.0 nulldata 6a24aa21a9ed5b6b
-```
-
-Output 0 pays the miner the block subsidy plus your exact fee.
-Output 1 is the BIP141 witness commitment (`OP_RETURN` starting with
-`aa21a9ed`), which anchors all SegWit signatures in the block.
-
-## Checkpoint
-
-```bash
-./lab.sh check 02
-```
-
-Expected output:
-
-```text
-PASS: stage 02. raw tx confirmed; coinbase collected subsidy plus fee.
-```
-
-The check sends one raw transaction, mines a block, and asserts the
-coinbase value equals subsidy plus fee. You can also rerun the script
-from Step 1 and confirm it prints a new TXID.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `Fee exceeds maximum configured by user` | Missing change output (Step 2 does this on purpose) | Add a change output as in Step 1 |
-| `list index out of range` from the python one liner | No coin of the needed size | Mine more: `./lab.sh step 1`, then retry |
-| `Transaction not in mempool` on `getmempoolentry` | You already mined a block since the send | Resend with the Step 1 script, then inspect before mining |
-| `insufficient fee` on `sendrawtransaction` | Fee below relay minimum | Raise the fee to at least 141 sats for a 141 vB tx |
-
-## Going further
-
-1. Pay an exact fee rate. Rebuild the Step 1 transaction with a
-   282 sat fee (2.0 sat/vB for 141 vB) and confirm `getmempoolentry`
-   shows `0.00000282`. Done when the fee field matches.
-2. Make the transaction non replaceable. Pass `"sequence": 4294967295`
-   in `createrawtransaction` and confirm `bip125-replaceable` is
-   `false`. Done when the flag flips.
-3. Read the fee code. Open `src/consensus/tx_verify.cpp` around
-   `txfee_aux` and find where `bad-txns-in-belowout` triggers. Done
-   when you can quote both lines.
-
-## Contribution task
-
-Run the upstream mempool package test and confirm it passes on your
-machine:
-
-```bash
-python3 ~/bitcoin/build/test/functional/test_runner.py mempool_packages.py
-```
-
-Expected: `mempool_packages.py | Passed`. If it fails, open a lab bug
-issue with the full output. Do not file upstream until a maintainer
-confirms.
-
-## Sources
-
-* `src/consensus/tx_verify.cpp` (`Consensus::CheckTxInputs`,
-  `txfee_aux = nValueIn - value_out`): implicit fees.
-* `src/rpc/rawtransaction_util.cpp` (default `nSequence =
-  MAX_BIP125_RBF_SEQUENCE`): why new transactions signal RBF.
-* BIP141 (Segregated Witness): weight, vsize, witness commitment.
-* BIP125 (Replace by Fee): the `sequence` signal, used in Stage 03.
+## Next
+Stage 03 ([`../03-rbf-and-cpfp/README.md`](../03-rbf-and-cpfp/README.md)): replace and bump the
+transactions you can now build.

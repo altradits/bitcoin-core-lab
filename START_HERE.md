@@ -1,8 +1,13 @@
 # Start here
 
 This lab teaches you to build on and contribute to Bitcoin Core and LND.
-Work through the stages in order. Each stage is short, runs on your own
-machine, and ends with a check you can run to prove it works.
+Work through the stages in the order [CURRICULUM.md](./CURRICULUM.md) gives. Each stage runs on
+your own machine and ends with checkers that prove your work.
+
+The rule: no shortcuts. You type every command and write every line of code that teaches a
+skill ([CURRICULUM_CONVENTIONS.md](./CURRICULUM_CONVENTIONS.md)). Worksheets say what to achieve,
+checkers tell you PASS or FAIL with a reason, and `solutions/` folders are spoilers you open only
+after a checker passes or after three honest attempts.
 
 Rule 0: use regtest or signet only. Never use real money (mainnet) for
 any exercise in this lab.
@@ -28,8 +33,10 @@ Install these before Stage 01. Stage 00 needs only Bitcoin Core and Go.
 | git | any recent | `git --version` |
 | LND (Stage 12 only) | v0.20.0-beta via Polar | `./lab.sh polar` |
 
-You also need about 20 GB of free disk space. A pruned node uses about
-16 GB. See Stage 11 for the exact disk math.
+You also need disk space: a few GB for regtest, signet and a Bitcoin Core
+build, and more for a pruned mainnet node (about 5.5 GB of block files
+plus the UTXO set, which grows). Stage 11 has you measure it on your own
+node.
 
 Bitcoin Core install guides: `doc/build-osx.md` for Mac and
 `doc/build-unix.md` for Linux, both in the
@@ -40,19 +47,14 @@ walks through the same steps with repetition drills.
 
 ## How the lab is organized
 
-There are 13 stages, numbered 00 to 12. Each stage folder holds one
-README and the scripts or code for that stage. Every stage README uses
-the same template (see [docs/STAGE_TEMPLATE.md](./docs/STAGE_TEMPLATE.md)):
+There are 20 stages, numbered 00 to 19. Each stage folder holds a README, worksheets in
+`exercises/`, checkers (`check_*.sh`, Go tests or Python tests) and spoilers in `solutions/`.
+Every stage README follows [docs/STAGE_TEMPLATE.md](./docs/STAGE_TEMPLATE.md). Your own
+answers, journals and programs go in [my-work/](./my-work/README.md), which git ignores so you
+choose what to publish.
 
-Goal, Why it matters, Prerequisites, Setup, Steps, Checkpoint,
-Common errors and fixes, Going further, Contribution task, Sources.
-
-Stages build on each other. Stage 01 starts your node and creates the
-wallets that later stages reuse. Do not skip ahead unless a stage says
-you can.
-
-The helper script `./lab.sh` runs demos and checks. Run `./lab.sh help`
-to list commands. It never touches mainnet.
+`./lab.sh` shows stages and runs checkers; it never does the exercise for you. Run
+`./lab.sh help` to list commands. It never touches mainnet.
 
 ## The five minute fast path
 
@@ -66,39 +68,46 @@ cd bitcoin-core-lab
 ```
 
 Expected result: `doctor` reports each tool as OK, and `step 1` shows
-your node mining one regtest block. If `doctor` reports a missing tool,
+the first Stage 00 micro-step for you to do yourself. If `doctor` reports a missing tool,
 install it and run `doctor` again. Then start Stage 00.
 
 ## Stage map
 
-Times are honest estimates for a first pass. Double them if you do
-every Going further exercise.
+Hours are honest estimates for a first pass on an 8 GB machine, including journaling
+(from [CURRICULUM.md](./CURRICULUM.md), which also has the week-by-week schedule).
 
-| Stage | Topic | Time | After this stage you can |
-| :--- | :--- | :--- | :--- |
-| [00](./00-start-small/README.md) | Start small: your first block, coins, and send | 1 hour | Mine a block, list coins, send coins on regtest |
-| [01](./01-node-foundations/README.md) | Node basics: coinbase maturity and halvings | 2 hours | Explain why new coins wait 100 blocks |
-| [02](./02-raw-tx-and-mempool/README.md) | Raw transactions, fees, and SegWit weight | 2 hours | Build and send a raw transaction by hand |
-| [03](./03-rbf-and-cpfp/README.md) | Fee bumps: BIP125 RBF and CPFP | 3 hours | Replace a stuck transaction two ways |
-| [04](./04-functional-test-framework/README.md) | Python functional tests | 3 hours | Run and write a two node framework test |
-| [05](./05-truc-package-relay-review/README.md) | TRUC (v3) and package relay | 3 hours | Submit a 1 parent 1 child package |
-| [06](./06-lightning-htlc-state-machine/README.md) | HTLC contracts on Bitcoin | 3 hours | Build a hash locked contract with a timeout refund |
-| [07](./07-psbt-descriptors-and-miniscript/README.md) | Descriptors and offline signing (PSBT) | 3 hours | Sign with a watch only wallet plus an offline signer |
-| [08](./08-builder-starter-kit/README.md) | Build an app on top of bitcoind | 4 hours | Serve invoices and timestamps over HTTP with Go |
-| [09](./09-bug-dojo-and-pr-mastery/README.md) | Bug dojo: break and fix real bugs | 6 hours | Reproduce five historical bugs and write the fixes |
-| [10](./10-protocol-primitives-from-scratch/README.md) | Protocol code from scratch in Go | 6 hours | Hash, serialize, and verify blocks without libraries |
-| [11](./11-from-regtest-to-live-mainnet/README.md) | Run a pruned node on a small machine | 3 hours | Size and run a node that fits your disk and RAM |
-| [12](./12-lightning-readiness-and-bitcoind-bridge/README.md) | Connect Lightning (LND) to your node | 4 hours | Open channels on a local Polar network |
+| Stage | Topic | Time |
+| :--- | :--- | :--- |
+| [00](./00-start-small/README.md) | Start small: first node, UTXOs, a small Go program | 4 hours |
+| [01](./01-node-foundations/README.md) | Your own bitcoin.conf; coinbase maturity and subsidy | 6 hours |
+| [02](./02-raw-tx-and-mempool/README.md) | Raw transactions by hand; policy vs consensus | 10 hours |
+| [03](./03-rbf-and-cpfp/README.md) | Fee bumps: RBF and CPFP with exact arithmetic | 8 hours |
+| [04](./04-functional-test-framework/README.md) | Write a two node functional test that catches a bug | 12 hours |
+| [05](./05-truc-package-relay-review/README.md) | TRUC (v3), package relay, ephemeral dust; a concept review | 10 hours |
+| [06](./06-lightning-htlc-state-machine/README.md) | Assemble an HTLC and spend both branches | 8 hours |
+| [07](./07-psbt-descriptors-and-miniscript/README.md) | PSBT, descriptors, miniscript in Go; offline signing | 10 hours |
+| [08](./08-builder-starter-kit/README.md) | Build a Go tool on bitcoind JSON-RPC | 10 hours |
+| [09](./09-bug-dojo-and-pr-mastery/README.md) | Fix historical bugs; write a regression test | 12 hours |
+| [10](./10-protocol-primitives-from-scratch/README.md) | Hashing, serialization, PoW, Merkle, bech32m in Go | 14 hours |
+| [11](./11-from-regtest-to-live-mainnet/README.md) | Node configs, signet sync, wallet backup drill | 6 hours |
+| [12](./12-lightning-readiness-and-bitcoind-bridge/README.md) | LND against bitcoind; Polar channel lifecycle | 12 hours |
+| [13](./13-core-codebase-build-and-unit-tests/README.md) | Build Bitcoin Core; write a unit test | 16 hours |
+| [14](./14-p2p-and-net-processing/README.md) | P2P and net_processing; a P2PInterface test | 18 hours |
+| [15](./15-validation-chainstate-and-reorgs/README.md) | Block validation, reorgs, assumeutxo | 18 hours |
+| [16](./16-script-taproot-and-libsecp256k1/README.md) | Interpreter, sighashes, Taproot, Schnorr | 18 hours |
+| [17](./17-fuzzing-sanitizers-debugging-and-ci/README.md) | Fuzz targets, sanitizers, lldb, bisect, CI | 16 hours |
+| [18](./18-cluster-mempool-wallet-and-policy/README.md) | Cluster mempool, package RBF, coin selection | 18 hours |
+| [19](./19-review-and-contribution-practicum/README.md) | Review real PRs; your own contributions | 40+ hours (ongoing) |
 
-Suggested order: 00, 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12.
+Stage 04 needs a Bitcoin Core build, which Stage 13 teaches; CURRICULUM.md says when to do it.
 If you only want Lightning, you still need 00 through 06 first.
 
 ## After the stages
 
-* Read the [30 day study plan](./OFFLINE_30_DAY_CURRICULUM.md) for a
-  daily schedule that repeats the stages.
-* Study real reviews in [pr-reviews/](./pr-reviews/) and write your own
-  review of one open pull request.
+* Use the [30 offline study days](./OFFLINE_30_DAY_CURRICULUM.md) on
+  days without internet.
+* Study real reviews in [pr-reviews/](./pr-reviews/README.md) and log your
+  evidence in [BTRUST_READINESS_TRACKER.md](./BTRUST_READINESS_TRACKER.md).
 * Practice recall with the [offline library](./offline-library/OFFLINE_INDEX.md)
   workbooks.
 * Read the [grant and meetup guide](./BTRUST_AND_BITDEVS_PLAYBOOK.md)

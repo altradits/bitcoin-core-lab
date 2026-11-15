@@ -1,225 +1,140 @@
-# Stage 09: Bug dojo
+# Stage 09: The Bug Dojo — Break It, Fix It, Prove It, Review It
 
-You learn consensus and policy code by breaking it. Each mission loads
-a vulnerable version of one function, you watch an exploit test fail,
-you write the fix, and the test passes. The missions mirror real
-Bitcoin Core history: two CVEs and three upstream pull requests.
+> Source checked: `master` (`e75b76b12c`) and `v29.0` (`f490f5562d`). The upstream PRs named
+> below were confirmed as merged with `gh pr view` and `git log --merges --grep` on 2026-11-15.
 
-## Goal
+**No-Shortcuts Rule.** Each mission gives you the *bug*, the *theory* and layered hints — never the
+finished fix. You write the fix in `dojo_missions.go`; for Mission 6 you write the **test**.
+Reference code is in [`solutions/`](./solutions/); `./lab.sh dojo solve` restores it. Open it only
+after `./lab.sh dojo check` passes or after **3 honest attempts**. Journal:
+`my-work/09-bug-dojo-and-pr-mastery/journal.md`.
 
-After this stage you can reproduce five historical Bitcoin Core bugs
-in Go, write each fix, and map each fix to its upstream C++ code.
+---
 
-## Why it matters
+## Objectives
 
-Reviewers who have seen a bug class before catch it in review. The
-2010 overflow bug (CVE-2010-5139) and the 2018 duplicate input bug
-(CVE-2018-17144) are why `CheckTransaction` looks the way it does
-today. The three pull request missions (BIP32 seed bounds, sigop
-adjusted vsize, PSBT signature handling) show how small hardening
-patches get reviewed and merged upstream.
+| ID | You can... |
+|----|------------|
+| C-CONS-1 | state and implement the `CheckTransaction` invariants (value range, duplicate inputs, coinbase scriptSig length) |
+| C-CONS-3 | explain CVE-2010-5139 (value overflow) and CVE-2018-17144 (duplicate inputs) and where the protection lives now |
+| C-TEST-3 | write a test that passes on correct code and fails on every boundary mutant |
+| C-REVIEW-1 | triage a fix PR: risk area, invariant, what a regression test must cover |
+| C-GIT-2 / C-GIT-6 | check out the real PR and find, with `git log -S` and `git blame`, when a line was introduced |
 
 ## Prerequisites
+Stages 02, 03 and 07. Go (`/usr/local/go/bin/go`). Estimated time: 12 hours.
 
-* Go 1.22 or later.
-* Stages 02 and 03 (fees, weight, RBF rules) so the mission briefings
-  make sense.
-* No node needed. The dojo is pure Go.
-
-## Setup
-
-```bash
-go -C ./09-bug-dojo-and-pr-mastery test ./...
+## Commands
+```
+./lab.sh dojo break        # load the broken pre-fix code into dojo_missions.go
+./lab.sh dojo check [1-6]  # run all missions or one
+./lab.sh dojo solve        # restore the reference (spoiler)
+./09-bug-dojo-and-pr-mastery/check_mission6.sh   # grades the test YOU write in Mission 6
 ```
 
-Expected output:
+---
 
-```text
-ok  	github.com/altradits/bitcoin-core-lab/09-bug-dojo-and-pr-mastery	0.857s
-```
+## Missions
 
-The checked in code holds the solved state, so this passes before you
-begin.
+### Mission 1 — The consensus shield (CVE-2010-5139, CVE-2018-17144)
+**Upstream:** `CheckTransaction` in [`src/consensus/tx_check.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_check.cpp).
+**Bug:** the broken `CheckTransactionConsensus` adds output values before range-checking each
+one, and never looks for an outpoint spent twice in the same transaction.
+**History:** in August 2010 a block created ~184 billion BTC through an overflowing sum
+(CVE-2010-5139). In 2018 a duplicate-input check skipped for performance could have crashed nodes
+or allowed inflation (CVE-2018-17144).
 
-## Steps
+<details><summary>Hint 1 (concept)</summary>
 
-### Step 1: Break all five missions
+Signed 64-bit addition wraps around. Which check must happen *before* each addition so that the
+running total can never wrap? And what data structure tells you "I have seen this outpoint before"?
+</details>
+<details><summary>Hint 2 (where)</summary>
 
-```bash
-./lab.sh dojo break
-./lab.sh dojo check
-```
+Read `tx_check.cpp` from top to bottom and copy the *order* of the checks, with the same reject
+strings (`bad-txns-vout-negative`, `bad-txns-vout-toolarge`, `bad-txns-txouttotal-toolarge`,
+`bad-txns-inputs-duplicate`).
+</details>
 
-Expected output:
+### Mission 2 — BIP32 seed length (PR #35320)
+**Upstream:** `CExtKey::SetSeed` in `src/key.cpp` (master). **Bug:** any seed length is accepted.
+**Theory:** BIP32 defines the seed as 128–512 bits. The master key is HMAC-SHA512("Bitcoin seed", seed).
+<details><summary>Hint 1</summary>
 
-```text
-Loaded BROKEN pre-PR code into 09-bug-dojo-and-pr-mastery/dojo_missions.go!
---- FAIL: TestMission1_ConsensusShield_CVE2010_And_CVE2018 (0.00s)
---- FAIL: TestMission2_PR35320_BIP32SeedLengthValidation (0.00s)
---- FAIL: TestMission3_PR32800_SigopAdjustedVsize (0.00s)
---- FAIL: TestMission4_BIP125_RBF_DoSProtection (0.00s)
---- FAIL: TestMission5_PR33014_PSBTInvalidSignatureHandling (0.00s)
-FAIL
-```
+Read BIP32 ("Master key generation") in your offline BIPs folder for the allowed range in bytes.
+Then compare with what PR #35320 asserts (`git show` the merge commit in your checkout).
+</details>
 
-`dojo break` copies the vulnerable variant over `dojo_missions.go`.
-Your job is to fix it back, one mission at a time.
+### Mission 3 — sigop-adjusted vsize (PR #32800)
+**Upstream:** `GetVirtualTransactionSize` in `src/policy/policy.cpp`; RPC fields in
+`src/rpc/mempool.cpp`. **Bug:** the broken code charges only for weight, so a tiny tx full of
+signature operations is underpriced.
+<details><summary>Hint 1</summary>
 
-### Step 2: Fix Mission 1 (consensus shield)
+Find `nBytesPerSigOp` / `DEFAULT_BYTES_PER_SIGOP` in `src/policy/settings.h` and
+`src/policy/policy.h`. The adjusted size uses the *larger* of two weights. Mind the rounding:
+vsize is weight / 4 rounded **up**.
+</details>
 
-Open `dojo_missions.go` and find `CheckTransactionConsensus`. The
-broken version sums outputs before checking them and never looks for
-duplicate inputs. Write the fix:
+### Mission 4 — replacement anti-DoS (Stage 03 rules 4 and 6)
+**Upstream:** `PaysMoreThanConflicts`, `PaysForRBF` in `src/policy/rbf.cpp` (v29).
+**Bug:** the broken validator only compares absolute fees.
+<details><summary>Hint 1</summary>
 
-1. Inside the output loop, reject `txout.Value < 0`
-   (`bad-txns-vout-negative`) and `txout.Value > MAX_MONEY`
-   (`bad-txns-vout-toolarge`) before adding to the running total.
-2. After each addition, reject a total below 0 or above MAX_MONEY
-   (`bad-txns-txouttotal-toolarge`). This catches the int64 overflow
-   where two huge outputs sum to a negative number.
-3. Track input outpoints in a map and reject repeats
-   (`bad-txns-inputs-duplicate`).
+Compare feerates without floating point: if a/b > c/d with positive b, d, then a·d > c·b.
+Rule 4 is the inequality you computed by hand in Stage 03 Worksheet 1.
+</details>
 
-Verify with:
+### Mission 5 — invalid partial signatures in a PSBT (PR #33014)
+**Upstream:** `descriptorprocesspsbt` in `src/wallet/rpc/spend.cpp`. **Bug:** an invalid existing
+or new partial signature is accepted.
+<details><summary>Hint 1</summary>
 
-```bash
-./lab.sh dojo check 1
-```
+A DER signature plus sighash byte has a minimum and maximum length (BIP66, `IsValidSignatureEncoding`
+in `src/script/interpreter.cpp`). Reject both bad existing and bad new signatures, with an error,
+not a panic.
+</details>
 
-Expected output:
+### Mission 6 — you write the regression test
+**Upstream:** the `bad-cb-length` rule in `tx_check.cpp`: a coinbase scriptSig must be 2–100
+bytes. `CheckCoinbaseScriptSigLength` is already correct in the solution and subtly wrong in
+`broken/`. Write `mission6_test.go` (package `dojo`, a func named `TestMission6_...`) in this
+directory. `check_mission6.sh` runs your test against the correct code (must pass) and four
+boundary mutants (each must fail).
+<details><summary>Hint 1</summary>
 
-```text
---- PASS: TestMission1_ConsensusShield_CVE2010_And_CVE2018 (0.00s)
-ok
-```
+Table-driven tests: a slice of `{length, wantErr}` cases. Test both sides of each edge.
+</details>
 
-Upstream reference: `CheckTransaction` in
-`src/consensus/tx_check.cpp`.
+---
 
-### Step 3: Fix Mission 2 (BIP32 seed bounds)
+## After each mission: review the real PR
+For Missions 2, 3 and 5, check out the PR in your Core checkout (`git fetch origin pull/<n>/head:pr-<n>`),
+list its commits, read its tests, and answer in your journal: what invariant does the fix
+protect, and would the PR's own test fail without the fix? (Stage 19's review method.)
+Note: the old `pr-reviews/PR-*-AUDIT.md` files contain conclusions written for you; treat them
+as someone else's notes to compare against **after** your own review, never as text to post.
 
-Find `DeriveBIP32MasterKey`. BIP32 requires the seed to be 16 to 64
-bytes (128 to 512 bits). The broken version accepts any length,
-including empty seeds that derive brute forcible keys. Reject
-`len(seed) < 16 || len(seed) > 64` before the HMAC call, then run
-`./lab.sh dojo check 2`.
+---
 
-Upstream reference: `CExtKey::SetSeed` in `src/key.cpp`
-(`bitcoin/bitcoin#35320`). Note: upstream uses `Assert`, a debug
-abort, while this mission returns a Go error. Same bound, different
-idiom.
+## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
+1. Why must each output be range-checked *before* it is added to the running total?
+2. Why was the duplicate-input check ever skipped, and what was the 2018 consequence?
+3. What is the BIP32 seed length range in bytes?
+4. Write the sigop-adjusted vsize formula with the default bytes-per-sigop.
+5. Why compare feerates by cross-multiplication?
+6. Give the four boundary values a test of a "2..100 inclusive" rule must use.
+7. What is a "mutant", and why does a test that never fails prove nothing?
+8. How do you find the commit that introduced a given line in Core?
 
-### Step 4: Fix Mission 3 (sigop adjusted vsize)
+## Review lens
+- Files: `src/consensus/tx_check.cpp`, `src/consensus/tx_verify.cpp`, `src/key.cpp`,
+  `src/policy/policy.cpp`, `src/policy/rbf.cpp`, `src/wallet/rpc/spend.cpp`, tests
+  `src/test/transaction_tests.cpp`, `src/test/key_tests.cpp`, `test/functional/rpc_psbt.py`.
+- Questions: Is the fix consensus (then it needs extreme care, a soft-fork-safe design, and
+  usually no behaviour change) or policy/RPC? Does the test fail without the fix? Are the
+  boundary cases covered? Could the fix itself crash on malformed input?
 
-Find `ComputeMempoolVsizes`. A tiny transaction full of signature
-checks costs more CPU than its bytes suggest, so policy charges the
-larger of weight and `sigOpCost * 20` weight units. Compute
-`sigOpWeight`, take the max with `txWeight`, and divide by 4 rounding
-up. Then run `./lab.sh dojo check 3`.
-
-Upstream reference: `GetVirtualTransactionSize` in
-`src/policy/policy.cpp` (`bitcoin/bitcoin#32800`).
-
-### Step 5: Fix Mission 4 (RBF rules)
-
-Find `ValidateBIP125Replacement`. A replacement must pay a strictly
-higher feerate than the original (compare with cross multiplication,
-no floats), must pay at least as much total fee (Rule 3), and must add
-enough extra fee to cover its own relay bandwidth (Rule 4). Then run
-`./lab.sh dojo check 4`.
-
-Upstream reference: `PaysForRBF` in `src/policy/rbf.cpp`. You verified
-Rule 4 live in Stage 03.
-
-### Step 6: Fix Mission 5 (PSBT signatures)
-
-Find `ProcessPSBTPartialSignatures`. A PSBT can arrive with a
-corrupted pre existing signature. The fixed code validates every
-existing signature (DER length 9 to 73 bytes, valid flag) and reports
-which pubkey failed instead of crashing or silently dropping data.
-Then run `./lab.sh dojo check 5`.
-
-Upstream reference: `descriptorprocesspsbt` in
-`src/rpc/rawtransaction.cpp` (`bitcoin/bitcoin#33014`).
-
-### Step 7: Confirm everything passes
-
-```bash
-./lab.sh dojo check
-```
-
-Expected output:
-
-```text
---- PASS: TestMission1_ConsensusShield_CVE2010_And_CVE2018 (0.00s)
---- PASS: TestMission2_PR35320_BIP32SeedLengthValidation (0.00s)
---- PASS: TestMission3_PR32800_SigopAdjustedVsize (0.00s)
---- PASS: TestMission4_BIP125_RBF_DoSProtection (0.00s)
---- PASS: TestMission5_PR33014_PSBTInvalidSignatureHandling (0.00s)
-ok
-```
-
-If you get stuck on a mission, compare against
-`solutions/dojo_missions_solved.go`, or restore everything with
-`./lab.sh dojo solve` and start that mission over.
-
-## Checkpoint
-
-```bash
-./lab.sh check 09
-```
-
-Expected output:
-
-```text
-PASS: stage 09. all five dojo missions pass.
-```
-
-The check runs the full dojo suite and requires all five missions to
-pass. It does not break your code first. Run `./lab.sh dojo check`
-by hand for the same result.
-
-## Common errors and fixes
-
-| Error | Cause | Fix |
-| :--- | :--- | :--- |
-| `CVE-2010-5139 VULNERABILITY: int64 output overflow was not caught` | Per output check missing or placed after the addition | Check each output before `nValueOut += txout.Value` |
-| `expected bad-txns-txouttotal-toolarge` | Cumulative sum check missing | Check the running total inside the loop, not just at the end |
-| `PR #35320 VULNERABILITY: accepted weak 8-byte seed` | Length guard missing | Reject `len(seed) < 16` first |
-| `expected vsize_bip141=100 and vsize_adjusted=400` | Max with sigop weight missing | Take `max(txWeight, sigOpCost * 20)` before dividing |
-| `BIP125 Rule #4 VULNERABILITY` | Relay floor missing | Require `additionalFee >= replacementVsize * relayPerVB` |
-| My fixes vanished | You ran `dojo break` again | That overwrites your file. `dojo solve` restores the reference |
-
-## Going further
-
-1. Add a mutation test. Comment out one check in your fixed Mission
-   1, run `dojo check 1`, and confirm it fails. Restore the check.
-   Done when you have seen the failure.
-2. Harden Mission 2 with a BIP32 test vector. Add a test that derives
-   the master key for a known seed and compares against the published
-   vector. Done when the new test passes.
-3. Read the real CVE-2018-17144 patch. Find the duplicate input check
-   in `src/consensus/tx_check.cpp` and compare it with your Go map.
-   Done when you can point to both.
-
-## Contribution task
-
-Read the audit for one of the three dojo pull requests in
-`pr-reviews/` (PR 32800, 33014, or 35320), then open the actual
-upstream pull request on GitHub and read one reviewer thread the audit
-does not quote. Write down what the reviewer asked and how the author
-answered. Bring it to your study group or post it as a comment on the
-audit issue if one exists.
-
-## Sources
-
-* `src/consensus/tx_check.cpp` (`CheckTransaction`): the consensus
-  shield for Missions 1.
-* `src/key.cpp` (`CExtKey::SetSeed`), `src/policy/policy.cpp`
-  (`GetVirtualTransactionSize`), `src/rpc/rawtransaction.cpp`
-  (`descriptorprocesspsbt`): Missions 2, 3, 5.
-* `src/policy/rbf.cpp` (`PaysForRBF`): Mission 4.
-* BIP32 (HD wallets), BIP125 (RBF): the standards behind Missions 2
-  and 4.
-* https://bitcoincore.org/en/2018/09/20/notice/: full disclosure of
-  CVE-2018-17144 (timeline, affected versions, root cause).
+## Proof-of-work output
+Your `mission6_test.go` and a journal entry per mission. Later: the same mutation discipline in a
+real test-coverage PR (Stage 19).
