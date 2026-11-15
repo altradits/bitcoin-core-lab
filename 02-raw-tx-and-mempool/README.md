@@ -1,138 +1,237 @@
-# Hour 02: Raw Transaction Construction, Implicit Fee Guardrails & Mempool Weight Accounting
+# Stage 02: Raw transactions and mempool
 
-## Objective
-Spend the matured `25.00000000 BTC` coinbase UTXO (`93328febe1e73e7d3bbb8dc9256fc57ae704d883b5538919a44c821ef957a29a:0`) using low-level raw transaction RPCs (`createrawtransaction`, `signrawtransactionwithwallet`, `sendrawtransaction`), verify why omitting a change output triggers the `-maxtxfee` guardrail, inspect SegWit weight/vsize accounting in `getmempoolentry`, and verify miner fee collection + BIP141 witness commitment in the confirmation block.
+You spend a coin by hand with the low level RPCs: build the bytes,
+sign them, send them. You learn that a transaction has no fee field
+(the fee is inputs minus outputs), that forgetting change triggers a
+fee guardrail, and how SegWit weight math works.
 
----
+## Goal
 
-## 1. Upstream C++ Consensus & Mempool References
+After this stage you can build, sign, and broadcast a raw SegWit
+transaction and read its weight, fee, and mempool entry.
 
-### Implicit Fee Calculation (`src/consensus/tx_verify.cpp`)
-A serialized Bitcoin transaction (`CTransaction` in `src/primitives/transaction.h`) contains **no explicit `fee` field**. Instead, consensus computes the fee strictly as the residual difference between total inputs and total outputs inside `Consensus::CheckTxInputs`:
-```cpp
-const CAmount value_out = tx.GetValueOut();
-if (nValueIn < value_out) {
-    return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-in-belowout",
-        strprintf("value in (%s) < value out (%s)", FormatMoney(nValueIn), FormatMoney(value_out)));
-}
-const CAmount txfee_aux = nValueIn - value_out;
-```
+## Why it matters
 
-### SegWit Transaction Weight & Virtual Size (`src/consensus/validation.h`)
-Under BIP141, non-witness bytes are weighted by `WITNESS_SCALE_FACTOR = 4`, while witness bytes (`txinwitness`) count as 1 weight unit (WU) per byte:
-$$\text{weight} = (\text{base\_size} \times 3) + \text{total\_size}$$
-$$\text{vsize} = \lceil \text{weight} / 4 \rceil$$
+Wallets hide transaction building, but contributors debug it. Consensus
+computes the miner fee as `nValueIn - value_out` in
+`Consensus::CheckTxInputs` (`src/consensus/tx_verify.cpp`). There is no
+`fee` field to set. BIP141 (SegWit) moved signatures to the witness so
+the txid no longer changes when a signature changes. That fix is what
+lets Lightning chain unconfirmed transactions safely.
 
----
+## Prerequisites
 
-## 2. Empirical Execution on Regtest
+* Stage 00 (a running node with mature coins in `kisumu_miner`).
+* Stage 01 (you know what a mature coin is).
 
-### Step 1: The Implicit Fee Trap (Omitting the Change Output)
-Spending the `25.00000000 BTC` UTXO to pay `1.00000000 BTC` to `kisumu_merchant` (`bcrt1qtxwmxk3hyfvaph8z4eacuh0df56kvd8fuz57xy`) without specifying a change output:
+## Setup
+
+Confirm the miner wallet has at least one spendable coin:
+
 ```bash
-RAW_TX_DANGEROUS=$(bitcoin-cli -regtest createrawtransaction \
-  '[{"txid":"93328febe1e73e7d3bbb8dc9256fc57ae704d883b5538919a44c821ef957a29a","vout":0}]' \
-  '[{"bcrt1qtxwmxk3hyfvaph8z4eacuh0df56kvd8fuz57xy":1.0}]')
+bitcoin-cli -regtest -rpcwallet="kisumu_miner" getbalance
 ```
-Attempting to broadcast after signing:
+
+Expected output (any positive value works):
+
+```text
+50.00000000
+```
+
+If the balance is zero, run `./lab.sh step 1` and wait for 101 blocks.
+
+## Steps
+
+### Step 1: Send a proper transaction with change
+
+```bash
+./02-raw-tx-and-mempool/raw_tx_mempool.sh
+```
+
+Expected output (ids and addresses differ on your machine):
+
+```text
+Spending UTXO 1d190e14d59525f7ddb61d1858096f1e93795a67e0d667c1ca709d41849cfd11:0 (50.0 BTC)
+ -> 1.00000000 BTC to bcrt1qujj42d8hjmpu4u5a324zwcsynw3cp9gr2wdry7
+ -> 48.99990000 BTC change to bcrt1qtqz3zm7harckx6juj0t2gsv3qvlsf2n906v0fs (0.00010000 BTC fee)
+Broadcasted TXID: 0c90064a94bd41822f7feee77b231f92f7fc1aa03722d6ac8fce1764f8ed9758
+```
+
+The script picks a miner coin, pays 1 BTC to the merchant, returns the
+rest to a fresh change address, and leaves 0.0001 BTC (10,000 sats) as
+the miner fee. Keep the printed TXID. The next steps use it.
+
+### Step 2: Spring the fee trap (no change output)
+
+Spend a different coin and pay 1 BTC with no change output. The missing
+49 BTC silently becomes the fee, and the node refuses to broadcast:
+
+```bash
+UTXO=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" listunspent | python3 -c "import sys,json; u=[x for x in json.load(sys.stdin) if x['amount']>=2.0][0]; print(u['txid'], u['vout'])")
+read TXID VOUT <<< "$UTXO"
+MADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_merchant" getnewaddress)
+RAW=$(bitcoin-cli -regtest createrawtransaction "[{\"txid\":\"$TXID\",\"vout\":$VOUT}]" "[{\"$MADDR\":1.0}]")
+SIGNED=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" signrawtransactionwithwallet "$RAW" | python3 -c "import sys,json; print(json.load(sys.stdin)['hex'])")
+bitcoin-cli -regtest sendrawtransaction "$SIGNED"
+```
+
+Expected output:
+
 ```text
 error code: -25
 error message:
 Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)
 ```
-**Why:** Without a change output, `25.00000000 - 1.00000000 = 24.00000000 BTC` is implicitly offered as a miner fee. Bitcoin Core's node policy guardrail (`maxtxfee`, defaulting to `0.10 BTC`) intercepts the broadcast before the transaction reaches the P2P network.
 
----
+The wallet meant to pay 1 BTC but offered about 49 BTC as fee. The
+`maxfeerate` guardrail (default 0.10 BTC/kvB on `sendrawtransaction`)
+stops the broadcast before the transaction reaches the network. Real
+money has been lost this way. Always check your change output.
 
-### Step 2: Proper Raw Transaction with Internal Bech32 Change Output
-Generating an internal BIP84 change address (`m/84h/1h/0h/1/*`) and allocating `23.99990000 BTC` change (leaving an explicit `0.00010000 BTC` / `10,000 sat` fee):
+### Step 3: Decode the transaction from Step 1
+
+Rebuild and decode a signed 1 input, 2 output transaction to see where
+the fee and signatures live:
+
 ```bash
-CHANGE_ADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" getrawchangeaddress "bech32")
-# Output: bcrt1qlyq6n7x2jusfcsly2azc7yjmhqmd6v53n8plev
-
-RAW_TX_SAFE=$(bitcoin-cli -regtest createrawtransaction \
-  '[{"txid":"93328febe1e73e7d3bbb8dc9256fc57ae704d883b5538919a44c821ef957a29a","vout":0}]' \
-  "[{\"bcrt1qtxwmxk3hyfvaph8z4eacuh0df56kvd8fuz57xy\":1.0},{\"$CHANGE_ADDR\":23.99990000}]")
+TXID=$(bitcoin-cli -regtest getrawmempool | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
+bitcoin-cli -regtest getrawtransaction "$TXID" true
 ```
 
-### Step 3: SegWit Signing, `txid` vs `wtxid`, and Witness Discount
-Decoded signed transaction:
+Expected output (abbreviated; hashes differ on your machine):
+
 ```json
 {
-  "txid": "4936ec7c5e2b1f87528e23fbc8724436a09cd8253d8ccd1459129b95434ca8b4",
-  "hash": "408cd807e7a07e8dc8c6eb0f17bc681aa6dbb4e835704737f0f49ce5bc80b1e7",
+  "txid": "2cd98ec18b1c68f535dacb8570df2e96ae11e8767082c12474009853f29ac591",
+  "hash": "084c383b3d994ea8951647a3c7d00d877fa63fca9cf8130e8fef365717daf03e",
   "version": 2,
   "size": 222,
   "vsize": 141,
   "weight": 561,
-  "locktime": 0,
   "vin": [
     {
-      "txid": "93328febe1e73e7d3bbb8dc9256fc57ae704d883b5538919a44c821ef957a29a",
-      "vout": 0,
       "scriptSig": { "asm": "", "hex": "" },
-      "txinwitness": [
-        "3044022004f1cb8d08bc52f0609882d6e7d2f77ceca3e657b2351738e79b2e249c59f29302206685cd2b5c1c4b3eacdfb27ed0971bd6f73c5feb589b3bc1e9d96e5ed8e5127301",
-        "03e5e984e15d364d2dba11671dbdb9c24a2ff1f23cc15b2de3af3344221e764bcf"
-      ],
+      "txinwitness": ["30440220...", "03d8f427..."],
       "sequence": 4294967293
     }
   ]
 }
 ```
-Key protocol observations:
-1. **Malleability Fix (`txid` != `wtxid`):** `scriptSig` is completely empty (`""`). The ECDSA signature (DER-encoded + `0x01` `SIGHASH_ALL`) and 33-byte compressed public key live in `txinwitness`. Because `txid` hashes only the non-witness data (`113` base bytes), third-party signature malleation cannot alter `txid` (`4936ec7c...`), making unconfirmed Lightning funding transactions safe to chain off of.
-2. **Weight Math Verification:**
-   - Base size (without witness): `113 bytes`
-   - Total size (with `109 bytes` of witness data): `222 bytes`
-   - $\text{weight} = (113 \times 3) + 222 = 339 + 222 = 561\text{ WU}$
-   - $\text{vsize} = \lceil 561 / 4 \rceil = 141\text{ vB}$
 
----
+Three things to notice. First, `scriptSig` is empty and the signature
+plus public key sit in `txinwitness`. Second, `txid` and `hash`
+(`wtxid`) differ, because the txid excludes witness data. Forging a new
+signature changes the wtxid but not the txid. Third, `sequence` is
+4294967293 (0xfffffffd), which signals BIP125 replaceability. Stage 03
+uses that.
 
-### Step 4: Mempool Inspection (`getmempoolentry`)
+Weight math: base size 113 bytes, total size 222 bytes.
+`weight = 113 * 3 + 222 = 561`, `vsize = ceil(561 / 4) = 141`.
+
+### Step 4: Inspect the mempool entry
+
+```bash
+TXID=$(bitcoin-cli -regtest getrawmempool | python3 -c "import sys,json; print(json.load(sys.stdin)[0])")
+bitcoin-cli -regtest getmempoolentry "$TXID"
+```
+
+Expected output (abbreviated):
+
 ```json
 {
   "vsize": 141,
   "weight": 561,
-  "height": 303,
-  "wtxid": "408cd807e7a07e8dc8c6eb0f17bc681aa6dbb4e835704737f0f49ce5bc80b1e7",
   "fees": {
-    "base": 0.00010000,
-    "modified": 0.00010000,
-    "ancestor": 0.00010000,
-    "descendant": 0.00010000
+    "base": 0.00010000
   },
   "bip125-replaceable": true
 }
 ```
-Because `createrawtransaction` sets `nSequence = 0xfffffffd` (`4294967293 < 0xfffffffe`), the transaction signals **BIP125 Opt-in Replace-By-Fee (`bip125-replaceable: true`)**.
 
----
+The mempool agrees with the decode: 141 vB, 0.0001 BTC fee,
+replaceable.
 
-### Step 5: Block 304 Confirmation & BIP141 Witness Commitment
-Mining block 304 (`14121b7288b16f3bb80261111654115c9aad5baaf42395f05758bbd92a0cc588`) confirms the transaction and produces two outputs in the block's coinbase transaction:
-```json
-[
-  {
-    "value": 12.5001,
-    "n": 0,
-    "scriptPubKey": {
-      "asm": "0 c68297ba384af46c1d711793ba3fb05fd5b9e67d",
-      "address": "bcrt1qc6pf0w3cft6xc8t3z7fm50astl2mnenaxhuxn3",
-      "type": "witness_v0_keyhash"
-    }
-  },
-  {
-    "value": 0.0,
-    "n": 1,
-    "scriptPubKey": {
-      "asm": "OP_RETURN aa21a9ed5b6bd325f2453e5172165d992839c405f0c87c13675c24f123d6b496395ac60f",
-      "hex": "6a24aa21a9ed5b6bd325f2453e5172165d992839c405f0c87c13675c24f123d6b496395ac60f",
-      "type": "nulldata"
-    }
-  }
-]
+### Step 5: Confirm the block and check the miner got paid
+
+```bash
+ADDR=$(bitcoin-cli -regtest -rpcwallet="kisumu_miner" getnewaddress)
+bitcoin-cli -regtest generatetoaddress 1 "$ADDR" > /dev/null
+H=$(bitcoin-cli -regtest getblockcount)
+bitcoin-cli -regtest getblock $(bitcoin-cli -regtest getblockhash $H) 2 | python3 -c "
+import sys, json
+cb = json.load(sys.stdin)['tx'][0]
+for o in cb['vout']:
+    print(o['value'], o['scriptPubKey'].get('type'), o['scriptPubKey'].get('hex', '')[:16])
+"
 ```
-- **`vout[0]` (`12.50010000 BTC`):** Combines the 3rd-epoch block subsidy (`12.50000000 BTC`) + our exact transaction fee (`0.00010000 BTC`).
-- **`vout[1]` (`OP_RETURN aa21a9ed...`):** The mandatory **BIP141 Witness Commitment** (`0xaa21a9ed` header followed by the 32-byte SHA256d hash of the witness Merkle root and witness reserved value), anchoring all SegWit signatures in the block.
+
+Expected output (subsidy 50, 25, or 12.5 depending on your height;
+plus the 0.0001 fee):
+
+```text
+25.00010000 witness_v0_keyhash 00147243346bae72
+0.0 nulldata 6a24aa21a9ed5b6b
+```
+
+Output 0 pays the miner the block subsidy plus your exact fee.
+Output 1 is the BIP141 witness commitment (`OP_RETURN` starting with
+`aa21a9ed`), which anchors all SegWit signatures in the block.
+
+## Checkpoint
+
+```bash
+./lab.sh check 02
+```
+
+Expected output:
+
+```text
+PASS: stage 02. raw tx confirmed; coinbase collected subsidy plus fee.
+```
+
+The check sends one raw transaction, mines a block, and asserts the
+coinbase value equals subsidy plus fee. You can also rerun the script
+from Step 1 and confirm it prints a new TXID.
+
+## Common errors and fixes
+
+| Error | Cause | Fix |
+| :--- | :--- | :--- |
+| `Fee exceeds maximum configured by user` | Missing change output (Step 2 does this on purpose) | Add a change output as in Step 1 |
+| `list index out of range` from the python one liner | No coin of the needed size | Mine more: `./lab.sh step 1`, then retry |
+| `Transaction not in mempool` on `getmempoolentry` | You already mined a block since the send | Resend with the Step 1 script, then inspect before mining |
+| `insufficient fee` on `sendrawtransaction` | Fee below relay minimum | Raise the fee to at least 141 sats for a 141 vB tx |
+
+## Going further
+
+1. Pay an exact fee rate. Rebuild the Step 1 transaction with a
+   282 sat fee (2.0 sat/vB for 141 vB) and confirm `getmempoolentry`
+   shows `0.00000282`. Done when the fee field matches.
+2. Make the transaction non replaceable. Pass `"sequence": 4294967295`
+   in `createrawtransaction` and confirm `bip125-replaceable` is
+   `false`. Done when the flag flips.
+3. Read the fee code. Open `src/consensus/tx_verify.cpp` around
+   `txfee_aux` and find where `bad-txns-in-belowout` triggers. Done
+   when you can quote both lines.
+
+## Contribution task
+
+Run the upstream mempool package test and confirm it passes on your
+machine:
+
+```bash
+python3 ~/bitcoin/build/test/functional/test_runner.py mempool_packages.py
+```
+
+Expected: `mempool_packages.py | Passed`. If it fails, open a lab bug
+issue with the full output. Do not file upstream until a maintainer
+confirms.
+
+## Sources
+
+* `src/consensus/tx_verify.cpp` (`Consensus::CheckTxInputs`,
+  `txfee_aux = nValueIn - value_out`): implicit fees.
+* `src/rpc/rawtransaction_util.cpp` (default `nSequence =
+  MAX_BIP125_RBF_SEQUENCE`): why new transactions signal RBF.
+* BIP141 (Segregated Witness): weight, vsize, witness commitment.
+* BIP125 (Replace by Fee): the `sequence` signal, used in Stage 03.

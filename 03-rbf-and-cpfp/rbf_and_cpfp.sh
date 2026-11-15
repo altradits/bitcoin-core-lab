@@ -5,8 +5,8 @@ BITCOIN_CLI="${BITCOIN_CLI:-bitcoin-cli -regtest}"
 MINER_WALLET="kisumu_miner"
 MERCHANT_WALLET="kisumu_merchant"
 
-$BITCOIN_CLI loadwallet "$MINER_WALLET" 2>/dev/null || true
-$BITCOIN_CLI loadwallet "$MERCHANT_WALLET" 2>/dev/null || true
+$BITCOIN_CLI loadwallet "$MINER_WALLET" > /dev/null 2>&1 || true
+$BITCOIN_CLI loadwallet "$MERCHANT_WALLET" > /dev/null 2>&1 || true
 
 UTXO_JSON=$($BITCOIN_CLI -rpcwallet="$MINER_WALLET" listunspent | python3 -c "import sys,json; u=[x for x in json.load(sys.stdin) if x['amount']>=5.0][0]; print(f\"{u['txid']} {u['vout']} {u['amount']}\")")
 read -r TXID VOUT AMOUNT <<< "$UTXO_JSON"
