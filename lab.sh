@@ -556,7 +556,7 @@ Tested ACK <40-char-commit-hash>
   - Mutation test: commented out the new check in `<file_path>`, recompiled, and confirmed the test fails as expected.
 ------------------------------------------------------------
 INNER_EOF
-      echo "📘 Full manual: BITCOIN_FROM_SOURCE_MASTERY.md"
+      echo "Full manual: BUILDING_BITCOIN_CORE_FROM_SOURCE.md"
       ;;
     *)
       echo "Usage: ./lab.sh drill [1..8]"
