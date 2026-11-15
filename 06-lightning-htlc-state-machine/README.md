@@ -86,6 +86,15 @@ Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 06
+```
+
+Runs: ./check_htlc_script.sh, ./check_htlc_spends.sh, ./check_bolt3.sh. Each prints PASS/FAIL with a reason, never the answer. Start your own regtest node first; the checkers read its state and your `answers.env`.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Write the byte values of `OP_IF`, `OP_ELSE`, `OP_ENDIF`, `OP_SHA256`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_CHECKSEQUENCEVERIFY`, `OP_DROP`.
 2. How is the number 10 pushed in a script? And 144?

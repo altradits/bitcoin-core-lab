@@ -98,6 +98,15 @@ your own node (Worksheet 1, Task 4), and start/stop it only with your `node.sh`.
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 01
+```
+
+Runs: ./check_conf.sh, ./check_node_procedure.sh, ./check_coinbase.sh. Each prints PASS/FAIL with a reason, never the answer. Start your own regtest node first; the checkers read its state and your `answers.env`.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Name four options that must go in the `[regtest]` section, and what happens if one is in the top section.
 2. What does the `.cookie` file contain, and when does it exist?

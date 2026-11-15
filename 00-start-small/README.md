@@ -75,6 +75,15 @@ If your node uses its own datadir, export `BTC_CLI` (for example
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 00
+```
+
+Runs: ./check_micro_steps.sh, ./check_first_app.sh. Each prints PASS/FAIL with a reason, never the answer.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answer from memory, then compare with [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. What is block 0 called, and where in the Bitcoin Core source is it defined?
 2. Why does a wallet show 50 BTC spendable (not 5050 BTC) after you mine 101 blocks?

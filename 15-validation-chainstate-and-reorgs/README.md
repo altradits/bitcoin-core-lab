@@ -117,6 +117,15 @@ PR #27596 ("assumeutxo (2)") and #30214 (state representation).
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 15
+```
+
+Runs: ./check_15.sh (your reorg drill, then your functional test). Each prints PASS/FAIL with a reason, never the answer. Run `./check_15.sh reorg` or `./check_15.sh test` to check one part.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Why is `CheckBlock` split from `ContextualCheckBlock`?
 2. Where are UTXOs looked up and spent during block connection?

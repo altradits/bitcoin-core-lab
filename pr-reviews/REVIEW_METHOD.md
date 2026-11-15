@@ -24,7 +24,7 @@ It explains each step and has the PR-type matrix. Sources: `CONTRIBUTING.md` ("P
 - [ ] Each finding has a `file:line` and is phrased as a question if I'm unsure.
 - [ ] Nits are labelled as nits, or left out.
 - [ ] No AI-written text. I could defend every sentence aloud at BitDevs Kisumu.
-- [ ] Afterwards: I recorded the link in [`../BTRUST_READINESS_TRACKER.md`](../BTRUST_READINESS_TRACKER.md) and my commands in `my-work/19/journal.md`.
+- [ ] Afterwards: I recorded the link in [`../BTRUST_READINESS_TRACKER.md`](../BTRUST_READINESS_TRACKER.md) and my commands in `my-work/19-review-and-contribution-practicum/journal.md`.
 
 **Vocabulary (from `CONTRIBUTING.md`)**: `Concept (N)ACK`, `Approach (N)ACK`; a code review "begins
 with `ACK BRANCH_COMMIT` … followed by a description of how the reviewer did the review". A NACK needs a rationale.

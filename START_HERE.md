@@ -9,8 +9,9 @@ skill ([CURRICULUM_CONVENTIONS.md](./CURRICULUM_CONVENTIONS.md)). Worksheets say
 checkers tell you PASS or FAIL with a reason, and `solutions/` folders are spoilers you open only
 after a checker passes or after three honest attempts.
 
-Rule 0: use regtest or signet only. Never use real money (mainnet) for
-any exercise in this lab.
+Rule 0: exercises that move coins use regtest or signet only. Stage 11
+has you configure and run a pruned mainnet node, but no exercise sends
+or receives real bitcoin.
 
 ## Who this lab is for
 
@@ -31,7 +32,9 @@ Install these before Stage 01. Stage 00 needs only Bitcoin Core and Go.
 | Go | 1.22 or later | `go version` |
 | Python | 3.10 or later | `python3 --version` |
 | git | any recent | `git --version` |
-| LND (Stage 12 only) | v0.20.0-beta via Polar | `./lab.sh polar` |
+| CMake and a C++ compiler (Stage 13 on) | per Bitcoin Core `doc/build-*.md` | `cmake --version` |
+| Docker and Polar (Stage 12 only) | Polar runs LND 0.20.0-beta | `./lab.sh polar` |
+| `lnd` binary (Stage 12, optional) | option names checked against 0.21.3-beta | `lnd --version` |
 
 You also need disk space: a few GB for regtest, signet and a Bitcoin Core
 build, and more for a pruned mainnet node (about 5.5 GB of block files
@@ -67,9 +70,11 @@ cd bitcoin-core-lab
 ./lab.sh step 1
 ```
 
-Expected result: `doctor` reports each tool as OK, and `step 1` shows
-the first Stage 00 micro-step for you to do yourself. If `doctor` reports a missing tool,
-install it and run `doctor` again. Then start Stage 00.
+Expected result: `doctor` reports each tool as OK. It also reports the
+regtest node as MISSING until you start your own node in Stage 00; that
+is expected. `step 1` shows the first Stage 00 micro-step for you to do
+yourself. If `doctor` reports a missing tool, install it and run
+`doctor` again. Then start Stage 00 (`./lab.sh stage 00`).
 
 ## Stage map
 
@@ -115,7 +120,9 @@ If you only want Lightning, you still need 00 through 06 first.
 
 ## Getting help
 
-If a step fails, read the Common errors section of that stage first.
+If a step fails, read the FAIL line from `./lab.sh check NN` (it names
+what is wrong), then the stage's worksheet hints. Some stage READMEs
+also list common errors.
 If the lab itself is wrong or unclear, open an issue on GitHub so a
 maintainer can fix it. See [CONTRIBUTING.md](./CONTRIBUTING.md) for how
 to report mistakes and propose new exercises.

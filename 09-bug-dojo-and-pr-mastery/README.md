@@ -117,6 +117,15 @@ as someone else's notes to compare against **after** your own review, never as t
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 09
+```
+
+Runs: go vet + go test on `dojo_missions.go`, then ./check_mission6.sh. Each prints PASS/FAIL with a reason, never the answer. `./check_mission6.sh` runs your Mission 6 test against boundary mutants; a strong test kills all of them.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Why must each output be range-checked *before* it is added to the running total?
 2. Why was the duplicate-input check ever skipped, and what was the 2018 consequence?

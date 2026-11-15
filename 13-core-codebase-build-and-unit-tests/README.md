@@ -225,6 +225,15 @@ Run the checker from the stage directory:
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 13
+```
+
+Runs: ./check_13.sh. Each prints PASS/FAIL with a reason, never the answer. Needs your Bitcoin Core build (`BITCOIN_ROOT`, default `~/bitcoin`).
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answer from memory; answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 
 1. Which CMake option builds `test_bitcoin`, and what is its default?

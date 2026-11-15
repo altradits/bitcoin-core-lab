@@ -195,6 +195,15 @@ All worksheets are in [`exercises/`](./exercises/). Do them in order.
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 17
+```
+
+Runs: python3 check_fuzz_target.py, python3 check_bisect.py. Each prints PASS/FAIL with a reason, never the answer. Both take an optional path: your fuzz worktree (default `~/bitcoin-fuzz`) and your Bitcoin Core checkout (default `~/bitcoin`).
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz-answers.md`](./solutions/quiz-answers.md))
 
 1. What does `FUZZ_TARGET(foo)` expand to, and how does the `fuzz` binary know which target to run?

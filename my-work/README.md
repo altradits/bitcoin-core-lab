@@ -8,7 +8,7 @@ depends on it.
 ```
 my-work/
   <stage-dir-name>/          # same name as the stage, e.g. 13-core-codebase-build-and-unit-tests
-    journal.md               # git-ignored by default (private)
+    journal.md               # private: all of my-work/ except this README is git-ignored
     notes.md, *.py, *.cpp…   # anything else you choose to keep
   reviews/<repo>-<PR>.md     # private review notes before you write a public comment
 ```
@@ -24,7 +24,7 @@ For each exercise:
 Do not paste output you have not read. Do not paste commands you did not type.
 
 ## Privacy
-`my-work/*/journal.md` is git-ignored, so you decide what becomes public. To publish
+Everything in `my-work/` except this README is git-ignored, so you decide what becomes public. To publish
 something (for example as evidence in
 [BTRUST_READINESS_TRACKER.md](../BTRUST_READINESS_TRACKER.md)), copy it into a separate
 file you have reviewed, check that it contains no secrets (wallet passphrases, RPC

@@ -19,7 +19,7 @@ Use `templates/bug-reproduction.md`. Rules:
 - Practice first on a closed issue that has a known fix: reproduce it at the parent of the fix
   commit, and confirm it is gone at the fix. Then do one on an open issue.
 
-**Output:** `my-work/19/comms/repro-<issue>.md`. Post it on the issue only if it adds new information
+**Output:** `my-work/19-review-and-contribution-practicum/comms/repro-<issue>.md`. Post it on the issue only if it adds new information
 (a new platform, a smaller reproduction, a failure rate). A "+1, same here" comment adds nothing.
 
 ## Part B: A Delving Bitcoin or bitcoindev post (C-COMMS-3, C-COMMS-4)
@@ -33,7 +33,7 @@ rules are not checked in this lab (`UNVERIFIED`), so read its FAQ and a few week
    data, code, or a precise question.
 2. Pick a topic where you have **your own data**: e.g. measurements from your pruned M1 node,
    fee data you collected, or a regtest experiment around a policy you reviewed in the Gauntlet.
-3. Fill in `templates/post-outline.md`, then write the post yourself in `my-work/19/comms/post-draft.md`.
+3. Fill in `templates/post-outline.md`, then write the post yourself in `my-work/19-review-and-contribution-practicum/comms/post-draft.md`.
 4. Wait a day, reread it, and cut 30%. Check every factual claim against code or a link.
 5. Ask a BitDevs Kisumu co-organizer to read it for clarity (they review it; they don't rewrite it).
 6. Post it when you are ready. A thoughtful **reply** to an existing thread counts too.
@@ -48,7 +48,7 @@ open questions to the room. (Chatham House and no-recording are common BitDevs p
    (not yes/no), the one thing you're still unsure about, and an optional regtest demo.
 3. Rehearse the intro aloud with a timer. If it goes over 2 minutes, cut it.
 4. Publish the reading list entry 1–2 weeks before the meetup.
-5. Afterwards, write down in `my-work/19/comms/seminar-<date>-retro.md` which questions started discussion
+5. Afterwards, write down in `my-work/19-review-and-contribution-practicum/comms/seminar-<date>-retro.md` which questions started discussion
    and which fell flat. Do not attribute anything said in the room to a named person.
 
 **Done when:** one reproduction write-up, one post draft (posted or not), and one seminar prep

@@ -55,10 +55,10 @@ with the full answer.]
 
 [Say what a pass proves. Never paste output that gives away an answer.]
 
-## Common errors and fixes
+## Common errors and fixes (optional)
 
-[Errors you hit while testing the stage on a fresh machine: exact text, cause, what to look at.
-Point to the cause; do not hand over the fixed command.]
+[Optional. Errors you hit while testing the stage on a fresh machine: exact text, cause, what to
+look at. Point to the cause; do not hand over the fixed command.]
 
 | Error | Cause | Where to look |
 | :--- | :--- | :--- |

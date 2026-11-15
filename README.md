@@ -8,31 +8,57 @@ contributor**: from your first regtest node to reviewing consensus, P2P, mempool
 contributing upstream. Built for **BitDevs Kisumu** and for anyone preparing to apply to
 **Btrust** or similar developer programs.
 
+**Who it is for:** you can program in at least one language and use a terminal. You do not need to
+know Bitcoin yet; Stage 00 assumes nothing. Go, Python, shell and (from Stage 13) C++ are used.
+
+## Quick start
+```bash
+git clone https://github.com/altradits/bitcoin-core-lab.git
+cd bitcoin-core-lab
+./lab.sh doctor      # checks git, Go, Python, bitcoind; tells you what is missing
+./lab.sh stage 00    # shows the Stage 00 README, worksheets and checkers
+```
+Install steps and pinned versions are in [`START_HERE.md`](./START_HERE.md).
+
 ## The rule: no shortcuts
 You type every command and write every line of code that teaches a skill
 ([`CURRICULUM_CONVENTIONS.md`](./CURRICULUM_CONVENTIONS.md)):
 - **Worksheets** (`NN-stage/exercises/`) say *what* to achieve and *which* RPC, file or function to use,
-  with layered hints — never the finished command.
+  with layered hints, never the finished command.
 - **Checkers** (`check_*.sh`, `test_*.py`, Go tests) inspect your node, your files or your code and
-  print PASS/FAIL with a reason — never the answer.
+  print PASS/FAIL with a reason, never the answer.
 - **Solutions** (`NN-stage/solutions/`) are spoilers: open them after a checker passes or after three
   honest attempts.
-- Your work goes in [`my-work/`](./my-work/README.md) (journals, answers, your programs).
+- Your work goes in [`my-work/`](./my-work/README.md) (journals, answers, your programs). It is
+  git-ignored, so you choose what to publish.
 - Nothing in this repo is a review comment or ACK to post in your name. Bitcoin Core's
   `doc/AI_POLICY.md` (master) and `CONTRIBUTING.md` apply to everything you publish.
 
+### How you work through a stage
+1. `./lab.sh stage NN` and read the stage README (objectives, theory, review lens).
+2. Do each worksheet in `exercises/` yourself. Log every command you typed in
+   `my-work/<stage>/journal.md`; write answers in `my-work/<stage>/answers.env` when a worksheet asks.
+3. `./lab.sh check NN` until every checker passes. A FAIL line tells you what is wrong, not how to fix it.
+4. Answer the stage's self-check quiz from memory, then compare with `solutions/`.
+5. Log evidence in [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md).
+
 ## Start here
-0. [`START_HERE.md`](./START_HERE.md) — what to install (pinned versions), `./lab.sh doctor`, and the stage map with time estimates.
-1. [`CURRICULUM.md`](./CURRICULUM.md) — every competency (`C-…` IDs), the stage map, a weekly schedule and three mastery checkpoints.
-2. [`00-start-small/`](./00-start-small/README.md) — your first node and first program, in micro-steps.
-3. [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md) — the evidence log you fill as you go,
-   and [`BTRUST_AND_BITDEVS_PLAYBOOK.md`](./BTRUST_AND_BITDEVS_PLAYBOOK.md) — verified program requirements.
+1. [`START_HERE.md`](./START_HERE.md): what to install (pinned versions), `./lab.sh doctor`, and the stage map with time estimates.
+2. [`CURRICULUM.md`](./CURRICULUM.md): every competency (`C-…` IDs), the order to take the stages in, a weekly
+   schedule and three mastery checkpoints.
+3. [`00-start-small/`](./00-start-small/README.md): your first node and first program, in micro-steps.
+4. [`BTRUST_READINESS_TRACKER.md`](./BTRUST_READINESS_TRACKER.md): the evidence log you fill as you go,
+   and [`BTRUST_AND_BITDEVS_PLAYBOOK.md`](./BTRUST_AND_BITDEVS_PLAYBOOK.md): program requirements checked against their sources.
 
 ## Stages
 
+The numbers group topics; they are not a strict order. Stage 04 needs a Bitcoin Core build, which
+Stage 13 teaches, and Stage 19 runs alongside everything from week 4. Follow the order and schedule
+in [`CURRICULUM.md`](./CURRICULUM.md).
+
 | # | Stage | You will be able to… |
 |---|-------|----------------------|
-| 00 | [Start small](./00-start-small/README.md) | run regtest, read UTXOs, write a 60-line Go program against your node |
+| 00 | [Start small](./00-start-small/README.md) | run regtest, read UTXOs, write your first Go program against your node |
 | 01 | [Node foundations](./01-node-foundations/README.md) | write your own `bitcoin.conf` and start/stop procedure; coinbase maturity and subsidy |
 | 02 | [Raw tx & mempool](./02-raw-tx-and-mempool/README.md) | decode a tx byte by byte; build/sign/broadcast raw txs; tell policy from consensus |
 | 03 | [RBF & CPFP](./03-rbf-and-cpfp/README.md) | replace and fee-bump by hand with exact arithmetic; full-RBF |
@@ -64,26 +90,32 @@ You type every command and write every line of code that teaches a skill
 ./lab.sh drill <1..8>            # from-source repetition drills
 ./lab.sh book | recall | bip <n> | bolt <n>   # offline library
 ./lab.sh journeys | pr-list | pr-audit <n>    # PR study material (blank review checklists)
+./lab.sh polar | status | genesis              # Polar networks, node status, genesis block
 ./lab.sh health | rest           # 8 GB M1: check RAM, stop daemons
+./lab.sh commit-offline "<msg>" | sync        # commit your own notes offline, push later
 ./lab.sh selftest                # check the lab itself (skeletons fail, solutions pass)
 ```
+`./lab.sh help` prints the full list.
 
 ## Reference material
-- [`offline-library/`](./offline-library/OFFLINE_INDEX.md) — from-memory workbooks, offline books, the whitepaper, blind-recall drills.
-- [`pr-reviews/`](./pr-reviews/README.md) — review method, merged-PR review journeys, and auto-generated PR study files
-  (read the known-issues list in that README first).
+- [`offline-library/`](./offline-library/OFFLINE_INDEX.md): from-memory workbooks, offline books, the whitepaper, blind-recall drills.
+- [`pr-reviews/`](./pr-reviews/README.md): the review method, merged-PR review journeys, and PR study files with blank
+  review checklists (read the caveats in that README first).
 - [`BUILDING_BITCOIN_CORE_FROM_SOURCE.md`](./BUILDING_BITCOIN_CORE_FROM_SOURCE.md) (repetition drills: clone, build, test, review),
   [`FIRST_PRINCIPLES_WORKBOOK.md`](./FIRST_PRINCIPLES_WORKBOOK.md) (whitepaper ideas mapped to code),
   [`BITCOIN_CORE_SECURITY_NOTES.md`](./BITCOIN_CORE_SECURITY_NOTES.md) (past consensus bugs, how to read a PR),
   [`OFFLINE_30_DAY_CURRICULUM.md`](./OFFLINE_30_DAY_CURRICULUM.md) (days without internet).
 
 ## Environment
-Tested with Bitcoin Core v29.0, Go 1.22+, Python 3.10+ and LND v0.20.0-beta (via Polar, Stage 12).
-Written for an Apple M1 with 8 GB RAM (Linux works too): one `bitcoind` at a time, small `dbcache`,
-limited `-j` when building. Bitcoin Core source at `~/bitcoin` (override with `BITCOIN_ROOT`), books
-and specs at `~/bitcoin-references` (override with `BITCOIN_REFERENCES`). Stages teach current
-`master` and note where the v29.x binary behaves differently. Regtest and signet only: no exercise
-uses real money.
+- **Tested with:** Bitcoin Core v29.0, Go 1.22+, Python 3.10+. Stage 12 uses LND 0.20.0-beta inside Polar
+  (bitcoind 30.0 backend), and its `lnd.conf` option names were checked against `lnd` 0.21.3-beta.
+- **Machine:** written for an Apple M1 with 8 GB RAM (Linux works too): one `bitcoind` at a time, small
+  `dbcache`, limited `-j` when building.
+- **Paths:** Bitcoin Core source at `~/bitcoin` (override with `BITCOIN_ROOT`), books and specs at
+  `~/bitcoin-references` (override with `BITCOIN_REFERENCES`).
+- **Versions:** stages teach current `master` and note where the v29.x binary behaves differently.
+- **Money:** exercises that move coins use regtest or signet. Stage 11 has you configure and run a
+  pruned mainnet node, but no exercise sends or receives real bitcoin.
 
 ## Contributing
 Found a mistake or want to add an exercise? See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and

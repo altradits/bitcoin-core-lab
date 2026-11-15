@@ -38,7 +38,7 @@ go test -run TestDust ./...       # one area at a time: TestAmounts, TestDust, T
 go run ./cmd/kit -check
 go run ./cmd/kit -wallet w07_watch
 ```
-In another terminal, write your own `curl` calls against `POST /api/invoice` (body `{"amount_btc":"0.0005","label":"…"}`) and `POST /api/opreturn` (body `{"data_hex":"…"}`). Save them in `my-work/08/journal.md`.
+In another terminal, write your own `curl` calls against `POST /api/invoice` (body `{"amount_btc":"0.0005","label":"…"}`) and `POST /api/opreturn` (body `{"data_hex":"…"}`). Save them in `my-work/08-builder-starter-kit/journal.md`.
 
 ### Builder challenges (no tests given: write the test first, then the code)
 - **A. Taproot invoices:** accept `"address_type":"bech32m"` and pass it to `getnewaddress`. Add a test in `kit_test.go` that the dust threshold for `5120<32 bytes>` is 330 at 3000 sat/kvB.

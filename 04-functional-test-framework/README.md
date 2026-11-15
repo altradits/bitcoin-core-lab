@@ -92,6 +92,15 @@ Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 04
+```
+
+Runs: ./check_anatomy.sh, ./check_functional_test.sh, ./check_functional_test.sh --mutation. Each prints PASS/FAIL with a reason, never the answer. Needs a Bitcoin Core build with `build/test/config.ini` (Stage 13). The `--mutation` run must make your test FAIL.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Which two methods must every functional test define?
 2. Why do most tests start with 200 blocks, and how do you opt out?

@@ -1,8 +1,8 @@
 # Exercise 19.1: The Review Method and the PR-Type Matrix
 
 You will use this method on **every** PR, in the Gauntlet and in real reviews.
-Save the commands you type in `my-work/19/journal.md`. After your first two PRs, write your
-own version of the method in `my-work/19/method-notes.md`.
+Save the commands you type in `my-work/19-review-and-contribution-practicum/journal.md`. After your first two PRs, write your
+own version of the method in `my-work/19-review-and-contribution-practicum/method-notes.md`.
 
 The short checklist version is in [`../../pr-reviews/REVIEW_METHOD.md`](../../pr-reviews/REVIEW_METHOD.md).
 

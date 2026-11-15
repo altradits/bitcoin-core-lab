@@ -88,6 +88,15 @@ Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 05
+```
+
+Runs: ./check_truc.sh, ./check_review_notes.sh. Each prints PASS/FAIL with a reason, never the answer. Start your own regtest node first; the checkers read its state, your `answers.env` and your review notes.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. Why can a 0-fee commitment transaction never be CPFP'd without package validation?
 2. State the four TRUC numeric limits and what each one prevents.

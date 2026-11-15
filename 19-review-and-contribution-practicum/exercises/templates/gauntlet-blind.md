@@ -1,4 +1,4 @@
-<!-- Copy to my-work/19/gauntlet/Gxx-<PR>-blind.md. Fill every blank yourself. Then seal (see 02-review-gauntlet.md). -->
+<!-- Copy to my-work/19-review-and-contribution-practicum/gauntlet/Gxx-<PR>-blind.md. Fill every blank yourself. Then seal (see 02-review-gauntlet.md). -->
 # Gxx blind review: PR #____
 
 Parent commit (merge^1, full hash): ________________________________________

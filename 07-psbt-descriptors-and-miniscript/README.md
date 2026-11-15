@@ -69,17 +69,17 @@ Tests use BIP380 and BIP174 test vectors plus checksums named in `src/test/descr
 When the tests pass, run your parser on a real PSBT you made in Exercise 4: `go run ./cmd/psbtinspect "<psbt>"`. Compare it with `bitcoin-cli -regtest decodepsbt` and `analyzepsbt`.
 
 ### Exercise 4 (CLI worksheet): an air-gapped spend you type yourself
-Save every command you type in `my-work/07/journal.md`. Use exactly these wallet names: `w07_signer` (holds keys) and `w07_watch` (watch-only).
+Save every command you type in `my-work/07-psbt-descriptors-and-miniscript/journal.md`. Use exactly these wallet names: `w07_signer` (holds keys) and `w07_watch` (watch-only).
 
 1. Create `w07_signer` as a normal descriptor wallet. Create `w07_watch` so that it **cannot** hold private keys. Read `help createwallet` and find the argument.
-2. Export the signer's **public** descriptors (`listdescriptors`, read its `private` argument). Pick the external BIP84 `wpkh` one. Check its checksum with `getdescriptorinfo` and save it to `my-work/07/descriptor.txt`.
+2. Export the signer's **public** descriptors (`listdescriptors`, read its `private` argument). Pick the external BIP84 `wpkh` one. Check its checksum with `getdescriptorinfo` and save it to `my-work/07-psbt-descriptors-and-miniscript/descriptor.txt`.
 3. Import the signer's `wpkh` receive **and** change descriptors into `w07_watch` (`importdescriptors`). Mark them active and set `internal` correctly for change.
 4. Get a receive address from `w07_watch`. Fund it from your mining wallet and confirm the funding.
-5. **Creator + Updater:** in `w07_watch`, fund a PSBT that pays 0.25 BTC to an address from another wallet (`walletcreatefundedpsbt`). Save the base64 to `my-work/07/psbt_created.txt`. Run `decodepsbt` and `analyzepsbt` on it, and note in your journal which input fields are present.
-6. **Signer (+ Finalizer):** move the PSBT "across the air gap" (copy the text) and process it with `w07_signer` (`walletprocesspsbt`). Save the result to `my-work/07/psbt_processed.txt`. Run `analyzepsbt` again.
+5. **Creator + Updater:** in `w07_watch`, fund a PSBT that pays 0.25 BTC to an address from another wallet (`walletcreatefundedpsbt`). Save the base64 to `my-work/07-psbt-descriptors-and-miniscript/psbt_created.txt`. Run `decodepsbt` and `analyzepsbt` on it, and note in your journal which input fields are present.
+6. **Signer (+ Finalizer):** move the PSBT "across the air gap" (copy the text) and process it with `w07_signer` (`walletprocesspsbt`). Save the result to `my-work/07-psbt-descriptors-and-miniscript/psbt_processed.txt`. Run `analyzepsbt` again.
 7. **Combiner (practice):** process the *original* PSBT a second time with `sign=false`, then `combinepsbt` both. Write in your journal why combining is safe: the combined PSBT must commit to the same unsigned tx.
-8. **Finalizer + Extractor:** `finalizepsbt`, then broadcast the hex (`sendrawtransaction`). Mine one block and save the txid to `my-work/07/final_txid.txt`.
-9. **Miniscript:** take one pubkey from `w07_signer` (`getaddressinfo` → `pubkey`). Write a `wsh()` descriptor that needs that key **and** a 144-block relative timelock. Add its checksum with `getdescriptorinfo`, derive its regtest address with `deriveaddresses`, and save both to `my-work/07/miniscript_desc.txt` / `miniscript_address.txt`.
+8. **Finalizer + Extractor:** `finalizepsbt`, then broadcast the hex (`sendrawtransaction`). Mine one block and save the txid to `my-work/07-psbt-descriptors-and-miniscript/final_txid.txt`.
+9. **Miniscript:** take one pubkey from `w07_signer` (`getaddressinfo` → `pubkey`). Write a `wsh()` descriptor that needs that key **and** a 144-block relative timelock. Add its checksum with `getdescriptorinfo`, derive its regtest address with `deriveaddresses`, and save both to `my-work/07-psbt-descriptors-and-miniscript/miniscript_desc.txt` / `miniscript_address.txt`.
 
 <details><summary>Hint 1 (concept)</summary>The watch-only wallet can create and update a PSBT because it knows the scripts and UTXOs. It cannot sign because it has no keys. Signing happens only where the keys are.</details>
 <details><summary>Hint 2 (which RPC and arguments)</summary>Read <code>help walletcreatefundedpsbt</code>: inputs can be <code>[]</code>, so the wallet picks coins. Outputs are an array of <code>{"address": amount}</code>. For miniscript, read the <code>and_v</code>, <code>v:</code> and <code>older</code> fragments in <code>bip-0379.md</code>.</details>

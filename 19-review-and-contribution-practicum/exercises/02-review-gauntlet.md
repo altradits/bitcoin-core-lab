@@ -21,14 +21,14 @@ merge commit on `origin/master` in `~/bitcoin`.
 2. **Start at the parent.** Check out the merge commit's **first parent** (the old `master`) in your
    review worktree, build, and run the relevant tests there. Then move to the PR head (the merge commit's
    **second parent**) and repeat. You work out both hashes yourself; the checker verifies them.
-3. **Write the blind review** in `my-work/19/gauntlet/Gxx-<PR>-blind.md`, using
+3. **Write the blind review** in `my-work/19-review-and-contribution-practicum/gauntlet/Gxx-<PR>-blind.md`, using
    `templates/gauntlet-blind.md`. It must include what you ran and your break attempt.
 4. **Seal it.** Compute the SHA-256 of the blind file (`shasum -a 256`; read `man shasum`) and
    write the hash into the compare file. After sealing, do not edit the blind file. The checker
    recomputes the hash.
 5. **Compare.** Now read the real thread (`gh pr view N -R bitcoin/bitcoin --comments`, and
    the inline review comments on the GitHub "Files changed" tab). Answer the rubric in
-   `my-work/19/gauntlet/Gxx-<PR>-compare.md` using `templates/gauntlet-compare.md`.
+   `my-work/19-review-and-contribution-practicum/gauntlet/Gxx-<PR>-compare.md` using `templates/gauntlet-compare.md`.
 6. **Score yourself** 0–2 on each rubric line. Be honest. Nobody else sees this unless you
    choose to publish it.
 7. Run `bash 19-review-and-contribution-practicum/check_gauntlet.sh Gxx`.

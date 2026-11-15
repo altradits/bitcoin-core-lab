@@ -153,6 +153,15 @@ uses ElligatorSwift-encoded keys, so the bytes look random, followed by ChaCha20
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 14
+```
+
+Runs: ./check_14.sh (nodes, then your P2P test). Each prints PASS/FAIL with a reason, never the answer. Run `./check_14.sh nodes` or `./check_14.sh test` to check one part.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 
 1. Which messages may only appear between `version` and `verack`, and what does Core do if they arrive later?

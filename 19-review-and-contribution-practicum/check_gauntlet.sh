@@ -2,7 +2,7 @@
 # check_gauntlet.sh: outcome checker for Stage 19 Review Gauntlet rounds.
 # Usage: bash 19-review-and-contribution-practicum/check_gauntlet.sh [G01 ... G10]   (no args = all)
 #
-# For each round it checks the learner's own files in my-work/19/gauntlet/:
+# For each round it checks the learner's own files in my-work/19-review-and-contribution-practicum/gauntlet/:
 #   Gxx-<PR>-blind.md   : parent + head commit lines are correct, required sections are filled,
 #                         template blanks are gone
 #   Gxx-<PR>-compare.md : Sealed-SHA256 matches the blind file (blind file unchanged since sealing),
@@ -11,7 +11,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DIR="$ROOT/my-work/19/gauntlet"
+DIR="$ROOT/my-work/19-review-and-contribution-practicum/gauntlet"
 
 # round  pr  sha256(parent)[0:16]  sha256(head)[0:16]
 ROUNDS=(

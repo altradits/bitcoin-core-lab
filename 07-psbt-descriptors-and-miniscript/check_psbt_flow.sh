@@ -5,7 +5,7 @@
 #   Usage: ./check_psbt_flow.sh
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WORK="$ROOT/my-work/07"
+WORK="$ROOT/my-work/07-psbt-descriptors-and-miniscript"
 CLI="${BITCOIN_CLI:-bitcoin-cli} -regtest"
 WATCH=w07_watch
 SIGNER=w07_signer
@@ -20,9 +20,9 @@ fi
 
 # 1. Journal exists (you choose what goes in it; the checker only needs it to exist and be non-trivial).
 if [ -s "$WORK/journal.md" ] && [ "$(wc -l < "$WORK/journal.md")" -ge 10 ]; then
-  pass "my-work/07/journal.md has your command log"
+  pass "my-work/07-psbt-descriptors-and-miniscript/journal.md has your command log"
 else
-  fail "my-work/07/journal.md missing or shorter than 10 lines — record every command you typed"
+  fail "my-work/07-psbt-descriptors-and-miniscript/journal.md missing or shorter than 10 lines — record every command you typed"
 fi
 
 # 2. Two wallets with the right properties.
@@ -47,7 +47,7 @@ if [ -s "$WORK/descriptor.txt" ]; then
   if $CLI -rpcwallet=$WATCH listdescriptors 2>/dev/null | grep -qF "${d%%#*}"; then pass "that descriptor is imported in $WATCH"; else fail "descriptor.txt is not among $WATCH's descriptors"; fi
   case "$d" in *"prv"*) fail "descriptor.txt contains a PRIVATE key (xprv/tprv) — export the public form";; esac
 else
-  fail "my-work/07/descriptor.txt missing (one public descriptor with checksum)"
+  fail "my-work/07-psbt-descriptors-and-miniscript/descriptor.txt missing (one public descriptor with checksum)"
 fi
 
 # 4. The spend: created by the watch-only wallet, signed elsewhere, confirmed.
@@ -62,7 +62,7 @@ if [ -s "$WORK/final_txid.txt" ]; then
     if echo "$tx" | grep -q '"category": "send"'; then pass "$WATCH sees the tx as a SEND from its own coins"; else fail "the tx must spend coins that belong to $WATCH"; fi
   fi
 else
-  fail "my-work/07/final_txid.txt missing (the txid sendrawtransaction returned)"
+  fail "my-work/07-psbt-descriptors-and-miniscript/final_txid.txt missing (the txid sendrawtransaction returned)"
 fi
 
 # 5. PSBT snapshots at each role, validated by the node itself.
@@ -76,7 +76,7 @@ for stage in created processed; do
       *) fail "psbt_$stage.txt has unexpected next role '${next:-unparseable}'";;
     esac
   else
-    fail "my-work/07/psbt_$stage.txt missing"
+    fail "my-work/07-psbt-descriptors-and-miniscript/psbt_$stage.txt missing"
   fi
 done
 
@@ -91,7 +91,7 @@ if [ -s "$WORK/miniscript_desc.txt" ] && [ -s "$WORK/miniscript_address.txt" ]; 
     fail "miniscript_desc.txt must be wsh(...older(N)...) with checksum, and derive the address in miniscript_address.txt"
   fi
 else
-  fail "my-work/07/miniscript_desc.txt and miniscript_address.txt missing"
+  fail "my-work/07-psbt-descriptors-and-miniscript/miniscript_desc.txt and miniscript_address.txt missing"
 fi
 
 echo

@@ -18,7 +18,7 @@ Verified on 2026-11-09 with `gh label list -R bitcoin/bitcoin`: there is **no
 `Needs Conceptual Review`, `Insufficient Review`, `Review club`, `Brainstorming`. The
 PR Review Club homepage also links a "Good First Issues" list.
 
-Sources of real work. For each one, write 2 candidates in `my-work/19/work-candidates.md`:
+Sources of real work. For each one, write 2 candidates in `my-work/19-review-and-contribution-practicum/work-candidates.md`:
 1. **Issues to reproduce.** Find an open bug issue with no reproduction from a second person.
    Reproduce it on your Mac (macOS/arm64 is a platform people need reports from). Use
    `templates/bug-reproduction.md`. A good reproduction comment is valuable on its own.
@@ -84,7 +84,7 @@ In **your fork's clone**, on a new branch from current `master`:
 5. Run:
    `bash 19-review-and-contribution-practicum/check_commit_hygiene.sh <path-to-your-clone> <base>..<your-branch>`
    Fix whatever it reports, by rewriting your commits yourself.
-6. Write a PR description draft in `my-work/19/pr-draft.md`: *what* and, more importantly, *why*;
+6. Write a PR description draft in `my-work/19-review-and-contribution-practicum/pr-draft.md`: *what* and, more importantly, *why*;
    which tests cover it; how a reviewer can test it manually; no `@` mentions.
 
 Push and open the PR **only** if you would defend every line at BitDevs. Opening it is your

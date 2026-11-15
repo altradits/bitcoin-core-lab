@@ -95,6 +95,15 @@ validation flags are *consensus*. A non-standard tx can still be valid in a bloc
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 18
+```
+
+Runs: python3 test_linearize.py, ./check_18.sh. Each prints PASS/FAIL with a reason, never the answer. `./check_18.sh pkgrbf|coinsel|unit` checks one part. The cluster-mempool part needs a master build and is skipped on 29.x.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz-answers.md`](./solutions/quiz-answers.md))
 1. Why is the ancestor feerate a poor estimate of a transaction's mining value in some clusters? Give an example.
 2. Chunk the linearization [A: 1000 sat/200 vB, B: 100/100 (child of A), C: 3000/100 (child of B)].
@@ -114,7 +123,7 @@ validation flags are *consensus*. A non-standard tx can still be valid in a bloc
 - Tests: `mempool_cluster.py` (master), `feature_rbf.py`, `mempool_package_rbf.py`, `rpc_packages.py`,
   `wallet_bumpfee.py`, `wallet_fundrawtransaction.py`, `wallet_migration.py`,
   `src/test/cluster_linearize_tests.cpp`, `src/test/txgraph_tests.cpp`,
-  `src/wallet/test/coinselector_tests.cpp`, `coinselection_tests.cpp`, fuzz `cluster_linearize`, `txgraph`, `coinselection`.
+  `src/wallet/test/coinselector_tests.cpp`, `coinselection_tests.cpp` (master), fuzz `cluster_linearize`, `txgraph`, `coinselection`.
 - Invariants: mempool and block template agree on what is best; every limit bounds CPU per tx;
   replacements never reduce miner income; coin selection never overpays by more than the waste
   metric allows and never spends unconfirmed coins it was told not to.

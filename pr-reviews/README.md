@@ -9,7 +9,7 @@ review practice is organised. **Start with [`REVIEW_METHOD.md`](./REVIEW_METHOD.
 | :-- | :-- | :-- |
 | [`REVIEW_METHOD.md`](./REVIEW_METHOD.md) | One-page review checklist | Keep it open during every review |
 | [`merged-journeys/`](./merged-journeys/README.md) | 8 merged PRs with their full review threads (#32313, #33624, #33630, #35724, #36439, #36447, #36469, #36545) | Read how real reviewers found problems and wrote ACKs. Study the patterns, but **do not copy wording** |
-| `PR-*-AUDIT.md` (10 files) | Auto-generated "Guardian" audit dumps: description, commit list, diff, a pre-ticked checklist | Use them **only** as offline copies of the diff. See the caveats below |
+| `PR-*-AUDIT.md` (10 files) | Study files: PR description, commit list, diff, and a **blank** review checklist and conclusion for you to fill in. #36550, #36553 and #36555 were checked by hand | Offline copies of a PR to practise on. Read the caveats below first |
 | [`../19-review-and-contribution-practicum/`](../19-review-and-contribution-practicum/README.md) | Stage 19: review method, Review Gauntlet, Review Club, contribution craft | Where the actual training happens |
 
 ### Caveats on the `PR-*-AUDIT.md` files (checked 2026-11-15)

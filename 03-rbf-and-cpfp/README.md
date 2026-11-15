@@ -115,6 +115,15 @@ Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 03
+```
+
+Runs: ./check_rbf.sh, ./check_cpfp.sh, ./check_code_reading.sh. Each prints PASS/FAIL with a reason, never the answer. Start your own regtest node first; the checkers read its state and your `answers.env`.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (from memory; answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. A 200 vB tx paid 400 sat. On v29 with default settings, what is the smallest fee its 210 vB replacement can pay? On master?
 2. Why does rule 3 (absolute fee) exist when rule 6 already demands a higher feerate?

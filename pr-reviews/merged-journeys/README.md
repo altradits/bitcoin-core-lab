@@ -115,9 +115,9 @@ Look at how short real `ACK` comments are once the code is ready:
 
 ---
 
-## 3. How to Apply These Patterns (Updated 2026-11-06)
+## 3. How to Apply These Patterns (states rechecked on GitHub 2026-11-15)
 
-Only `#36555` below is still open. The other two already resolved;
+Only `#36555` below is still open (head `4aeb6a8f` on 2026-11-15; recheck before you review). The other two already resolved;
 study them with the same patterns but do not post new reviews there.
 
 1. **Merged PR `#36553` (`test: Add missing sync_mempools in wallet_conflicts.py` by `@maflcko`):**
@@ -134,7 +134,8 @@ study them with the same patterns but do not post new reviews there.
      `src/pubkey.cpp` to `core_interface`) needed for the new unit
      test or a leftover? Does every caller of the RPC handle the new
      error instead of `null`? Run `rpc_invalidateblock.py` on the
-     branch and report Tested ACK or the failure.
+     branch. Post a review only if you built and ran it yourself, in
+     your own words (`doc/AI_POLICY.md`); report the failure if it fails.
 3. **Closed PR `#36550` (`crypto: cleanse CSHA512 state in its destructor` by `@fametrano`):**
    - Look at **Pattern 1** (`@sedited` checking callers across the codebase).
    - As an exercise, read `src/random.cpp:518-520`

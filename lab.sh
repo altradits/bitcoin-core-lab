@@ -123,7 +123,7 @@ stage_checkers() {  # prints the checker commands for a stage, one per line (rel
     16) printf '%s\n' "python3 test_tagged_hash.py" ;;
     17) printf '%s\n' "python3 check_fuzz_target.py" "python3 check_bisect.py" ;;
     18) printf '%s\n' "python3 test_linearize.py" ./check_18.sh ;;
-    19) printf '%s\n' ./check_gauntlet.sh ./check_commit_hygiene.sh ;;
+    19) printf '%s\n' ./check_gauntlet.sh ;;  # check_commit_hygiene.sh needs <repo> <range>: run it yourself
   esac
 }
 
@@ -329,7 +329,8 @@ INNER_EOF
 commit_offline() {
   MSG="${1:-docs(lab): record offline protocol study progress}"
   git -C "$LAB_DIR" add -A
-  git -C "$LAB_DIR" -c user.name="altradits" -c user.email="altradits@gmail.com" commit -m "$MSG"
+  # Uses YOUR git identity (git config user.name / user.email). my-work/ stays git-ignored.
+  git -C "$LAB_DIR" commit -m "$MSG"
   echo "✅ Committed offline! Run './lab.sh sync' whenever internet returns."
 }
 

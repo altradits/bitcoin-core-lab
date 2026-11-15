@@ -1,4 +1,4 @@
-<!-- Copy to my-work/19/gauntlet/Gxx-<PR>-compare.md. Write this only AFTER sealing the blind file. -->
+<!-- Copy to my-work/19-review-and-contribution-practicum/gauntlet/Gxx-<PR>-compare.md. Write this only AFTER sealing the blind file. -->
 # Gxx comparison: PR #____
 
 Sealed-SHA256: ________________________________________________________________

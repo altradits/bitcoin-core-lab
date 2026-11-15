@@ -1,4 +1,4 @@
-<!-- PRIVATE notes for a live PR. Keep in my-work/19/reviews/PR-<N>.md. The public comment is written fresh, by you, from these notes. -->
+<!-- PRIVATE notes for a live PR. Keep in my-work/19-review-and-contribution-practicum/reviews/PR-<N>.md. The public comment is written fresh, by you, from these notes. -->
 # PR #____ review notes
 
 Head reviewed (full hash): ________________________________________

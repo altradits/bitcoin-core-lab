@@ -123,6 +123,15 @@ Copy [`exercises/answers.env.template`](./exercises/answers.env.template) to
 
 ---
 
+## Checkpoint
+
+```bash
+./lab.sh check 02
+```
+
+Runs: ./check_setup.sh, ./check_decode.sh, ./check_raw_tx.sh, ./check_policy.sh. Each prints PASS/FAIL with a reason, never the answer. Start your own regtest node first; the checkers read its state and your `answers.env`.
+Open `solutions/` only after this passes or after three honest attempts.
+
 ## Self-check quiz (answers in [`solutions/quiz_answers.md`](./solutions/quiz_answers.md))
 1. A tx has base size 113 and total size 222. Weight? vsize?
 2. Why does the 32-byte prev-txid in raw hex look different from the txid `listunspent` prints?
