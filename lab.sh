@@ -2,8 +2,8 @@
 set -euo pipefail
 
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BITCOIN_ROOT="${BITCOIN_ROOT:-/Users/mac/bitcoin}"
-REF_DIR="/Users/mac/bitcoin-references"
+BITCOIN_ROOT="${BITCOIN_ROOT:-$HOME/bitcoin}"
+REF_DIR="${BITCOIN_REFERENCES:-$HOME/bitcoin-references}"
 export PATH="$BITCOIN_ROOT/build/bin:$PATH"
 CLI="bitcoin-cli -regtest"
 
@@ -296,7 +296,7 @@ read_bolt() {
 }
 
 pr_list() {
-  echo "=== Offline Bitcoin Core PRs Available in Local /Users/mac/bitcoin ==="
+  echo "=== Offline Bitcoin Core PRs Available in $BITCOIN_ROOT ==="
   git -C "$BITCOIN_ROOT" log master --merges -n 25 --oneline | grep "Merge bitcoin/bitcoin#"
 }
 
@@ -421,8 +421,8 @@ run_drill() {
       echo "🔨 DRILL 1: Clone, Git Remotes, Directory Map & Toolchain"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  git clone https://github.com/bitcoin/bitcoin.git /Users/mac/bitcoin"
-      echo "  git -C /Users/mac/bitcoin remote -v"
+      echo "  git clone https://github.com/bitcoin/bitcoin.git "$HOME/bitcoin""
+      echo "  git -C \"$BITCOIN_ROOT\" remote -v"
       echo "  cmake --version && clang++ --version && python3 --version"
       echo ""
       echo "LIVE VERIFICATION ON YOUR MACHINE:"
@@ -441,7 +441,7 @@ run_drill() {
       echo "🔨 DRILL 2: Configure CMake & Compile Bitcoin Core From Source"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  cd /Users/mac/bitcoin"
+      echo "  cd \"$BITCOIN_ROOT\""
       echo "  cmake -B build -DBUILD_TESTING=ON"
       echo "  cmake --build build --target bitcoind bitcoin-cli test_bitcoin -j4"
       echo ""
@@ -459,17 +459,17 @@ run_drill() {
       echo "============================================================"
       ensure_daemon
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  export PATH=\"/Users/mac/bitcoin/build/bin:\$PATH\""
+      echo "  export PATH=\"$BITCOIN_ROOT/build/bin:\$PATH\""
       echo "  bitcoind -regtest -daemon"
       echo "  bitcoin-cli -regtest getblockchaininfo"
-      echo "  tail -n 10 \"/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log\""
+      echo "  tail -n 10 \"$HOME/Library/Application Support/Bitcoin/regtest/debug.log\""
       echo "  # To stop cleanly: bitcoin-cli -regtest stop"
       echo ""
       echo "LIVE REGTEST DAEMON CHECK:"
       $CLI getblockchaininfo | grep -E '"chain"|"blocks"|"headers"|"bestblockhash"'
       echo ""
       echo "LAST 5 LINES OF LIVE REGTEST debug.log:"
-      tail -n 5 "/Users/mac/Library/Application Support/Bitcoin/regtest/debug.log" || true
+      tail -n 5 "$HOME/Library/Application Support/Bitcoin/regtest/debug.log" 2>/dev/null || tail -n 5 "$HOME/.bitcoin/regtest/debug.log" 2>/dev/null || true
       echo ""
       echo "👉 Next: Run './lab.sh drill 4' to recreate all lab.sh wallets & blocks from scratch."
       ;;
@@ -497,11 +497,11 @@ run_drill() {
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
       echo "  # 1. Run a C++ Boost Unit Test Suite (< 1 second):"
-      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=merkle_tests"
-      echo "  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=bip32_tests"
+      echo "  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=merkle_tests"
+      echo "  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=bip32_tests"
       echo ""
       echo "  # 2. Run a Python Functional Test:"
-      echo "  python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=/Users/mac/bitcoin/build/test/config.ini"
+      echo "  python3 $LAB_DIR/04-functional-test-framework/kisumu_pos_rbf_test.py --configfile=$BITCOIN_ROOT/build/test/config.ini"
       echo ""
       echo "LIVE C++ UNIT TEST EXECUTION (merkle_tests & bip32_tests):"
       "$BITCOIN_ROOT/build/bin/test_bitcoin" --run_test=merkle_tests
@@ -514,9 +514,9 @@ run_drill() {
       echo "🔨 DRILL 6: Finding Errors with git grep, Editing C++ & Recompiling"
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
-      echo "  git -C /Users/mac/bitcoin grep -n \"bad-txns-vin-empty\" src/"
-      echo "  git -C /Users/mac/bitcoin grep -n \"CheckTransaction(\" src/"
-      echo "  cmake --build /Users/mac/bitcoin/build --target test_bitcoin -j4"
+      echo "  git -C \"$BITCOIN_ROOT\" grep -n \"bad-txns-vin-empty\" src/"
+      echo "  git -C \"$BITCOIN_ROOT\" grep -n \"CheckTransaction(\" src/"
+      echo "  cmake --build $BITCOIN_ROOT/build --target test_bitcoin -j4"
       echo ""
       echo "LIVE git grep SEARCH IN $BITCOIN_ROOT/src/:"
       git -C "$BITCOIN_ROOT" grep -n "bad-txns-vin-empty" src/
@@ -529,11 +529,11 @@ run_drill() {
       echo "============================================================"
       echo "COMMANDS TO MEMORIZE & REPEAT:"
       echo "  # When Online (fetch any PR by number):"
-      echo "  git -C /Users/mac/bitcoin fetch origin pull/35320/head:pr-35320"
+      echo "  git -C \"$BITCOIN_ROOT\" fetch origin pull/35320/head:pr-35320"
       echo ""
       echo "  # When Offline (inspect merged PRs in local git history):"
-      echo "  MERGE=\$(git -C /Users/mac/bitcoin log master --merges --grep=\"bitcoin/bitcoin#35320:\" -n 1 --format=\"%H\")"
-      echo "  git -C /Users/mac/bitcoin diff \"\${MERGE}^1...\${MERGE}^2\""
+      echo "  MERGE=\$(git -C \"$BITCOIN_ROOT\" log master --merges --grep=\"bitcoin/bitcoin#35320:\" -n 1 --format=\"%H\")"
+      echo "  git -C \"$BITCOIN_ROOT\" diff \"\${MERGE}^1...\${MERGE}^2\""
       echo ""
       echo "LIVE INSPECTION OF PR #35320 IN YOUR LOCAL REPO:"
       MERGE=$(git -C "$BITCOIN_ROOT" log master --merges --grep="bitcoin/bitcoin#35320:" -n 1 --format="%H")
@@ -752,6 +752,16 @@ case "${1:-help}" in
     BOOK_ID="${2:-index}"
     CHAPTER="${3:-}"
     case "$BOOK_ID" in
+      mb|pb|cli|ln|mastering-bitcoin|programming-bitcoin|learning-bitcoin-cli|mastering-lightning)
+        if [ ! -d "$REF_DIR/books" ]; then
+          echo "No local book library at $REF_DIR/books."
+          echo "Clone the books into \$HOME/bitcoin-references/books, or set BITCOIN_REFERENCES."
+          echo "See LICENSES.md for the book list and licences."
+          exit 1
+        fi
+        ;;
+    esac
+    case "$BOOK_ID" in
       index|list|"")
         cat "$LAB_DIR/offline-library/OFFLINE_INDEX.md"
         ;;
@@ -776,8 +786,13 @@ case "${1:-help}" in
           ls "$REF_DIR/books/mastering-bitcoin/"ch*.adoc
           echo "👉 Run: ./lab.sh book mb ch04  (or any ch01..ch12)"
         else
-          head -n 120 "$REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc"
-          echo "--- (Read full chapter: less $REF_DIR/books/mastering-bitcoin/${CHAPTER}.adoc) ---"
+          FILE=$(ls "$REF_DIR/books/mastering-bitcoin/${CHAPTER}"*.adoc 2>/dev/null | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "Chapter '$CHAPTER' not found. Try: ./lab.sh book mb"
+            exit 1
+          fi
+          head -n 120 "$FILE"
+          echo "--- (Read full chapter: less $FILE) ---"
         fi
         ;;
       pb|programming-bitcoin)

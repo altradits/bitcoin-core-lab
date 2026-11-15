@@ -3,7 +3,7 @@
 - **Author:** `@enirox001`
 - **Merged At:** `2026-10-14T08:07:56Z`
 - **Final Merged Head Commit:** `c9cccf6d68c682e533876b4450f5ad7044a79f10`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-36469` (`git -C /Users/mac/bitcoin show pr-36469`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-36469` (`git -C $BITCOIN_ROOT show pr-36469`)
 - **Core Lesson for Reviewers:** How a clean C++ validation refactoring gets `Concept ACK` early, followed by concise one-line `ACK <commit>` approvals (`dedup is clean.`).
 
 ---

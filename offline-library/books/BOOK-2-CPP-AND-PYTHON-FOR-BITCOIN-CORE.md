@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_SUITE_END()
 ```
 - **Run a single C++ unit test suite:**
   ```bash
-  /Users/mac/bitcoin/build/bin/test_bitcoin --run_test=txvalidation_tests
+  $BITCOIN_ROOT/build/bin/test_bitcoin --run_test=txvalidation_tests
   ```
 
 ---

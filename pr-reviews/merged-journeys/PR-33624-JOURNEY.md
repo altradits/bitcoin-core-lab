@@ -3,7 +3,7 @@
 - **Author:** `@brunoerg`
 - **Merged At:** `2025-10-15T08:55:55Z`
 - **Final Merged Head Commit:** `3a10d700bc1889b3690097efc935c5a4ba5966bb`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-33624` (`git -C /Users/mac/bitcoin show pr-33624`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-33624` (`git -C $BITCOIN_ROOT show pr-33624`)
 - **Core Lesson for Reviewers:** How @instagibbs improved test readability with inline `/*flags=*/0` parameter comments, and how @l0rinc proved the new test actually catches bugs by flipping the flag check to `if (true)` (with @janb84 confirming against the `1 == 1` mutant) to watch the assertion fail.
 
 ---

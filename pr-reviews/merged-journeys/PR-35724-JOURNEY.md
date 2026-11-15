@@ -3,7 +3,7 @@
 - **Author:** `@davidgumberg`
 - **Merged At:** `2026-10-16T05:49:00Z`
 - **Final Merged Head Commit:** `4f5ce816db1055b8d885113397c7215dc7af3c83`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-35724` (`git -C /Users/mac/bitcoin show pr-35724`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-35724` (`git -C $BITCOIN_ROOT show pr-35724`)
 - **Core Lesson for Reviewers:** How @w0xlt caught a real logic bug in extrapool vs mempool counter decrements (causing the author to pause and rework the PR), and how @0xB10C tested the PR on live Signet and pasted real log lines.
 
 ---

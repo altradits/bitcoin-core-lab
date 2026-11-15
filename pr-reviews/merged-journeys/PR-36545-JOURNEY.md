@@ -3,7 +3,7 @@
 - **Author:** `@maflcko`
 - **Merged At:** `2026-10-19T03:27:14Z`
 - **Final Merged Head Commit:** `fad7637529426f058a3c2409dd137009b14622a4`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-36545` (`git -C /Users/mac/bitcoin show pr-36545`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-36545` (`git -C $BITCOIN_ROOT show pr-36545`)
 - **Core Lesson for Reviewers:** How reviewers verify intermittent P2P test fixes (`tACK`, `lightly tested ACK`) and ask architectural questions about deterministic flake hunting (`rr` / `bedrock`).
 
 ---

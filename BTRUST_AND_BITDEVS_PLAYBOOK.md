@@ -3,7 +3,7 @@
 This playbook summarizes how to stay **100% compliant with Btrust (`btrust.tech`) regulations** while:
 1. Earning a **Btrust Grant** (paid in Bitcoin) as an open-source contributor,
 2. Operating a **Btrust-compliant BitDevs Socratic Seminar**, and
-3. Training local developers in your community using [`bitcoin-core-lab`](file:///Users/mac/bitcoin-core-lab/README.md) so they can also earn from Bitcoin Free and Open-Source Software (FOSS).
+3. Training local developers in your community using [`bitcoin-core-lab`](./README.md) so they can also earn from Bitcoin Free and Open-Source Software (FOSS).
 
 ---
 
@@ -28,7 +28,7 @@ Btrust offers three main developer pathways for builders in Africa and the Globa
 
 ### 1. Btrust Builders (Pathway Program)
 - **Who it is for:** Experienced software engineers transitioning into Bitcoin & Lightning open-source development.
-- **How your lab gives you an edge:** You already have Polar (`Addis Ababa Bootcamp` & `Bitrust Bootcamp 2026`), a compiled `bitcoind` + `test_bitcoin` environment, and 13 stages of pure Bitcoin & Lightning code in [`bitcoin-core-lab`](file:///Users/mac/bitcoin-core-lab/README.md).
+- **How your lab gives you an edge:** You already have Polar (`Addis Ababa Bootcamp` & `Bitrust Bootcamp 2026`), a compiled `bitcoind` + `test_bitcoin` environment, and 13 stages of pure Bitcoin & Lightning code in [`bitcoin-core-lab`](./README.md).
 
 ### 2. Btrust Starter Grant (6 Months Full-Time, Paid in BTC)
 To win a **Btrust Starter Grant**, you must show that you have already started contributing *before* asking for funding. Specifically, Btrust requires:
@@ -36,7 +36,7 @@ To win a **Btrust Starter Grant**, you must show that you have already started c
 - **Non-Trivial Merged Code PR(s):** At least **one merged code-based PR** (not just typo/doc fixes, and beyond trivial `good first issue` labels).
 - **High-Signal Code Reviews (Your Fastest Entry Point):**
   - Btrust explicitly looks for *"evidence of contributing helpful technical insights on other people's work (code reviews)"*.
-  - Reviewing 1–2 open PRs per week using [`./lab.sh pr-audit`](file:///Users/mac/bitcoin-core-lab/lab.sh) and the 7 Maintainer Patterns in [`pr-reviews/merged-journeys/README.md`](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/README.md) builds a public track record of `tACK`s and bug catches on GitHub.
+  - Reviewing 1–2 open PRs per week using [`./lab.sh pr-audit`](./lab.sh) and the 7 Maintainer Patterns in [`pr-reviews/merged-journeys/README.md`](./pr-reviews/merged-journeys/README.md) builds a public track record of `tACK`s and bug catches on GitHub.
 - **A Clear 6-Month Scope of Work:** A concrete proposal listing what PRs, test coverage, or subsystem improvements you will deliver full-time over 6 months.
 - **1 Peer/Contributor Reference:** Once you consistently review a maintainer's or regular contributor's PRs (and fix issues they care about), they know your work and can vouch for you.
 
@@ -56,7 +56,7 @@ Btrust sponsors local **BitDevs** chapters across Africa (covering venue, refres
 ### Rule 2: Mandatory "Socratic Seminar" Format (No Sales Pitches or Lectures)
 - A BitDevs meetup is **not** a beginner "What is Bitcoin?" lecture or a company pitch.
 - It must follow the **Socratic Seminar** format:
-  1. **1–2 Weeks Before the Meetup:** Publish a public reading list on your BitDevs website/GitHub containing recent **Bitcoin Optech Newsletter** items, **merged & open `bitcoin/bitcoin` PRs** (from your [`pr-reviews/merged-journeys/`](file:///Users/mac/bitcoin-core-lab/pr-reviews/merged-journeys/README.md)), **Delving Bitcoin** threads, and **Lightning BOLT** updates.
+  1. **1–2 Weeks Before the Meetup:** Publish a public reading list on your BitDevs website/GitHub containing recent **Bitcoin Optech Newsletter** items, **merged & open `bitcoin/bitcoin` PRs** (from your [`pr-reviews/merged-journeys/`](./pr-reviews/merged-journeys/README.md)), **Delving Bitcoin** threads, and **Lightning BOLT** updates.
   2. **During the Meetup:** As moderator, you briefly introduce each PR or protocol topic in 2 minutes, then ask the room open technical questions (*"Why did `@maflcko` need `sync_mempools()` between `tx1`, `tx2`, and `tx3` in PR #36553?"*, *"What happens if two miners broadcast conflicting compact blocks?"*).
 
 ### Rule 3: Strict Chatham House Rule & Zero Recording
@@ -70,7 +70,7 @@ Btrust sponsors local **BitDevs** chapters across Africa (covering venue, refres
 
 ## Part 4: How to Build a Local Community of Contributors Who Earn From Open Source
 
-You can use your own [`bitcoin-core-lab`](file:///Users/mac/bitcoin-core-lab/README.md) repository as a **4-Step Incubator** after each monthly BitDevs Socratic Seminar (e.g., running a 2-hour "PR Review Club & Builder Workshop" alongside BitDevs):
+You can use your own [`bitcoin-core-lab`](./README.md) repository as a **4-Step Incubator** after each monthly BitDevs Socratic Seminar (e.g., running a 2-hour "PR Review Club & Builder Workshop" alongside BitDevs):
 
 ```mermaid
 flowchart LR

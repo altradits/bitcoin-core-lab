@@ -3,7 +3,7 @@
 - **Author:** `@l0rinc`
 - **Merged At:** `2025-10-15T13:48:22Z`
 - **Final Merged Head Commit:** `24d861da7894add47747eff69dd3fc71fbcdd7d0`
-- **Local Git Branch in `/Users/mac/bitcoin`:** `pr-32313` (`git -C /Users/mac/bitcoin show pr-32313`)
+- **Local Git Branch in `$BITCOIN_ROOT`:** `pr-32313` (`git -C $BITCOIN_ROOT show pr-32313`)
 - **Core Lesson for Reviewers:** How @andrewtoth and @maflcko reviewed a critical UTXO cache memory-accounting fix (`CCoinsViewCache`), spotting a redundant subtraction on a newly created empty coin and keeping unrelated sanitizer changes out of the PR.
 
 ---

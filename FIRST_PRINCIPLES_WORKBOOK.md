@@ -9,24 +9,24 @@ This workbook maps whitepaper ideas to Bitcoin Core C++ code and terminal drills
 
 ## 🧭 Part 1: Satoshi's 5 Core Invariants in Bitcoin Core C++
 
-Whenever you read or review code in `/Users/mac/bitcoin/src/`, map it back to these five invariants from Satoshi's design:
+Whenever you read or review code in `$BITCOIN_ROOT/src/`, map it back to these five invariants from Satoshi's design:
 
-| # | Consensus Invariant | Whitepaper Section | Exact C++ Source Location in `/Users/mac/bitcoin` |
+| # | Consensus Invariant | Whitepaper Section | Exact C++ Source Location in `$BITCOIN_ROOT` |
 | :---: | :--- | :--- | :--- |
-| **1** | **Hard-Capped Supply (`21,000,000 BTC`) & Halving** | Section 6 (*Incentive*) | [`src/consensus/amount.h`](file:///Users/mac/bitcoin/src/consensus/amount.h) (`MAX_MONEY`) & `GetBlockSubsidy` in [`src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp) |
-| **2** | **Coinbase Maturity (`COINBASE_MATURITY = 100`)** | Section 6 & 11 | [`src/consensus/consensus.h`](file:///Users/mac/bitcoin/src/consensus/consensus.h) & `Consensus::CheckTxInputs` in [`src/consensus/tx_verify.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_verify.cpp) |
-| **3** | **UTXO Conservation & Implicit Miner Fees** | Section 2 (*Transactions*) & Section 6 | `Consensus::CheckTxInputs` in [`src/consensus/tx_verify.cpp`](file:///Users/mac/bitcoin/src/consensus/tx_verify.cpp) (`txfee_aux = nValueIn - value_out`) |
-| **4** | **Stack-Based Programmable Verification (Script)** | Section 2 (*Digital Signatures*) | `EvalScript` & `VerifyScript` in [`src/script/interpreter.cpp`](file:///Users/mac/bitcoin/src/script/interpreter.cpp) |
-| **5** | **Topological Ordering & Mempool Incentives** | Section 3 (*Timestamp Server*) & Section 5 (*Network*) | `AcceptToMemoryPool` in [`src/validation.cpp`](file:///Users/mac/bitcoin/src/validation.cpp), [`src/policy/rbf.cpp`](file:///Users/mac/bitcoin/src/policy/rbf.cpp), [`src/policy/truc_policy.cpp`](file:///Users/mac/bitcoin/src/policy/truc_policy.cpp) |
+| **1** | **Hard-Capped Supply (`21,000,000 BTC`) & Halving** | Section 6 (*Incentive*) | [`src/consensus/amount.h`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/amount.h) (`MAX_MONEY`) & `GetBlockSubsidy` in [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp) |
+| **2** | **Coinbase Maturity (`COINBASE_MATURITY = 100`)** | Section 6 & 11 | [`src/consensus/consensus.h`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/consensus.h) & `Consensus::CheckTxInputs` in [`src/consensus/tx_verify.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_verify.cpp) |
+| **3** | **UTXO Conservation & Implicit Miner Fees** | Section 2 (*Transactions*) & Section 6 | `Consensus::CheckTxInputs` in [`src/consensus/tx_verify.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/consensus/tx_verify.cpp) (`txfee_aux = nValueIn - value_out`) |
+| **4** | **Stack-Based Programmable Verification (Script)** | Section 2 (*Digital Signatures*) | `EvalScript` & `VerifyScript` in [`src/script/interpreter.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/script/interpreter.cpp) |
+| **5** | **Topological Ordering & Mempool Incentives** | Section 3 (*Timestamp Server*) & Section 5 (*Network*) | `AcceptToMemoryPool` in [`src/validation.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp), [`src/policy/rbf.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/policy/rbf.cpp), [`src/policy/truc_policy.cpp`](https://github.com/bitcoin/bitcoin/blob/master/src/policy/truc_policy.cpp) |
 
 ---
 
 ## 🛠️ Part 2: Step-by-Step Terminal Hands-On Drills (Hours 01–07)
 
-Before starting any drill, open your terminal in `/Users/mac/bitcoin` and add your compiled binaries to `PATH`:
+Before starting any drill, open your terminal in `$BITCOIN_ROOT` and add your compiled binaries to `PATH`:
 
 ```bash
-export PATH="/Users/mac/bitcoin/build/bin:$PATH"
+export PATH="$BITCOIN_ROOT/build/bin:$PATH"
 bitcoind -regtest -daemon 2>/dev/null || true
 ```
 
@@ -39,10 +39,10 @@ bitcoind -regtest -daemon 2>/dev/null || true
 **Run it yourself:**
 ```bash
 # 1. Inspect the C++ consensus constant
-grep -n "COINBASE_MATURITY" /Users/mac/bitcoin/src/consensus/consensus.h
+grep -n "COINBASE_MATURITY" $BITCOIN_ROOT/src/consensus/consensus.h
 
 # 2. Run the automated verification script
-/Users/mac/bitcoin-core-lab/01-node-foundations/verify_coinbase_maturity.sh
+./01-node-foundations/verify_coinbase_maturity.sh
 ```
 
 **Self-Check Question:** What validation error string does `Consensus::CheckTxInputs` return in `src/consensus/tx_verify.cpp` if you attempt to spend a coinbase output at depth 99?  
@@ -57,10 +57,10 @@ grep -n "COINBASE_MATURITY" /Users/mac/bitcoin/src/consensus/consensus.h
 **Run it yourself:**
 ```bash
 # 1. Inspect the C++ fee conservation check
-grep -n -C 5 "bad-txns-in-belowout" /Users/mac/bitcoin/src/consensus/tx_verify.cpp
+grep -n -C 5 "bad-txns-in-belowout" $BITCOIN_ROOT/src/consensus/tx_verify.cpp
 
 # 2. Execute the raw transaction & mempool inspection script
-/Users/mac/bitcoin-core-lab/02-raw-tx-and-mempool/raw_tx_mempool.sh
+./02-raw-tx-and-mempool/raw_tx_mempool.sh
 ```
 
 **Self-Check Formula:** Given `base_size = 113 bytes` and `total_size = 222 bytes`, calculate `weight` and `vsize` by hand:
@@ -77,10 +77,10 @@ $$\text{weight} = (113 \times 3) + 222 = 561\text{ WU}, \quad \text{vsize} = \lc
 **Run it yourself:**
 ```bash
 # 1. Read PaysForRBF in C++
-sed -n '160,185p' /Users/mac/bitcoin/src/policy/rbf.cpp
+sed -n '160,185p' $BITCOIN_ROOT/src/policy/rbf.cpp
 
 # 2. Run the RBF replacement + CPFP child script
-/Users/mac/bitcoin-core-lab/03-rbf-and-cpfp/rbf_and_cpfp.sh
+./03-rbf-and-cpfp/rbf_and_cpfp.sh
 ```
 
 ---
@@ -92,11 +92,11 @@ sed -n '160,185p' /Users/mac/bitcoin/src/policy/rbf.cpp
 **Run it yourself:**
 ```bash
 # 1. Run upstream RBF and mempool package tests
-python3 /Users/mac/bitcoin/build/test/functional/test_runner.py feature_rbf.py mempool_packages.py
+python3 $BITCOIN_ROOT/build/test/functional/test_runner.py feature_rbf.py mempool_packages.py
 
 # 2. Run your custom 2-node P2P functional test
-python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_test.py \
-  --configfile=/Users/mac/bitcoin/build/test/config.ini
+python3 ./04-functional-test-framework/kisumu_pos_rbf_test.py \
+  --configfile=$BITCOIN_ROOT/build/test/config.ini
 ```
 
 ---
@@ -108,10 +108,10 @@ python3 /Users/mac/bitcoin-core-lab/04-functional-test-framework/kisumu_pos_rbf_
 **Run it yourself:**
 ```bash
 # 1. Run the upstream TRUC test suite
-python3 /Users/mac/bitcoin/build/test/functional/test_runner.py mempool_truc.py
+python3 $BITCOIN_ROOT/build/test/functional/test_runner.py mempool_truc.py
 
 # 2. Run the live 0-fee v3 Parent + v3 Child submitpackage script
-/Users/mac/bitcoin-core-lab/05-truc-package-relay-review/truc_1p1c_package.sh
+./05-truc-package-relay-review/truc_1p1c_package.sh
 ```
 
 ---
@@ -122,7 +122,7 @@ python3 /Users/mac/bitcoin/build/test/functional/test_runner.py mempool_truc.py
 
 **Run it yourself:**
 ```bash
-python3 /Users/mac/bitcoin-core-lab/06-lightning-htlc-state-machine/verify_htlc.py
+python3 ./06-lightning-htlc-state-machine/verify_htlc.py
 ```
 
 ---
@@ -133,8 +133,8 @@ python3 /Users/mac/bitcoin-core-lab/06-lightning-htlc-state-machine/verify_htlc.
 
 **Run it yourself:**
 ```bash
-go -C /Users/mac/bitcoin-core-lab/07-psbt-descriptors-and-miniscript test -v ./...
-go -C /Users/mac/bitcoin-core-lab/07-psbt-descriptors-and-miniscript run .
+go -C ./07-psbt-descriptors-and-miniscript test -v ./...
+go -C ./07-psbt-descriptors-and-miniscript run .
 ```
 
 ---
@@ -145,7 +145,7 @@ Grant committees at **Btrust Builders**, **Brink**, and **OpenSats** evaluate ca
 
 ### Step 1: Fetch and Checkout an Open PR from `bitcoin/bitcoin`
 ```bash
-# Inside /Users/mac/bitcoin, fetch PR #<PR_NUMBER> into a local branch
+# Inside $BITCOIN_ROOT, fetch PR #<PR_NUMBER> into a local branch
 git fetch origin pull/<PR_NUMBER>/head:pr-<PR_NUMBER>
 git checkout pr-<PR_NUMBER>
 ```
